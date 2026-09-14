@@ -9386,7 +9386,8 @@ function blankSeoLocation(label, regionIdx){
   return {
     id: uid(), label: label || '', regionIdx: regionIdx || 0, lat:null, lng:null,
     rank:null, prevRank:null, matchedTitle:null, matchedDomain:null, sourceUrl:null,
-    checkedAt:null, manual:false, error:null, precision:null, history:[]
+    checkedAt:null, manual:false, error:null, precision:null,
+    readCount:null, topDomains:null, history:[]
   };
 }
 function migrateSeoClient(c){
@@ -9602,13 +9603,36 @@ function seoNormalizeDfsOrganic(data){
   // DataForSEO directly from the live SERP. Using it instead of our own
   // array index means a stray item with no title can't silently shift
   // every position after it by one.
-  const organic = items.filter(i => i.type === 'organic').map(it => ({
+  /* Which item types count as an organic ranking.
+
+     'organic' is the obvious one. 'featured_snippet' matters just as much
+     and used to be thrown away here, which is how a site sitting at the very
+     top of Google could be reported as not ranking at all: when Google
+     promotes a result into the answer box, DataForSEO returns it as a
+     featured_snippet, and on some SERPs it does not also repeat it as a
+     plain organic item. Filtering to 'organic' alone discarded the single
+     best position there is.
+
+     Ads and the local pack are still excluded on purpose - this column is a
+     website's organic position, not its map listing. */
+  const ORGANIC_TYPES = {organic: true, featured_snippet: true};
+  const organic = items.filter(i => ORGANIC_TYPES[i.type]).map(it => ({
     title: it.title || '',
     domain: it.domain || (it.url ? cleanDomain(it.url) : null),
     url: it.url || null,
     position: (typeof it.rank_group === 'number' ? it.rank_group : null)
   }));
-  return {organic};
+  /* A featured snippet and its own organic twin are the same result twice,
+     so the lower of the two positions wins and the duplicate is dropped. */
+  const seen = new Map();
+  organic.forEach(r => {
+    const key = (r.domain || '') + '|' + (r.url || '');
+    const cur = seen.get(key);
+    if (!cur || (r.position != null && (cur.position == null || r.position < cur.position))) seen.set(key, r);
+  });
+  const deduped = Array.from(seen.values())
+    .sort((a, b) => (a.position == null ? 999 : a.position) - (b.position == null ? 999 : b.position));
+  return {organic: deduped};
 }
 function seoNormalizeSerperOrganic(data){
   const organic = (data.organic || []).map(x => ({
@@ -9795,6 +9819,16 @@ async function seoScanOne(client, kw, loc){
     /* Which shape of request actually answered. 'country' means the pin was
        refused and this is a nationwide reading, not a local one. */
     loc.precision = data.precision || 'coordinate';
+    /* A bare \u201c100+\u201d is unarguable with. These two say what was actually
+       read, so a real absence can be told apart from a thin or wrong SERP
+       at a glance: three results read means the scrape failed, a hundred
+       results read with familiar competitors in them means the site really
+       isn't there. */
+    if (found){ loc.readCount = null; loc.topDomains = null; }
+    else {
+      loc.readCount = organic.length;
+      loc.topDomains = organic.slice(0, 3).map(r => r.domain).filter(Boolean);
+    }
     loc.checkedAt = Date.now();
     loc.manual = false;
     loc.error = null;
@@ -10640,8 +10674,20 @@ function seoLocGroupRow(c, k, loc){
     }
   }
   else if (loc.sourceUrl && loc.checkedAt){
+    /* When nothing was found, the row says what it looked through. Without
+       it there is no way to tell a genuine absence from a scrape that came
+       back with six results and gave up. */
+    let miss = '';
+    if (loc.rank === 0 && loc.readCount != null){
+      miss = ' \u00b7 read ' + loc.readCount + ' result' + (loc.readCount === 1 ? '' : 's') +
+        ', none on ' + esc(c.website || 'this site');
+      if (loc.topDomains && loc.topDomains.length){
+        miss += ' <span title="The results that were read, in order">(' + esc(loc.topDomains.join(', ')) + '\u2026)</span>';
+      }
+    }
     statusEl.innerHTML = esc(fmtWhen(loc.checkedAt)) +
       (loc.precision === 'country' ? ' \u00b7 <b title="The pinned search was refused, so this position was read for the whole country instead of from this city.">country-wide reading</b>' : '') +
+      miss +
       ' \u00b7 <a href="' + esc(loc.sourceUrl) + '" target="_blank" rel="noopener">view the search</a>';
     const copyLinkBtn = document.createElement('button');
     copyLinkBtn.type = 'button';

@@ -5747,17 +5747,25 @@ const mapsUrl = (kw, lat, lng, hl, zoom) =>
    referrer. Rather than argue with it, the maps are moved onto providers
    that are built for application use.
 
-   Carto's basemap CDN is the primary. Esri's world basemap sits behind it,
-   and if a provider ever starts refusing us the next one in the list takes
-   over on its own, so a map never goes blank. Attribution travels with each
-   layer, which is the other half of using someone else's tiles properly. */
+   Carto was the first choice here and had to be dropped: their basemap CDN
+   now wants an API key, and rather than refusing the request they serve the
+   tile with API KEY REQUIRED stamped across it. That is worse than a
+   failure, because a watermarked tile is still a successful response - the
+   fallback below watches for errors, and there is no error to catch.
+
+   Esri's world basemaps need no key and no account, so both entries are
+   theirs. Street Map is the primary because a rank grid is read against
+   street names; Topo sits behind it as a different service path in case the
+   first one has a bad day. If a provider ever does start failing, the next
+   one takes over on its own and the map never goes blank. Attribution
+   travels with each layer, which is the other half of using someone else's
+   tiles properly. */
 const TILE_PROVIDERS = [
-  { name:'carto',
-    url:'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-    opts:{ maxZoom:19, subdomains:'abcd', crossOrigin:true,
-           attribution:'&copy; OpenStreetMap contributors &copy; CARTO' } },
-  { name:'esri',
+  { name:'esri-street',
     url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+    opts:{ maxZoom:19, crossOrigin:true, attribution:'Tiles &copy; Esri' } },
+  { name:'esri-topo',
+    url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
     opts:{ maxZoom:19, crossOrigin:true, attribution:'Tiles &copy; Esri' } }
 ];
 /* Kept under the old names so nothing that referenced them has to change. */

@@ -9387,7 +9387,7 @@ function blankSeoLocation(label, regionIdx){
     id: uid(), label: label || '', regionIdx: regionIdx || 0, lat:null, lng:null,
     rank:null, prevRank:null, matchedTitle:null, matchedDomain:null, sourceUrl:null,
     checkedAt:null, manual:false, error:null, precision:null,
-    readCount:null, topDomains:null, history:[]
+    readCount:null, topDomains:null, partial:false, history:[]
   };
 }
 function migrateSeoClient(c){
@@ -9708,6 +9708,18 @@ async function seoDfsSerp(endpoint, task){
   }
   const t = (data.tasks || [])[0];
   if (t && t.status_code && t.status_code !== 20000){
+    /* \u201cTask completed with partial results\u201d is not a failure. DataForSEO
+       flags the task because one of the later result pages timed out, but
+       the pages it did get are attached and perfectly good - and page one,
+       where almost every ranking anyone cares about lives, is nearly always
+       among them. Throwing the whole response away because of a non-20000
+       status is how a site sitting at #1 got reported as not ranking. So if
+       there are items in the box, the items are used. */
+    const partialItems = (((t.result || [])[0]) || {}).items || [];
+    if (partialItems.length){
+      data.__partial = t.status_message || ('status ' + t.status_code);
+      return data;
+    }
     const err = new Error(t.status_message || String(t.status_code));
     /* Only money and credentials are worth giving up over. A server error on
        their end is the whole reason the next rung exists. */
@@ -9753,7 +9765,14 @@ async function seoOrganicLadder(keyword, p, region, opts){
     rungs.push({endpoint:'advanced', precision:'country', task: Object.assign({location_code: country}, base)});
   }
 
-  let emptyResult = null, lastErr = null;
+  /* Knowing which site we're looking for changes when it's worth spending
+     another call: a rung that already found it is finished, however partial
+     the read was, and a rung that didn't find it in an incomplete read has
+     not actually answered the question yet. */
+  const site = (opts && opts.site) || '';
+  const hasSite = arr => !!site && arr.some(r => domainMatches(r.domain, site));
+
+  let best = null, lastErr = null;
   for (let i = 0; i < rungs.length; i++){
     const rung = rungs[i];
     let data;
@@ -9769,14 +9788,19 @@ async function seoOrganicLadder(keyword, p, region, opts){
     }
     const out = seoNormalizeDfsOrganic(data);
     out.precision = rung.precision;
-    if (out.organic.length) return out;
-    /* A clean response with nothing in it is a real answer, but it is also
-       what a half-failed scrape looks like, so the next rung still gets a
-       turn - and if they all come back empty, this is what we report. */
-    if (!emptyResult) emptyResult = out;
+    out.partial = !!data.__partial;
+    out.partialNote = data.__partial || null;
+
+    /* Found it - nothing further to ask. */
+    if (hasSite(out.organic)) return out;
+    /* Didn't find it, and the whole SERP was read - that's a real absence. */
+    if (out.organic.length && !out.partial) return out;
+    /* Didn't find it and pages were missing: the next rung gets a turn,
+       because the site may well be on a page that never arrived. */
+    if (!best || out.organic.length > best.organic.length) best = out;
     if (i < rungs.length - 1) await seoDelay(900);
   }
-  if (emptyResult) return emptyResult;
+  if (best) return best;
   const msg = lastErr && lastErr.message ? lastErr.message : 'no response';
   const err = new Error('Google couldn\u2019t be read for this keyword right now (' + msg + '). ' +
     'Open the live search from this row to check it by hand, or scan again in a few minutes.');
@@ -9804,7 +9828,7 @@ async function seoScanOne(client, kw, loc){
      open the search yourself and see what is actually there. */
   loc.sourceUrl = buildScanUrl(kw.text, g.lat, g.lng, {hl:region.hl, gl:region.gl, depth, surface:'web'});
   try{
-    const data = await seoOrganicLadder(kw.text, {lat:g.lat, lng:g.lng}, region, {depth});
+    const data = await seoOrganicLadder(kw.text, {lat:g.lat, lng:g.lng}, region, {depth, site: client.website});
     const organic = data.organic || [];
     let found = null, idx = -1;
     for (let i = 0; i < organic.length; i++){
@@ -9824,10 +9848,14 @@ async function seoScanOne(client, kw, loc){
        at a glance: three results read means the scrape failed, a hundred
        results read with familiar competitors in them means the site really
        isn't there. */
-    if (found){ loc.readCount = null; loc.topDomains = null; }
+    if (found){ loc.readCount = null; loc.topDomains = null; loc.partial = false; }
     else {
       loc.readCount = organic.length;
       loc.topDomains = organic.slice(0, 3).map(r => r.domain).filter(Boolean);
+      /* A miss on an incomplete read is a weaker claim than a miss on a
+         full one, and the row says so rather than printing a confident
+         100+ over a SERP that was never fully fetched. */
+      loc.partial = !!data.partial;
     }
     loc.checkedAt = Date.now();
     loc.manual = false;
@@ -10683,6 +10711,9 @@ function seoLocGroupRow(c, k, loc){
         ', none on ' + esc(c.website || 'this site');
       if (loc.topDomains && loc.topDomains.length){
         miss += ' <span title="The results that were read, in order">(' + esc(loc.topDomains.join(', ')) + '\u2026)</span>';
+      }
+      if (loc.partial){
+        miss += ' <b title="Google didn\u2019t hand over every page of results this time, so the site could be on one of the pages that never arrived. Open the live search to check, or scan again.">\u2014 incomplete read, treat this with suspicion</b>';
       }
     }
     statusEl.innerHTML = esc(fmtWhen(loc.checkedAt)) +

@@ -9386,7 +9386,7 @@ function blankSeoLocation(label, regionIdx){
   return {
     id: uid(), label: label || '', regionIdx: regionIdx || 0, lat:null, lng:null,
     rank:null, prevRank:null, matchedTitle:null, matchedDomain:null, sourceUrl:null,
-    checkedAt:null, manual:false, error:null, precision:null,
+    checkedAt:null, manual:false, error:null, precision:null, matchedBy:null,
     readCount:null, topDomains:null, partial:false, history:[]
   };
 }
@@ -9677,6 +9677,70 @@ const SEO_SERP_ENDPOINTS = {
   regular:  'https://api.dataforseo.com/v3/serp/google/organic/live/regular'
 };
 
+/* ==========================================================================
+   RECOGNISING THE CLIENT IN A SET OF RESULTS
+
+   Matching on the website field alone is brittle. It fails whenever the
+   field holds a slightly different spelling from the one Google indexed - a
+   .com against a .ca, a stale domain, a blank left over from an import - and
+   when it fails the client is reported as not ranking at all, which is the
+   most alarming possible way for a typo to show up.
+
+   So a result is recognised three ways, strongest first, and how it matched
+   is recorded rather than flattened away:
+
+     site   the domain is the one on the client record. Unarguable.
+     brand  the domain IS the client's name - westwoodestates.ca for
+            Westwood Estates. Their site under a spelling the record didn't
+            have, which is still their site.
+     name   the page title carries the client's name on some other domain.
+            The weakest of the three, only consulted when the first two find
+            nothing anywhere in the results, never trusted on a directory,
+            and always labelled in the row so nobody mistakes it for proof.
+   ========================================================================== */
+
+/* Pages on these carry a business's name without belonging to it, so a title
+   match there says nothing about the client's own ranking. */
+const SEO_THIRD_PARTY = /(?:^|\.)(?:facebook|instagram|linkedin|x|twitter|yelp|yellowpages|weddingwire|theknot|zola|eventective|wedding-spot|tripadvisor|houzz|homestars|kijiji|indeed|amazon|ebay|wikipedia|pinterest|youtube|bbb|mapquest|glassdoor|yellowpages|canada411|foursquare)\./i;
+
+/* westwoodestates.ca -> westwoodestates, and bakery.co.uk -> bakery */
+function seoDomainLabel(domain){
+  const parts = String(domain || '').toLowerCase().split('.').filter(Boolean);
+  if (!parts.length) return '';
+  if (parts.length >= 3 && /^(?:co|com|net|org|gov|ac|edu)$/.test(parts[parts.length - 2])) return parts[parts.length - 3];
+  return parts.length >= 2 ? parts[parts.length - 2] : parts[0];
+}
+/* Is this domain the client's name written as a domain? Compared on the
+   front of the label rather than anywhere inside it, so "redeerdental" isn't
+   claimed by a client called Dental. Short names are held to an exact match
+   for the same reason. */
+function seoBrandMatchesDomain(name, domain){
+  const label = seoDomainLabel(domain).replace(/[^a-z0-9]/g, '');
+  const joined = nameTokens(name).join('');
+  if (!label || !joined) return false;
+  if (label === joined) return true;
+  if (joined.length >= 9 && label.indexOf(joined) === 0) return true;
+  if (label.length >= 9 && joined.indexOf(label) === 0) return true;
+  return false;
+}
+function seoIdentifyResult(r, client){
+  if (client.website && domainMatches(r.domain, client.website)) return 'site';
+  if (client.name && seoBrandMatchesDomain(client.name, r.domain)) return 'brand';
+  return null;
+}
+function seoTitleMatchesResult(r, client){
+  if (!client.name || !r.title) return false;
+  if (SEO_THIRD_PARTY.test('.' + String(r.domain || '') + '.')) return false;
+  const toks = nameTokens(client.name);
+  /* A one-word client name is not enough to claim a stranger's page. Called
+     "Westwood", this rule would otherwise hand you Westwood College of
+     Design's ranking; called "Dental", it would hand you every dentist in
+     the province. Two distinctive words, all of them present, or nothing. */
+  if (toks.length < 2) return false;
+  const title = normName(r.title);
+  return toks.every(t => title.indexOf(t) !== -1) && nameMatches(r.title, client.name);
+}
+
 /* Posts one shaped task and hands back the raw response. Deliberately its
    own function rather than a change to dfsQuery(), which the whole GBP grid
    depends on and which is working. */
@@ -9769,8 +9833,8 @@ async function seoOrganicLadder(keyword, p, region, opts){
      another call: a rung that already found it is finished, however partial
      the read was, and a rung that didn't find it in an incomplete read has
      not actually answered the question yet. */
-  const site = (opts && opts.site) || '';
-  const hasSite = arr => !!site && arr.some(r => domainMatches(r.domain, site));
+  const match = (opts && opts.match) || null;
+  const hasSite = arr => !!match && arr.some(match);
 
   let best = null, lastErr = null;
   for (let i = 0; i < rungs.length; i++){
@@ -9828,11 +9892,23 @@ async function seoScanOne(client, kw, loc){
      open the search yourself and see what is actually there. */
   loc.sourceUrl = buildScanUrl(kw.text, g.lat, g.lng, {hl:region.hl, gl:region.gl, depth, surface:'web'});
   try{
-    const data = await seoOrganicLadder(kw.text, {lat:g.lat, lng:g.lng}, region, {depth, site: client.website});
+    const data = await seoOrganicLadder(kw.text, {lat:g.lat, lng:g.lng}, region, {
+      depth,
+      match: r => !!seoIdentifyResult(r, client) || seoTitleMatchesResult(r, client)
+    });
     const organic = data.organic || [];
-    let found = null, idx = -1;
+    let found = null, idx = -1, how = null;
+    /* Domain first, across the whole set - a real match further down beats a
+       name that happens to appear near the top. */
     for (let i = 0; i < organic.length; i++){
-      if (domainMatches(organic[i].domain, client.website)){ found = organic[i]; idx = i; break; }
+      const m = seoIdentifyResult(organic[i], client);
+      if (m){ found = organic[i]; idx = i; how = m; break; }
+    }
+    /* Only if nothing on this client's own domain was found anywhere. */
+    if (!found){
+      for (let i = 0; i < organic.length; i++){
+        if (seoTitleMatchesResult(organic[i], client)){ found = organic[i]; idx = i; how = 'name'; break; }
+      }
     }
     loc.prevRank = loc.rank;
     // Prefer the provider's own authoritative organic position over our
@@ -9840,6 +9916,9 @@ async function seoScanOne(client, kw, loc){
     loc.rank = found ? (found.position != null ? found.position : idx + 1) : 0;
     loc.matchedTitle = found ? found.title : null;
     loc.matchedDomain = found ? found.domain : null;
+    /* 'site' needs no explanation. Anything else does, and the row gives it
+       one rather than presenting a guess as a measurement. */
+    loc.matchedBy = found ? how : null;
     /* Which shape of request actually answered. 'country' means the pin was
        refused and this is a nationwide reading, not a local one. */
     loc.precision = data.precision || 'coordinate';
@@ -10716,9 +10795,20 @@ function seoLocGroupRow(c, k, loc){
         miss += ' <b title="Google didn\u2019t hand over every page of results this time, so the site could be on one of the pages that never arrived. Open the live search to check, or scan again.">\u2014 incomplete read, treat this with suspicion</b>';
       }
     }
+    /* How the result was recognised, whenever that wasn't simply the domain
+       on the client record. */
+    let via = '';
+    if (loc.rank > 0 && loc.matchedBy === 'brand'){
+      via = ' \u00b7 <b title="The ranking page is on ' + esc(loc.matchedDomain || '') +
+        ', which is this client\u2019s name as a domain. Worth putting that domain on the client record.">matched ' +
+        esc(loc.matchedDomain || 'their domain') + ' by name</b>';
+    } else if (loc.rank > 0 && loc.matchedBy === 'name'){
+      via = ' \u00b7 <b title="Nothing on this client\u2019s own domain was in the results, but this page carries their name. Check it is actually theirs before reporting this position.">matched by page title on ' +
+        esc(loc.matchedDomain || 'another domain') + ' \u2014 worth confirming</b>';
+    }
     statusEl.innerHTML = esc(fmtWhen(loc.checkedAt)) +
       (loc.precision === 'country' ? ' \u00b7 <b title="The pinned search was refused, so this position was read for the whole country instead of from this city.">country-wide reading</b>' : '') +
-      miss +
+      via + miss +
       ' \u00b7 <a href="' + esc(loc.sourceUrl) + '" target="_blank" rel="noopener">view the search</a>';
     const copyLinkBtn = document.createElement('button');
     copyLinkBtn.type = 'button';

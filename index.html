@@ -2372,6 +2372,12 @@ body.report-mode{
   --aa-ink-2:#56646f;
   --aa-ink-3:#8795a1;
 
+  /* The grey AgencyAnalytics sets its big dashboard numerals in — sampled
+     straight off the "Ranking Average" card, which is a flat neutral #555,
+     not the blue-grey the rest of this theme uses. At 50px+ the near-black
+     --aa-ink reads as a much heavier weight than it actually is. */
+  --aa-num:#555555;
+
   /* The published report draws from the same five-band scale as the tool,
      so a client comparing the report against a screenshot sees one colour
      language, not two. */
@@ -2429,8 +2435,8 @@ body.report-mode{background:var(--aa-bg);}
 .kwr-root .kwr-stat.is-on{border-color:#c3ced8; background:var(--aa-surface-2); box-shadow:inset 0 0 0 1px rgba(38,49,60,.04);}
 .kwr-root .kwr-stat.is-on::before{opacity:1; width:6px;}
 .kwr-root .kwr-stat b{
-  display:block; font-family:var(--display); font-size:72px; font-weight:600;
-  letter-spacing:-.045em; color:var(--aa-ink); line-height:.95;
+  display:block; font-family:var(--display); font-size:52px; font-weight:600;
+  letter-spacing:-.02em; color:var(--aa-num); line-height:1;
 }
 .kwr-root .kwr-stat span{
   display:block; font-size:11.5px; font-weight:700; letter-spacing:.11em; text-transform:uppercase;
@@ -2681,7 +2687,7 @@ body.report-mode{background:var(--aa-bg);}
 @media (max-width:820px){
   .kwr-root .kwr-stats{grid-template-columns:1fr;}
   .kwr-root .kwr-stat{padding:22px 20px 22px 24px; min-height:150px;}
-  .kwr-root .kwr-stat b{font-size:54px;}
+  .kwr-root .kwr-stat b{font-size:42px;}
   .kwr-root .kwr-stat span{margin-top:10px;}
   .kwr-root .kwr-stat span.kwr-stat-hint{display:none;}
   .kwr-dist-body{grid-template-columns:1fr;}

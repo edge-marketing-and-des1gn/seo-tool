@@ -2404,7 +2404,13 @@ body.report-mode{background:var(--aa-bg);}
 .kwr-root .kwr-head{
   background:var(--aa-surface); border:1px solid var(--aa-line); border-radius:10px;
   box-shadow:0 1px 2px rgba(38,49,60,.05); padding:18px 20px; margin-bottom:12px; gap:14px;
+  justify-content:center; text-align:center;
 }
+/* The header is a flex row (logo · text · snapshot stamp) and the text block
+   claimed all the leftover space, which pinned the title hard left even when
+   it was the only thing in the row. Letting it size to its content and
+   centring the row puts the title in the middle of the card. */
+.kwr-root .kwr-head-text{flex:0 1 auto; min-width:0;}
 .kwr-root .kwr-title{font-family:var(--display); font-size:20px; font-weight:600; color:var(--aa-ink); letter-spacing:-.02em;}
 .kwr-root .kwr-sub{font-size:12.5px; color:var(--aa-ink-2);}
 .kwr-root .kwr-logo{width:42px; height:42px; border-radius:8px; border-color:var(--aa-line); background:var(--aa-surface-2);}

@@ -2418,21 +2418,27 @@ body.report-mode{background:var(--aa-bg);}
 .kwr-root .kwr-stat{
   position:relative; background:var(--aa-surface); border:1px solid var(--aa-line);
   border-radius:10px; box-shadow:0 1px 2px rgba(38,49,60,.05);
-  padding:30px 28px 30px 32px; overflow:hidden; min-height:208px;
-  display:flex; flex-direction:column; justify-content:center; align-items:flex-start;
-  cursor:pointer; text-align:left; font-family:var(--ui); appearance:none;
+  padding:30px 28px; overflow:hidden; min-height:208px;
+  display:flex; flex-direction:column; justify-content:center; align-items:center;
+  cursor:pointer; text-align:center; font-family:var(--ui); appearance:none;
   transition:border-color .16s var(--ease), box-shadow .16s var(--ease), transform .16s var(--ease);
 }
 .kwr-root .kwr-stat::before{
   content:''; position:absolute; left:0; top:0; bottom:0; width:4px;
   background:var(--aa-none); opacity:.55; transition:opacity .16s var(--ease);
 }
-.kwr-root .kwr-stat[data-filter="all"]::before{background:var(--aa-ink-3);}
+/* "Keywords tracked" is the whole list, not a slice of it, so it gets no
+   accent edge — the bar is the band-colour language, and a grey bar on the
+   total just reads as a fourth band that doesn't exist. */
+.kwr-root .kwr-stat[data-filter="all"]::before{display:none;}
 .kwr-root .kwr-stat[data-filter="loc"]::before{background:var(--aa-t20);}
 .kwr-root .kwr-stat[data-filter="t3"]::before{background:var(--aa-t3);}
 .kwr-root .kwr-stat:hover{transform:none; border-color:#cfd8e0; box-shadow:0 2px 6px rgba(38,49,60,.09);}
 .kwr-root .kwr-stat:focus-visible{outline:none; box-shadow:var(--aa-focus);}
-.kwr-root .kwr-stat.is-on{border-color:#c3ced8; background:var(--aa-surface-2); box-shadow:inset 0 0 0 1px rgba(38,49,60,.04);}
+/* Active filter is signalled by the border and the accent edge, never by a
+   fill — these cards stay white so they read as report chrome rather than
+   as something switched on. */
+.kwr-root .kwr-stat.is-on{border-color:#c3ced8; background:var(--aa-surface); box-shadow:inset 0 0 0 1px rgba(38,49,60,.04);}
 .kwr-root .kwr-stat.is-on::before{opacity:1; width:6px;}
 .kwr-root .kwr-stat b{
   display:block; font-family:var(--display); font-size:52px; font-weight:600;
@@ -2440,7 +2446,7 @@ body.report-mode{background:var(--aa-bg);}
 }
 .kwr-root .kwr-stat span{
   display:block; font-size:11.5px; font-weight:700; letter-spacing:.11em; text-transform:uppercase;
-  color:var(--aa-ink-2); margin-top:14px;
+  color:var(--aa-ink-2); margin-top:14px; text-indent:.11em;
 }
 .kwr-root .kwr-stat.good b{color:var(--aa-t3);}
 .kwr-root .kwr-stat span.kwr-stat-hint{
@@ -2686,7 +2692,7 @@ body.report-mode{background:var(--aa-bg);}
 }
 @media (max-width:820px){
   .kwr-root .kwr-stats{grid-template-columns:1fr;}
-  .kwr-root .kwr-stat{padding:22px 20px 22px 24px; min-height:150px;}
+  .kwr-root .kwr-stat{padding:22px 20px; min-height:150px;}
   .kwr-root .kwr-stat b{font-size:42px;}
   .kwr-root .kwr-stat span{margin-top:10px;}
   .kwr-root .kwr-stat span.kwr-stat-hint{display:none;}

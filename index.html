@@ -2475,11 +2475,13 @@ body.report-mode{background:var(--aa-bg);}
 .kwr-dist-body{display:grid; grid-template-columns:172px 1fr; gap:0;}
 .kwr-hero{
   padding:20px 16px; border-right:1px solid var(--aa-line-2); text-align:center;
-  display:flex; flex-direction:column; justify-content:center; background:var(--aa-surface-2);
+  display:flex; flex-direction:column; justify-content:center; background:var(--aa-surface);
 }
+/* Same numeral treatment as the three summary cards above — size, tracking
+   and AA's #555 — so the report has one number style, not two. */
 .kwr-hero-num{
-  font-family:var(--display); font-size:46px; font-weight:600; letter-spacing:-.04em;
-  color:var(--aa-ink); line-height:1;
+  font-family:var(--display); font-size:52px; font-weight:600; letter-spacing:-.02em;
+  color:var(--aa-num); line-height:1;
 }
 .kwr-hero-num sup{font-size:.42em; font-weight:600; letter-spacing:0; margin-left:1px; top:-.85em;}
 .kwr-hero-lbl{
@@ -2698,7 +2700,7 @@ body.report-mode{background:var(--aa-bg);}
   .kwr-root .kwr-stat span.kwr-stat-hint{display:none;}
   .kwr-dist-body{grid-template-columns:1fr;}
   .kwr-hero{border-right:none; border-bottom:1px solid var(--aa-line-2); padding:16px;}
-  .kwr-hero-num{font-size:38px;}
+  .kwr-hero-num{font-size:42px;}
   .kwr-track, .kwr-track-pad{display:none;}
   .kwr-band{grid-template-columns:78px 1fr 52px;}
   .kwr-root .kwr-meta{padding-left:0;}

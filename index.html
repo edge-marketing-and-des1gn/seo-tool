@@ -711,6 +711,14 @@ kbd{font-family:var(--mono);font-size:10.5px;background:#fff;border:1px solid va
 .conf.fuzzy{background:var(--brand);}
 .conf.manual{background:var(--console-3);}
 
+/* the reading behind a number: the view it came from, and the list itself */
+.pop-read{font-family:var(--mono);font-size:9.5px;color:var(--ink-3);letter-spacing:-.01em;margin:5px 0 3px;line-height:1.55;}
+.pop-read b{color:var(--brand-deep);font-weight:700;}
+.pop-warn{font-size:10.5px;color:var(--ink-3);margin-top:7px;line-height:1.5;}
+.pop-warn.stale{color:var(--brand-deep);}
+.leaflet-popup-content ol li.hit{background:var(--brand-wash);border-radius:4px;margin-left:-4px;padding-left:4px;}
+.leaflet-popup-content ol li.hit a{font-weight:700;color:var(--brand-deep);}
+
 /* progress bar during scan */
 .prog{height:4px;background:var(--line-2);border-radius:20px;overflow:hidden;margin-top:11px;}
 .prog i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--brand-hi),var(--brand-deep));border-radius:20px;transition:width .3s var(--ease);}
@@ -4401,6 +4409,19 @@ function uuleLatLng(lat,lng,radius){
 }
 const uuleForUrl = u => u.slice(0,2) + u.slice(2).replace(/\+/g,'%2B').replace(/\//g,'%2F').replace(/=/g,'%3D');
 
+/* The radius inside a uule is metres, and it is the whole reason a link can
+   disagree with a reading. A map view at zoom z spans
+   1000 * 156543.03392 * cos(lat) / 2^z metres across a ~1000px viewport, so
+   half of that is the radius that shows Google the same patch of ground the
+   API was shown. A fixed radius cannot do that: at 14z it is roughly 3 km,
+   at 10z roughly 47 km, and asking for the wrong one is asking a different
+   question. Clamped at 500 m because Google ignores anything tighter. */
+function zoomRadius(zoom, lat){
+  const z = Math.max(1, Math.min(21, Number(zoom) || 14));
+  const perPx = 156543.03392 * Math.cos((Number(lat) || 0) * Math.PI / 180) / Math.pow(2, z);
+  return String(Math.max(500, Math.round(perPx * 1000 / 2)));
+}
+
 /* ---------- geocoding ----------
    One lookup serves the whole app. addressdetails=1 is requested so the same
    response can also be folded into the "City,Region,Country" shape DataForSEO
@@ -5745,19 +5766,103 @@ function gridPoints(lat, lng, rows, spacingKm){
   return pts;
 }
 function buildScanUrl(keyword, lat, lng, opts){
+  const o = opts || {};
+  /* radius follows the zoom unless one is handed in explicitly */
+  const radius = o.radius || zoomRadius(o.zoom, lat);
   const p = [
     'q=' + encodeURIComponent(keyword),
-    'hl=' + encodeURIComponent(opts.hl),
-    'gl=' + encodeURIComponent(opts.gl),
+    'hl=' + encodeURIComponent(o.hl),
+    'gl=' + encodeURIComponent(o.gl),
     'ie=utf-8','oe=utf-8','pws=0',
-    'uule=' + uuleForUrl(uuleLatLng(lat, lng, '93000')),
-    'num=' + (opts.depth || 20)
+    'uule=' + uuleForUrl(uuleLatLng(lat, lng, radius))
   ];
-  if (opts.surface === 'local') p.push('tbm=lcl');
+  /* Google stopped honouring num= in September 2025 and now serves ten
+     results whatever it is set to. Sending num=100 made an opened page look
+     like it contradicted a reading that had legitimately gone deeper, so it
+     is only sent while it is still inside what Google will actually show. */
+  const depth = Number(o.depth) || 0;
+  if (depth && depth <= 20) p.push('num=' + depth);
+  if (o.surface === 'local') p.push('tbm=lcl');
   return 'https://www.google.com/search?' + p.join('&');
 }
 const mapsUrl = (kw, lat, lng, hl, zoom) =>
   'https://www.google.com/maps/search/' + encodeURIComponent(kw) + '/@' + lat.toFixed(7) + ',' + lng.toFixed(7) + ',' + (zoom || 14) + 'z?hl=' + encodeURIComponent(hl);
+
+/* --------------------------------------------------------------------------
+   KEEPING THE NUMBER AND THE LINK ON THE SAME QUERY
+
+   resolvePoint() climbs a ladder of up to five views, and the number it
+   settles on can come from any rung of it. The links used to be frozen at
+   grid-build time from the base rung alone, so a point widened to 10z on the
+   web surface still offered a 14z map-pack link: two different questions, two
+   different answers, and the reading blamed for it.
+
+   So the winning rung is now recorded on the point as p.read, and every link
+   is rebuilt from that record at the moment it is clicked. Building it late
+   also keeps the timestamp inside the uule current - a stale one is quietly
+   discarded by Google, which is why links off an old saved scan drifted worst.
+-------------------------------------------------------------------------- */
+function regionOf(scan){
+  if (!scan) return REGIONS[0];
+  if (scan.regionIdx != null && REGIONS[scan.regionIdx]) return REGIONS[scan.regionIdx];
+  return REGIONS.find(r => r.label === scan.region) || REGIONS[0];
+}
+function readSpec(scan, p){
+  if (p && p.read) return p.read;
+  const region = regionOf(scan);
+  return {
+    surface: (scan && scan.surface) || 'local',
+    zoom: (scan && scan.zoom) || 14,
+    depth: (scan && scan.depth) || 20,
+    hl: region.hl, gl: region.gl,
+    pending: true
+  };
+}
+function pointSearchUrl(scan, p){
+  const s = readSpec(scan, p);
+  return buildScanUrl(scan.keyword, p.lat, p.lng, {
+    hl: s.hl, gl: s.gl, surface: s.surface, depth: s.depth,
+    zoom: s.zoom, radius: s.radius
+  });
+}
+function pointMapsUrl(scan, p){
+  const s = readSpec(scan, p);
+  return mapsUrl(scan.keyword, p.lat, p.lng, s.hl, s.zoom);
+}
+/* Written in the same breath as the rank itself, so the two can never come
+   to describe different searches. */
+function recordRead(p, step, region, read){
+  const zoom = (step && step.zoom) || 14;
+  return {
+    surface: (step && step.surface) || 'local',
+    zoom: zoom,
+    radius: zoomRadius(zoom, p.lat),
+    depth: state.settings.depth || 100,
+    hl: region.hl, gl: region.gl,
+    list: (read && read.listKind) || null,
+    count: (read && read.names) ? read.names.length : 0,
+    adCount: (read && read.adNames) ? read.adNames.length : 0,
+    ts: Date.now()
+  };
+}
+/* Which list a position was counted in. On the web surface Google may answer
+   with a local pack instead of blue links, and a pack slot of 3 next to an
+   organic position of 3 are not the same fact. */
+const READ_LIST_WORDS = {
+  maps: 'the Google Maps results',
+  pack: 'the local pack on the web results',
+  organic: 'the organic web results',
+  paste: 'the page you pasted',
+  page: 'the page the relay returned'
+};
+function readCaption(r){
+  if (!r) return '';
+  const bits = [(r.surface === 'web' ? 'web' : 'map pack') + ' \u00b7 ' + r.zoom + 'z'];
+  if (r.radius) bits.push('~' + (Math.round(Number(r.radius) / 100) / 10) + ' km');
+  bits.push(r.count + ' listing' + (r.count === 1 ? '' : 's'));
+  if (r.ts) bits.push(new Date(r.ts).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}));
+  return bits.join(' \u00b7 ');
+}
 
 /* ==========================================================================
    MAPS
@@ -6020,6 +6125,21 @@ function dotPopup(p, idx, scan){
   r.textContent = p.rank == null ? 'Not read yet' : (p.rank === 0 ? 'Not in the results read here' : '#' + p.rank);
   d.appendChild(r);
 
+  /* What this number is a number in. Without it, a pack slot of 3 and an
+     organic position of 3 look like the same claim. */
+  if (p.read){
+    const rd = document.createElement('div');
+    rd.className = 'pop-read';
+    rd.textContent = readCaption(p.read);
+    d.appendChild(rd);
+    if (p.rank >= 1 && READ_LIST_WORDS[p.read.list]){
+      const w = document.createElement('div');
+      w.className = 'pop-read';
+      w.textContent = 'Counted in ' + READ_LIST_WORDS[p.read.list] + '.';
+      d.appendChild(w);
+    }
+  }
+
   if (p.matched){
     const m = document.createElement('div');
     m.className = 'pop-line';
@@ -6083,9 +6203,14 @@ function dotPopup(p, idx, scan){
   co.textContent = p.lat.toFixed(5) + ', ' + p.lng.toFixed(5);
   d.appendChild(co);
 
-  const links = (scan.surface === 'local')
-    ? [['Open the map results that were read', p.mapsUrl], ['Open the local finder page', p.url]]
-    : [['Open this exact search', p.url], ['Open Google Maps here', p.mapsUrl]];
+  /* Rebuilt from the rung that produced the number, not from the rung the
+     grid was built on, and rebuilt now so the uule timestamp is current. */
+  const searchHref = pointSearchUrl(scan, p);
+  const mapsHref = pointMapsUrl(scan, p);
+  const readSurface = (p.read && p.read.surface) || scan.surface;
+  const links = (readSurface === 'local')
+    ? [['Open the map results that were read', mapsHref], ['Open the local finder page', searchHref]]
+    : [['Open this exact search', searchHref], ['Open Google Maps here', mapsHref]];
   links.forEach(([txt, href]) => {
     const line = document.createElement('div');
     const a = document.createElement('a');
@@ -6093,11 +6218,16 @@ function dotPopup(p, idx, scan){
     line.appendChild(a); d.appendChild(line);
   });
 
+  /* The list below is the reading. The number above is an index into it, so
+     the two agree by construction - including after a manual pick, which
+     rewrites the index against this same array. A live Google tab cannot
+     make that promise: it is a fresh query, personalised to the browser
+     asking, minutes or weeks after this one. */
   if (p.names && p.names.length){
     d.appendChild(listBlock('Listings read here (' + p.names.length + ')', p.names, p.matched, (n, i) => {
       p.rank = i + 1; p.matched = n; p.matchConfidence = 'manual'; p.matchedViaAd = false;
       commitPointEdit(idx, scan);
-    }));
+    }, (p.rank >= 1 && !p.matchedViaAd) ? p.rank - 1 : null, p.rank >= 1 && !p.matchedViaAd));
   }
   if (p.adNames && p.adNames.length){
     d.appendChild(listBlock('Sponsored listings read here (' + p.adNames.length + ')', p.adNames, p.adMatched, (n, i) => {
@@ -6105,7 +6235,19 @@ function dotPopup(p, idx, scan){
       p.rank = (p.names ? p.names.length : 0) + i + 1;
       p.matched = n; p.matchConfidence = 'manual'; p.matchedViaAd = true;
       commitPointEdit(idx, scan);
-    }));
+    }, p.adRank ? p.adRank - 1 : null, !!p.matchedViaAd));
+  }
+
+  if (p.rank != null){
+    const note = document.createElement('div');
+    if (p.read){
+      note.className = 'pop-warn';
+      note.textContent = 'The link rebuilds the view this number came from. Google still tailors live results to the browser asking, so the list above is the record.';
+    } else {
+      note.className = 'pop-warn stale';
+      note.textContent = 'Read before the view was recorded, so the link may open a wider or narrower search than the number came from. Read it again to pin the two together.';
+    }
+    d.appendChild(note);
   }
 
   const acts = document.createElement('div');
@@ -6140,8 +6282,12 @@ function dotPopup(p, idx, scan){
   d.appendChild(acts);
   return d;
 }
-function listBlock(title, names, highlight, onPick){
+/* markIdx marks the row by its position rather than by its text. Matching on
+   the name put the marker on the wrong row whenever two listings shared a
+   title - common with chains - and made a correct reading look wrong. */
+function listBlock(title, names, highlight, onPick, markIdx, openByDefault){
   const det = document.createElement('details');
+  if (openByDefault) det.open = true;
   const sum = document.createElement('summary');
   sum.textContent = title;
   det.appendChild(sum);
@@ -6150,7 +6296,8 @@ function listBlock(title, names, highlight, onPick){
     const li = document.createElement('li');
     const a = document.createElement('a');
     a.href = '#'; a.textContent = n;
-    if (highlight && n === highlight) a.style.fontWeight = '700';
+    const isHit = (markIdx != null) ? (i === markIdx) : (highlight && n === highlight);
+    if (isHit) li.className = 'hit';
     a.addEventListener('click', e => { e.preventDefault(); onPick(n, i); });
     li.appendChild(a); ol.appendChild(li);
   });
@@ -6481,10 +6628,13 @@ function createScan(){
   const region = REGIONS[g.regionIdx] || REGIONS[0];
   const depth = state.settings.depth || 100;
   const zoom = g.zoom || 14;
-  const opts = {hl:region.hl, gl:region.gl, surface:g.surface, depth};
+  /* zoom travels with the options now, so the frozen URL a point starts life
+     with already matches the view it is about to be read at. Once it has been
+     read, p.read supersedes this and the link is rebuilt from that instead. */
+  const opts = {hl:region.hl, gl:region.gl, surface:g.surface, depth, zoom};
   const pts = gridPoints(g.center.lat, g.center.lng, g.gridSize, g.spacingKm).map(p => ({
     ...p, rank:null, matched:null, matchConfidence:null, matchedViaAd:false,
-    adRank:null, adMatched:null, names:[], adNames:[], sparse:false, error:null,
+    adRank:null, adMatched:null, names:[], adNames:[], sparse:false, error:null, read:null,
     url: buildScanUrl(kw.text, p.lat, p.lng, opts),
     mapsUrl: mapsUrl(kw.text, p.lat, p.lng, region.hl, zoom)
   }));
@@ -6713,7 +6863,7 @@ function providerQuery(keyword, p, region, surface, opts){
   const o = opts || {};
   const prov = state.settings.provider || 'dataforseo';
   if (prov === 'serper') return serperQuery(keyword, p, region, surface, o).then(normalizeSerper);
-  if (prov === 'direct') return directQuery(p);
+  if (prov === 'direct') return directQuery(keyword, p, region, surface, o);
   return dfsQuery(keyword, p, region, surface, o).then(d => normalizeDfs(d, surface));
 }
 
@@ -6784,13 +6934,16 @@ function normalizeDfs(data, surface){
   });
   if (surface === 'web'){
     const pack = items.filter(i => i.type === 'local_pack').map(pick).filter(x => x.title);
-    const organic = pack.length ? pack : items.filter(i => i.type === 'organic').map(pick).filter(x => x.title);
+    /* Which of the two lists answered matters as much as the position in it,
+       so it travels with the result instead of being inferred later. */
+    const usePack = pack.length > 0;
+    const organic = usePack ? pack : items.filter(i => i.type === 'organic').map(pick).filter(x => x.title);
     const ads = items.filter(i => i.type === 'paid').map(pick).filter(x => x.title);
-    return {organic, ads, corrected};
+    return {organic, ads, corrected, listKind: usePack ? 'pack' : 'organic'};
   }
   const organic = items.filter(i => (i.type === 'maps_search' || i.type === 'local_pack') && !i.is_paid).map(pick).filter(x => x.title);
   const ads = items.filter(i => i.is_paid || i.type === 'maps_paid').map(pick).filter(x => x.title);
-  return {organic, ads, corrected};
+  return {organic, ads, corrected, listKind: 'maps'};
 }
 
 async function serperQuery(keyword, p, region, surface, opts){
@@ -6838,10 +6991,11 @@ function normalizeSerper(data){
     phone: x.phoneNumber || x.phone || null,
     domain: x.link ? cleanDomain(x.link) : null
   })).filter(x => x.title);
-  const organic = places.length ? places : (data.organic || []).map(x => ({
+  const usePlaces = places.length > 0;
+  const organic = usePlaces ? places : (data.organic || []).map(x => ({
     title: x.title || '', cid:null, placeId:null, phone:null, domain: x.link ? cleanDomain(x.link) : null
   })).filter(x => x.title);
-  return {organic, ads};
+  return {organic, ads, listKind: usePlaces ? 'maps' : 'organic'};
 }
 
 /* relay mode — free, fragile, honest about it */
@@ -6861,9 +7015,17 @@ function htmlToText(html){
     .replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&nbsp;/g,' ')
     .split('\n').map(s => s.replace(/\s+/g,' ').trim()).filter(Boolean).join('\n');
 }
-async function directQuery(p){
+async function directQuery(keyword, p, region, surface, opts){
+  /* Built here rather than read off the point, so the page the relay fetches
+     and the page the point's link opens are produced by one function from one
+     set of inputs. */
+  const target = buildScanUrl(keyword, p.lat, p.lng, {
+    hl: region.hl, gl: region.gl, surface: surface,
+    depth: state.settings.depth || 20,
+    zoom: (opts && opts.zoom) || 14
+  });
   let res;
-  try{ res = await fetch(relayUrl(p.url), {headers:{Accept:'text/html'}}); }
+  try{ res = await fetch(relayUrl(target), {headers:{Accept:'text/html'}}); }
   catch(e){ throw new Error('the relay could not be reached — try the other one on step four'); }
   if (!res.ok) throw new Error('the relay returned HTTP ' + res.status);
   const html = await res.text();
@@ -6877,7 +7039,8 @@ async function directQuery(p){
   }
   return {
     organic: parsed.entries.filter(e => !e.ad).map(e => ({title:e.name, cid:null, placeId:null, phone:null, domain:null})),
-    ads: parsed.entries.filter(e => e.ad).map(e => ({title:e.name, cid:null, placeId:null, phone:null, domain:null}))
+    ads: parsed.entries.filter(e => e.ad).map(e => ({title:e.name, cid:null, placeId:null, phone:null, domain:null})),
+    listKind: 'page'
   };
 }
 
@@ -6906,7 +7069,8 @@ function readListings(results, target){
     rank: 0, matched: null, matchConfidence: null, matchedViaAd: false,
     adRank: null, adMatched: null,
     sparse: organic.length < SPARSE,
-    corrected: (results && results.corrected) || null
+    corrected: (results && results.corrected) || null,
+    listKind: (results && results.listKind) || null
   };
   for (let i = 0; i < organic.length; i++){
     const conf = identify(organic[i], target, strict);
@@ -6930,9 +7094,10 @@ function readListings(results, target){
   out.self = mine ? {rating:mine.rating, reviews:mine.reviews, category:mine.category} : null;
   return out;
 }
-function applyListings(p, results, target){
+function applyListings(p, results, target, step, region){
   Object.assign(p, readListings(results, target));
   p.verified = false; p.widened = false; p.attempts = null;
+  if (region) p.read = recordRead(p, step, region, p);
 }
 
 /* ---------------------------------------------------------------------------
@@ -6964,7 +7129,7 @@ async function resolvePoint(keyword, p, region, target, cfg){
   const deep = state.settings.deepVerify !== false && !relay;
   const ladder = relay ? [{surface, zoom: base}] : zoomLadder(base, surface);
   const attempts = [];
-  let chosen = null, widened = false, lastErr = null, reads = 0;
+  let chosen = null, chosenStep = null, widened = false, lastErr = null, reads = 0;
 
   for (let i = 0; i < ladder.length; i++){
     const step = ladder[i];
@@ -6983,8 +7148,8 @@ async function resolvePoint(keyword, p, region, target, cfg){
     reads++;
     attempts.push({surface: step.surface, zoom: step.zoom, listings: read.names.length, rank: read.rank});
     if (c.onStep) c.onStep(step, i, attempts[attempts.length - 1]);
-    if (!chosen || (chosen.rank === 0 && read.names.length > chosen.names.length)) chosen = read;
-    if (read.rank >= 1){ chosen = read; widened = i > 0; break; }
+    if (!chosen || (chosen.rank === 0 && read.names.length > chosen.names.length)){ chosen = read; chosenStep = step; }
+    if (read.rank >= 1){ chosen = read; chosenStep = step; widened = i > 0; break; }
     // Shallow mode still walks on when a view came back empty or threadbare — an
     // empty view is the usual cause of a false "not found", not proof of one.
     if (!deep && read.names.length >= SPARSE) break;
@@ -6995,6 +7160,9 @@ async function resolvePoint(keyword, p, region, target, cfg){
   p.attempts = attempts;
   p.widened = widened;
   p.verified = p.rank === 0 && reads > 1;
+  /* Same assignment as the rank: the rung that produced this number, so the
+     link can reproduce it exactly rather than approximate it. */
+  p.read = recordRead(p, chosenStep, region, chosen);
   p.error = null;
 }
 
@@ -7021,7 +7189,7 @@ function updateAssist(){
 $('openPointBtn').addEventListener('click', () => {
   if (!currentScan || currentIdx == null) return;
   lastFocused = 'single';
-  window.open(currentScan.points[currentIdx].url, '_blank', 'noopener');
+  window.open(pointSearchUrl(currentScan, currentScan.points[currentIdx]), '_blank', 'noopener');
 });
 $('skipPointBtn').addEventListener('click', () => {
   if (!currentScan || currentIdx == null) return;
@@ -7071,6 +7239,18 @@ function runPaste(fromGesture){
   p.sparse = res.organicNames.length < SPARSE;
   p.top = (res.organicDetail || []).slice(0, 3);
   p.self = (res.rank >= 1 && !res.viaAd) ? (res.organicDetail || [])[res.rank - 1] || null : null;
+  /* A pasted reading came off the page the point's own link opened, so it is
+     recorded against that same view and stays reproducible like any other. */
+  (function(){
+    const reg = regionOf(currentScan);
+    const z = currentScan.zoom || 14;
+    p.read = {
+      surface: currentScan.surface, zoom: z, radius: zoomRadius(z, p.lat),
+      depth: currentScan.depth || 20, hl: reg.hl, gl: reg.gl,
+      list: 'paste', count: res.organicNames.length, adCount: res.adNames.length,
+      ts: Date.now(), pasted: true
+    };
+  })();
   p.error = null;
   save();
 
@@ -7087,7 +7267,7 @@ function runPaste(fromGesture){
   if (currentIdx != null){
     msg += ' Next up: point ' + (currentIdx + 1) + '.';
     if (fromGesture && $('autoOpen').checked){
-      window.open(currentScan.points[currentIdx].url, '_blank', 'noopener');
+      window.open(pointSearchUrl(currentScan, currentScan.points[currentIdx]), '_blank', 'noopener');
       msg += ' It just opened in a new tab.';
     }
   } else { msg += ' The grid is complete.'; }
@@ -7313,9 +7493,18 @@ function comparePopup(p, idx, scan, gbps){
   co.textContent = p.lat.toFixed(5) + ', ' + p.lng.toFixed(5);
   d.appendChild(co);
 
+  if (p.read){
+    const rd = document.createElement('div');
+    rd.className = 'pop-read';
+    rd.textContent = readCaption(p.read) +
+      (READ_LIST_WORDS[p.read.list] ? ' \u00b7 counted in ' + READ_LIST_WORDS[p.read.list] : '');
+    d.appendChild(rd);
+  }
+
   const line = document.createElement('div');
   const a = document.createElement('a');
-  a.href = p.url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'Open this exact search';
+  a.href = pointSearchUrl(scan, p); a.target = '_blank'; a.rel = 'noopener';
+  a.textContent = 'Open this exact search';
   line.appendChild(a); d.appendChild(line);
 
   const acts = document.createElement('div');
@@ -7761,9 +7950,9 @@ function createCompareScan(){
   const region = REGIONS[regionIdx] || REGIONS[0];
   const depth = state.settings.depth || 100;
   const zoom = 14;
-  const opts = {hl:region.hl, gl:region.gl, surface, depth};
+  const opts = {hl:region.hl, gl:region.gl, surface, depth, zoom};
   const pts = gridPoints(lat, lng, rows, spacingKm).map(p => ({
-    ...p, results:null, error:null, sparse:false, names:[], adNames:[],
+    ...p, results:null, error:null, sparse:false, names:[], adNames:[], read:null,
     url: buildScanUrl(keyword, p.lat, p.lng, opts),
     mapsUrl: mapsUrl(keyword, p.lat, p.lng, region.hl, zoom)
   }));
@@ -7830,7 +8019,7 @@ async function resolveComparePoint(scan, p, region, gbps){
   const deep = state.settings.deepVerify !== false && !relay;
   const ladder = relay ? [{surface: scan.surface, zoom: base}] : zoomLadder(base, scan.surface);
   const attempts = [];
-  let best = null, lastErr = null, reads = 0;
+  let best = null, bestStep = null, bestRes = null, lastErr = null, reads = 0;
 
   for (let i = 0; i < ladder.length; i++){
     const step = ladder[i];
@@ -7854,14 +8043,17 @@ async function resolveComparePoint(scan, p, region, gbps){
     const hits = gbps.filter(g => probe.results[g.id] && probe.results[g.id].rank >= 1).length;
     attempts.push({surface: step.surface, zoom: step.zoom, listings: organic.length, hits});
     telemetry(TEL_CMP, {step: stepWording(attempts[attempts.length - 1], i) + ' \u00b7 ' + hits + ' of these profiles'});
-    if (!best || organic.length > (best.names || []).length) best = probe;
-    if (hits > 0){ best = probe; best.widened = i > 0; break; }
+    if (!best || organic.length > (best.names || []).length){ best = probe; bestStep = step; bestRes = res; }
+    if (hits > 0){ best = probe; bestStep = step; bestRes = res; best.widened = i > 0; break; }
     if (!deep && organic.length >= SPARSE) break;
   }
 
   if (!reads) throw (lastErr || new Error('no view of this point could be read'));
   Object.assign(p, best);
   p.attempts = attempts;
+  p.read = recordRead(p, bestStep, region, {
+    listKind: bestRes && bestRes.listKind, names: p.names, adNames: p.adNames
+  });
   p.error = null;
 }
 
@@ -7991,7 +8183,7 @@ function updateCompareAssist(){
 $('cmpOpenPointBtn').addEventListener('click', () => {
   if (!currentCompareScan || currentCompareIdx == null) return;
   lastFocused = 'compare';
-  window.open(currentCompareScan.points[currentCompareIdx].url, '_blank', 'noopener');
+  window.open(pointSearchUrl(currentCompareScan, currentCompareScan.points[currentCompareIdx]), '_blank', 'noopener');
 });
 $('cmpSkipPointBtn').addEventListener('click', () => {
   if (!currentCompareScan || currentCompareIdx == null) return;
@@ -8021,6 +8213,16 @@ function runComparePaste(fromGesture){
   const organic = parsed.organicNames.map(n => ({title:n, cid:null, placeId:null, phone:null, domain:null}));
   const ads = parsed.adNames.map(n => ({title:n, cid:null, placeId:null, phone:null, domain:null}));
   applyCompareListings(p, {organic, ads}, c.gbps);
+  (function(){
+    const reg = regionOf(currentCompareScan);
+    const z = currentCompareScan.zoom || 14;
+    p.read = {
+      surface: currentCompareScan.surface, zoom: z, radius: zoomRadius(z, p.lat),
+      depth: currentCompareScan.depth || 20, hl: reg.hl, gl: reg.gl,
+      list: 'paste', count: organic.length, adCount: ads.length,
+      ts: Date.now(), pasted: true
+    };
+  })();
   p.error = null;
   save();
 
@@ -8037,7 +8239,7 @@ function runComparePaste(fromGesture){
   if (currentCompareIdx != null){
     msg += ' Next up: point ' + (currentCompareIdx + 1) + '.';
     if (fromGesture && $('autoOpen').checked){
-      window.open(currentCompareScan.points[currentCompareIdx].url, '_blank', 'noopener');
+      window.open(pointSearchUrl(currentCompareScan, currentCompareScan.points[currentCompareIdx]), '_blank', 'noopener');
       msg += ' It just opened in a new tab.';
     }
   } else { msg += ' The grid is complete.'; }
@@ -9913,7 +10115,9 @@ async function seoScanOne(client, kw, loc){
      coordinate-pinned Google URL the Live SERP tool builds, and it is most
      useful precisely when the lookup fails - that is the moment you want to
      open the search yourself and see what is actually there. */
-  loc.sourceUrl = buildScanUrl(kw.text, g.lat, g.lng, {hl:region.hl, gl:region.gl, depth, surface:'web'});
+  /* City-wide on purpose, unlike a grid point - pinned explicitly so the
+     zoom-derived default used by the grid does not narrow it. */
+  loc.sourceUrl = buildScanUrl(kw.text, g.lat, g.lng, {hl:region.hl, gl:region.gl, depth, surface:'web', radius:'93000'});
   try{
     const data = await seoOrganicLadder(kw.text, {lat:g.lat, lng:g.lng}, region, {
       depth,

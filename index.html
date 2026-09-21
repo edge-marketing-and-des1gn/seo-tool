@@ -770,6 +770,32 @@ kbd{font-family:var(--mono);font-size:10.5px;background:#fff;border:1px solid va
 }
 .preview-box a{color:var(--brand-deep);}
 
+/* ---- result-page stepper -------------------------------------------------
+   Each button is a whole search of its own, pin and all, rather than a link
+   Google rebuilds for us. Styled as a segmented control so it reads as one
+   control with a current position, not ten loose buttons. ---------------- */
+.pager{
+  margin-top:14px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--r-md);
+  background:linear-gradient(180deg,var(--card) 0%,var(--card-2) 100%);
+}
+.pager-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:9px;flex-wrap:wrap;}
+.pager-title{font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;font-weight:700;color:var(--ink-2);}
+.pager-note{font-size:11px;color:var(--ink-3);}
+.pager-note.warn{color:var(--brand-deep);font-weight:600;}
+.pager-row{display:flex;gap:5px;flex-wrap:wrap;}
+.pager-btn{
+  min-width:34px;height:32px;padding:0 9px;border-radius:9px;cursor:pointer;
+  border:1px solid var(--line);background:var(--card);color:var(--ink-2);
+  font-family:var(--mono);font-size:12px;font-weight:600;
+  transition:background .16s ease,border-color .16s ease,color .16s ease,transform .16s ease,box-shadow .16s ease;
+}
+.pager-btn:hover{border-color:var(--brand);color:var(--brand-deep);background:var(--brand-wash);transform:translateY(-1px);}
+.pager-btn:active{transform:translateY(0);}
+.pager-btn.on{
+  background:linear-gradient(180deg,var(--brand-hi) 0%,var(--brand) 100%);
+  border-color:var(--brand-deep);color:#fff;
+  box-shadow:0 1px 2px rgba(20,28,36,.14),inset 0 1px 0 rgba(255,255,255,.28);
+}
 
 /* ---- live scan theatre (presentation only) ---- */
 @keyframes sonarOut{0%{transform:scale(.3);opacity:.9}70%{opacity:.35}100%{transform:scale(3.1);opacity:0}}
@@ -2728,6 +2754,213 @@ body.report-mode{background:var(--aa-bg);}
   .kwr-root .kwr-delta{width:auto;}
 }
 
+/* ============================================================================
+   ██  PREMIUM FINISH
+   ============================================================================
+   A refinement layer, not a redesign. It sits last in the sheet so it tunes
+   what is already here rather than replacing it, and it touches presentation
+   only — no layout is moved, no element is hidden, no behaviour changes.
+
+   The instrument metaphor stays. What changes is the quality of the light:
+
+   · surfaces are lit from above, with a vertical gradient and a hairline
+     highlight along the top edge, so a card reads as a physical panel rather
+     than a filled rectangle;
+   · shadows are layered — a tight contact shadow for the edge, a wide ambient
+     one for the lift — which is what separates an expensive interface from a
+     flat one more than any amount of colour;
+   · every figure is set in tabular numerals, so columns of ranks and
+     coordinates align to the digit and data reads as instrumentation;
+   · the orange is treated as a jewel accent: a gradient with a darker rim,
+     used sparingly, rather than a flat fill used everywhere.
+   ========================================================================= */
+
+:root{
+  /* Neutrals warmed by a few degrees and given more separation between steps.
+     The old greys were even but slightly cold, which reads as "default". */
+  --paper:#eef2f5;
+  --card:#ffffff;
+  --card-2:#f7f9fb;
+  --line:#e0e6ec;
+  --line-2:#edf1f5;
+
+  --ink:#161d25;
+  --ink-2:#51606d;
+  --ink-3:#8593a0;
+
+  /* A deeper, slightly richer console. More contrast against the paper, and
+     the steps between its own layers are wider so panels read apart. */
+  --console:#151b22;
+  --console-2:#1f262f;
+  --console-3:#2a333d;
+  --console-line:#343f4b;
+  --console-ink:#eaeff4;
+  --console-ink-2:#93a2b1;
+
+  /* Layered light. Each step adds an ambient layer rather than just growing
+     the blur, which is what keeps a raised surface legible on white. */
+  --sh-1:0 1px 1px rgba(16,24,33,.04), 0 1px 3px -1px rgba(16,24,33,.06);
+  --sh-2:0 1px 2px rgba(16,24,33,.05), 0 8px 20px -10px rgba(16,24,33,.20), 0 2px 8px -4px rgba(16,24,33,.07);
+  --sh-3:0 2px 4px rgba(16,24,33,.06), 0 32px 68px -28px rgba(16,24,33,.34), 0 10px 26px -12px rgba(16,24,33,.16);
+  --ring:0 0 0 3.5px rgba(232,119,34,.15), 0 1px 2px rgba(16,24,33,.06);
+
+  /* The hairline that sits along the top of a lit surface. */
+  --lift:inset 0 1px 0 rgba(255,255,255,.9);
+  --lift-dark:inset 0 1px 0 rgba(255,255,255,.06);
+
+  /* One easing, used everywhere, with a touch more overshoot than before. */
+  --ease:cubic-bezier(.2,.75,.25,1);
+  --ease-out:cubic-bezier(.16,1,.3,1);
+}
+
+/* Numbers align to the digit. On a screen that is mostly ranks, coordinates
+   and counts this is the single change that most makes it read as an
+   instrument rather than a document. */
+body{
+  font-feature-settings:"tnum" 1,"cv05" 1,"ss01" 1;
+  font-variant-numeric:tabular-nums;
+  letter-spacing:-.005em;
+  background:
+    radial-gradient(1200px 600px at 78% -8%, rgba(232,119,34,.045), transparent 62%),
+    radial-gradient(900px 520px at 4% 102%, rgba(28,48,74,.05), transparent 60%),
+    var(--paper);
+  background-attachment:fixed;
+}
+.mono,code,.pop-coord,input.mono,input[inputmode=decimal],input[inputmode=numeric]{
+  font-variant-numeric:tabular-nums;
+}
+/* Display type is set tighter and heavier optically, the way a masthead is. */
+.crumbs .c-main,.modal h3,.rail-brand h1,.hub-brand h1,.seo-embed-empty h3,.seo-embed-name{
+  letter-spacing:-.021em;
+}
+h2,h3{letter-spacing:-.018em;}
+
+/* ---- surfaces -------------------------------------------------------- */
+.card{
+  background:linear-gradient(180deg,#fff 0%,var(--card-2) 190%);
+  border-color:var(--line);
+  box-shadow:var(--sh-2),var(--lift);
+}
+/* The workspace panels that are not .card but read as the same material. */
+.preview-box,.pager,.geo-out{
+  box-shadow:var(--lift);
+}
+
+/* ---- controls -------------------------------------------------------- */
+.btn{
+  background:linear-gradient(180deg,#fff 0%,#f4f7f9 100%);
+  border-color:var(--line);
+  box-shadow:var(--sh-1),var(--lift);
+  letter-spacing:-.005em;
+  transition:transform .18s var(--ease),box-shadow .18s var(--ease),
+             border-color .18s var(--ease),background .18s var(--ease),color .18s var(--ease);
+}
+.btn:hover{
+  border-color:#cbd5dd;
+  transform:translateY(-1.5px);
+  box-shadow:var(--sh-2),var(--lift);
+}
+.btn:active{transform:translateY(0);box-shadow:var(--sh-1),inset 0 1px 3px rgba(16,24,33,.09);}
+.btn:focus-visible{outline:none;box-shadow:var(--ring),var(--sh-1);}
+.btn-dark{
+  background:linear-gradient(180deg,#2b343f 0%,var(--console) 100%);
+  border-color:#0f141a;color:#fff;
+  box-shadow:var(--sh-2),var(--lift-dark);
+}
+.btn-dark:hover{background:linear-gradient(180deg,#35404c 0%,#1d242c 100%);border-color:#0f141a;}
+/* The primary action: a lit gradient with a darker rim, so it sits proud of
+   the page instead of being painted onto it. */
+.btn-go{
+  background:linear-gradient(180deg,#f6a34d 0%,var(--brand) 52%,#c9620f 100%);
+  box-shadow:
+    0 1px 2px rgba(146,66,8,.30),
+    0 10px 22px -10px rgba(184,87,15,.70),
+    inset 0 1px 0 rgba(255,255,255,.34),
+    inset 0 -1px 0 rgba(120,52,4,.30);
+  letter-spacing:.002em;
+}
+.btn-go:hover{
+  filter:none;
+  background:linear-gradient(180deg,#f8ad5c 0%,#ee7f28 52%,#c9620f 100%);
+  box-shadow:
+    0 1px 2px rgba(146,66,8,.32),
+    0 16px 30px -12px rgba(184,87,15,.78),
+    inset 0 1px 0 rgba(255,255,255,.40),
+    inset 0 -1px 0 rgba(120,52,4,.30);
+}
+.btn-go:active{transform:translateY(1px);box-shadow:0 1px 2px rgba(146,66,8,.4),inset 0 2px 5px rgba(120,52,4,.32);}
+
+/* ---- fields ---------------------------------------------------------- */
+input[type=text],input[type=password],select,textarea{
+  background:linear-gradient(180deg,#f8fafb 0%,#fff 100%);
+  border-color:var(--line);
+  box-shadow:inset 0 1px 2px rgba(16,24,33,.035);
+  transition:border-color .18s var(--ease),box-shadow .18s var(--ease),background .18s var(--ease);
+}
+input:hover,select:hover,textarea:hover{border-color:#c9d4dd;}
+input:focus,select:focus,textarea:focus{
+  background:#fff;border-color:var(--brand);
+  box-shadow:var(--ring),inset 0 1px 2px rgba(16,24,33,.02);
+}
+
+/* ---- the console rail ------------------------------------------------ */
+.rail{
+  background:
+    radial-gradient(520px 280px at 50% -6%, rgba(232,119,34,.10), transparent 64%),
+    linear-gradient(180deg,#1b222a 0%,#12171d 100%);
+  border-right:1px solid #0b0f13;
+  box-shadow:1px 0 0 rgba(255,255,255,.03) inset, 18px 0 40px -34px rgba(0,0,0,.7);
+}
+.rail-brand{border-bottom-color:rgba(255,255,255,.07);}
+.rail-mark{box-shadow:0 8px 20px -10px rgba(0,0,0,.75),inset 0 1px 0 rgba(255,255,255,.9);}
+
+/* ---- top bar: frosted, so content scrolling under it stays legible --- */
+.topbar{
+  background:rgba(255,255,255,.80);
+  -webkit-backdrop-filter:saturate(180%) blur(14px);
+  backdrop-filter:saturate(180%) blur(14px);
+  border-bottom:1px solid rgba(20,30,40,.08);
+  box-shadow:0 1px 0 rgba(255,255,255,.7) inset;
+}
+
+/* ---- data marks ------------------------------------------------------ */
+.rank-pill{
+  box-shadow:var(--lift),0 1px 1.5px rgba(16,24,33,.07);
+  letter-spacing:.005em;
+}
+.chip{transition:background .18s var(--ease),border-color .18s var(--ease),color .18s var(--ease),transform .18s var(--ease),box-shadow .18s var(--ease);}
+.chip:hover{transform:translateY(-1px);}
+
+/* ---- overlays -------------------------------------------------------- */
+.modal{
+  background:linear-gradient(180deg,#fff 0%,#fcfdfe 100%);
+  box-shadow:var(--sh-3),var(--lift);
+}
+
+/* ---- scrollbars: thinner, quieter, and they only darken on hover ----- */
+::-webkit-scrollbar{width:11px;height:11px;}
+::-webkit-scrollbar-thumb{
+  background:#c7d2da;border-radius:9px;border:3px solid transparent;background-clip:padding-box;
+}
+::-webkit-scrollbar-thumb:hover{background:#a8b7c2;background-clip:padding-box;}
+.rail ::-webkit-scrollbar-thumb{background:#313c48;background-clip:padding-box;}
+.rail ::-webkit-scrollbar-thumb:hover{background:#3f4c5a;background-clip:padding-box;}
+
+/* ---- focus: one ring, everywhere, and only for keyboard users -------- */
+:focus-visible{outline:none;box-shadow:var(--ring);}
+a:focus-visible{border-radius:5px;}
+
+/* The published report is a client-facing document, so it gets the same
+   material treatment rather than being left on the old flat palette. */
+.kwr-root .seo-lg-card,.kwr-panel,.kwr-locbar,.kwr-root .kwr-stat{
+  box-shadow:var(--sh-2),var(--lift);
+}
+.kwr-root .kwr-head{box-shadow:var(--sh-2),var(--lift);}
+
+@media (prefers-reduced-motion:reduce){
+  .btn:hover,.chip:hover{transform:none;}
+}
+
 /* Nothing interactive survives a print — the bands, chips and search box are
    controls, and a PDF that shows a filter the reader can't move is a bug. The
    filter state itself does carry through, so a report printed while filtered
@@ -3514,12 +3747,23 @@ body.report-mode{background:var(--aa-bg);}
               </div>
             </details>
             <button class="btn btn-go btn-full" id="goBtn">Open this search</button>
+            <!-- Page stepper. Google's own Next button rebuilds the query from
+                 its session and drops the uule, which is what snaps a pinned
+                 search back to wherever the browser really is. These open each
+                 page from a URL we build, so the pin survives to page ten. -->
+            <div class="pager" id="serpPager" style="display:none">
+              <div class="pager-head">
+                <span class="pager-title">Result page</span>
+                <span class="pager-note" id="serpPagerNote">the pin is carried on every page</span>
+              </div>
+              <div class="pager-row" id="serpPagerRow"></div>
+            </div>
             <div class="preview-box" id="preview" style="display:none"></div>
             <div class="pop-acts" id="previewActs" style="display:none">
               <button class="btn btn-sm" id="copyBtn">Copy link</button>
               <button class="btn btn-sm" id="openBtn">Open in a new tab</button>
             </div>
-            <div class="hint">For a clean, logged-out view, right-click the link and open it in a private window.</div>
+            <div class="hint">For a clean, logged-out view, right-click the link and open it in a private window. Use the page buttons above rather than Google's own <b>Next</b> &mdash; Google drops the location pin from its own pagination, these keep it.</div>
           </div>
         </div>
       </div>
@@ -4421,6 +4665,22 @@ function zoomRadius(zoom, lat){
   const perPx = 156543.03392 * Math.cos((Number(lat) || 0) * Math.PI / 180) / Math.pow(2, z);
   return String(Math.max(500, Math.round(perPx * 1000 / 2)));
 }
+/* The exact inverse, so a Maps link can be opened at the viewport the uule
+   described rather than at a rounded-off approximation of it. When a radius
+   was clamped up to 500 m the two are no longer inverses, so the recorded
+   zoom is trusted instead — clamping is the only case where it is the more
+   faithful of the two. Kept fractional: Google Maps honours 13.7z, and
+   rounding it to 14z is a visibly different patch of ground. */
+function radiusZoom(radius, lat, fallbackZoom){
+  const r = Number(radius);
+  const base = Math.max(1, Math.min(21, Number(fallbackZoom) || 14));
+  if (!isFinite(r) || r <= 0) return base;
+  if (r <= 500) return base;                      // clamped: the radius no longer describes the view
+  const perPx = (r * 2) / 1000;                   // metres per pixel across a ~1000px viewport
+  const z = Math.log2(156543.03392 * Math.cos((Number(lat) || 0) * Math.PI / 180) / perPx);
+  if (!isFinite(z)) return base;
+  return Math.round(Math.max(3, Math.min(21, z)) * 100) / 100;
+}
 
 /* ---------- geocoding ----------
    One lookup serves the whole app. addressdetails=1 is requested so the same
@@ -4617,6 +4877,13 @@ function migrateClient(c){
     c.gbps.forEach(g => {
       if (typeof g.phone !== 'string') g.phone = '';
       if (typeof g.website !== 'string') g.website = '';
+      /* Same treatment as phone and website. A profile that reached the
+         record without these - an older import, a hand-edited backup - put
+         the literal word "undefined" in the form field, because that is what
+         an undefined value becomes on the way into an input. Filling them in
+         only ever replaces a missing value; an existing one is left alone. */
+      if (typeof g.gbpLink !== 'string') g.gbpLink = '';
+      if (typeof g.bizName !== 'string') g.bizName = '';
       if (!Array.isArray(g.keywords)) g.keywords = [];
       if (!g.center) g.center = {lat:null,lng:null,label:''};
       if (!g.name) g.name = g.bizName || 'Profile';
@@ -5783,10 +6050,39 @@ function buildScanUrl(keyword, lat, lng, opts){
   const depth = Number(o.depth) || 0;
   if (depth && depth <= 20) p.push('num=' + depth);
   if (o.surface === 'local') p.push('tbm=lcl');
+  /* Page two onwards. Google's own Next button rebuilds the query from its
+     session and throws the uule away, which is exactly how a pinned search
+     snaps back to wherever the browser really is. Carrying start= on a URL
+     we build ourselves keeps every parameter — pin included — intact. */
+  const start = Number(o.start) || 0;
+  if (start > 0) p.push('start=' + start);
   return 'https://www.google.com/search?' + p.join('&');
 }
-const mapsUrl = (kw, lat, lng, hl, zoom) =>
-  'https://www.google.com/maps/search/' + encodeURIComponent(kw) + '/@' + lat.toFixed(7) + ',' + lng.toFixed(7) + ',' + (zoom || 14) + 'z?hl=' + encodeURIComponent(hl);
+/* --------------------------------------------------------------------------
+   The Maps link has to land on the same patch of ground the API was shown,
+   or the listings it draws are simply a different question's answer.
+
+   Three things were letting it drift:
+
+   · the zoom was rounded to whole numbers while the reading was pinned by a
+     radius in metres, so a view read at an effective 13.6z opened at 14z —
+     a visibly tighter map, and on the edge of a grid that is the difference
+     between eight listings and three;
+   · gl never travelled, so Maps answered in whatever country the browser
+     looked like it was in rather than the one that was scanned;
+   · hl was passed through whole, but Maps wants a bare language tag and
+     quietly ignores a regional one like pt-BR.
+
+   The coordinate is written at seven decimals because that is exactly what
+   went to the provider in location_coordinate — same string, same place. */
+function mapsUrl(kw, lat, lng, hl, zoom, gl, radius){
+  const z = radiusZoom(radius, lat, zoom);
+  const p = ['hl=' + encodeURIComponent((hl || 'en').split('-')[0])];
+  if (gl) p.push('gl=' + encodeURIComponent(String(gl).toLowerCase() === 'uk' ? 'gb' : gl));
+  return 'https://www.google.com/maps/search/' + encodeURIComponent(kw) +
+    '/@' + Number(lat).toFixed(7) + ',' + Number(lng).toFixed(7) + ',' + z + 'z' +
+    '?' + p.join('&');
+}
 
 /* --------------------------------------------------------------------------
    KEEPING THE NUMBER AND THE LINK ON THE SAME QUERY
@@ -5810,24 +6106,39 @@ function regionOf(scan){
 function readSpec(scan, p){
   if (p && p.read) return p.read;
   const region = regionOf(scan);
+  const zoom = (scan && scan.zoom) || 14;
   return {
     surface: (scan && scan.surface) || 'local',
-    zoom: (scan && scan.zoom) || 14,
+    zoom: zoom,
+    /* Derived rather than left undefined. Without it the fallback link fell
+       back again inside buildScanUrl, and a scan read before p.read existed
+       opened at a radius nobody had chosen. */
+    radius: zoomRadius(zoom, (p && p.lat) || (scan && scan.lat) || 0),
     depth: (scan && scan.depth) || 20,
     hl: region.hl, gl: region.gl,
     pending: true
   };
 }
-function pointSearchUrl(scan, p){
+/* Both links are built from the coordinate the provider was actually handed,
+   not from the grid cell's nominal centre. They are the same number today,
+   but reading it off the record is what keeps them the same number after a
+   grid is ever re-centred or re-spaced under an existing scan. */
+function readPoint(scan, p){
   const s = readSpec(scan, p);
-  return buildScanUrl(scan.keyword, p.lat, p.lng, {
+  const lat = (s.lat != null) ? s.lat : p.lat;
+  const lng = (s.lng != null) ? s.lng : p.lng;
+  return {s, lat, lng};
+}
+function pointSearchUrl(scan, p){
+  const {s, lat, lng} = readPoint(scan, p);
+  return buildScanUrl(scan.keyword, lat, lng, {
     hl: s.hl, gl: s.gl, surface: s.surface, depth: s.depth,
     zoom: s.zoom, radius: s.radius
   });
 }
 function pointMapsUrl(scan, p){
-  const s = readSpec(scan, p);
-  return mapsUrl(scan.keyword, p.lat, p.lng, s.hl, s.zoom);
+  const {s, lat, lng} = readPoint(scan, p);
+  return mapsUrl(scan.keyword, lat, lng, s.hl, s.zoom, s.gl, s.radius);
 }
 /* Written in the same breath as the rank itself, so the two can never come
    to describe different searches. */
@@ -5837,6 +6148,11 @@ function recordRead(p, step, region, read){
     surface: (step && step.surface) || 'local',
     zoom: zoom,
     radius: zoomRadius(zoom, p.lat),
+    /* The exact coordinate that went out in location_coordinate, at the same
+       seven decimals, so the link is rebuilt from the query rather than from
+       whatever the grid cell happens to say later. */
+    lat: Number(Number(p.lat).toFixed(7)),
+    lng: Number(Number(p.lng).toFixed(7)),
     depth: state.settings.depth || 100,
     hl: region.hl, gl: region.gl,
     list: (read && read.listKind) || null,
@@ -6207,10 +6523,7 @@ function dotPopup(p, idx, scan){
      grid was built on, and rebuilt now so the uule timestamp is current. */
   const searchHref = pointSearchUrl(scan, p);
   const mapsHref = pointMapsUrl(scan, p);
-  const readSurface = (p.read && p.read.surface) || scan.surface;
-  const links = (readSurface === 'local')
-    ? [['Open the map results that were read', mapsHref], ['Open the local finder page', searchHref]]
-    : [['Open this exact search', searchHref], ['Open Google Maps here', mapsHref]];
+  const links = [['Open this exact search', searchHref], ['Open Google Maps', mapsHref]];
   links.forEach(([txt, href]) => {
     const line = document.createElement('div');
     const a = document.createElement('a');
@@ -6636,7 +6949,7 @@ function createScan(){
     ...p, rank:null, matched:null, matchConfidence:null, matchedViaAd:false,
     adRank:null, adMatched:null, names:[], adNames:[], sparse:false, error:null, read:null,
     url: buildScanUrl(kw.text, p.lat, p.lng, opts),
-    mapsUrl: mapsUrl(kw.text, p.lat, p.lng, region.hl, zoom)
+    mapsUrl: mapsUrl(kw.text, p.lat, p.lng, region.hl, zoom, region.gl, zoomRadius(zoom, p.lat))
   }));
   const scan = {
     id:uid(), ts:Date.now(), keyword:kw.text, depth, zoom,
@@ -7501,11 +7814,15 @@ function comparePopup(p, idx, scan, gbps){
     d.appendChild(rd);
   }
 
-  const line = document.createElement('div');
-  const a = document.createElement('a');
-  a.href = pointSearchUrl(scan, p); a.target = '_blank'; a.rel = 'noopener';
-  a.textContent = 'Open this exact search';
-  line.appendChild(a); d.appendChild(line);
+  /* Same pair, same words, same order as the single-profile popup — both are
+     rebuilt from p.read, so both reproduce the view the numbers came from. */
+  [['Open this exact search', pointSearchUrl(scan, p)],
+   ['Open Google Maps', pointMapsUrl(scan, p)]].forEach(([txt, href]) => {
+    const line = document.createElement('div');
+    const a = document.createElement('a');
+    a.href = href; a.target = '_blank'; a.rel = 'noopener'; a.textContent = txt;
+    line.appendChild(a); d.appendChild(line);
+  });
 
   const acts = document.createElement('div');
   acts.className = 'pop-acts';
@@ -7954,7 +8271,7 @@ function createCompareScan(){
   const pts = gridPoints(lat, lng, rows, spacingKm).map(p => ({
     ...p, results:null, error:null, sparse:false, names:[], adNames:[], read:null,
     url: buildScanUrl(keyword, p.lat, p.lng, opts),
-    mapsUrl: mapsUrl(keyword, p.lat, p.lng, region.hl, zoom)
+    mapsUrl: mapsUrl(keyword, p.lat, p.lng, region.hl, zoom, region.gl, zoomRadius(zoom, p.lat))
   }));
   const scan = {
     id:uid(), ts:Date.now(), keyword, depth, zoom, grid:{rows, spacingKm}, surface,
@@ -8557,7 +8874,30 @@ wireGeoFinder({
   btn:'kwGeocodeBtn', input:'kwLocationName',
   status:'kwGeoStatus', out:'kwGeoOut', market:true
 });
-function buildCheckerUrl(){
+/* --------------------------------------------------------------------------
+   PAGE TWO AND BEYOND, WITHOUT LOSING THE PIN
+
+   A uule only ever applies to the request that carries it. Google's own
+   Next link is built from its session rather than from the URL you arrived
+   on, so it comes back without the uule and the results revert to wherever
+   the browser actually is — which is exactly the "it jumps back to my real
+   location on page 2" problem.
+
+   Nothing on our side can change how Google builds that link. What we can do
+   is never use it: every page is opened from a URL built here, with the pin,
+   language, country and personalisation switch all still attached. start= is
+   a plain result offset, so page n begins at (n-1) x results-per-page.
+-------------------------------------------------------------------------- */
+let serpPage = 1;
+const SERP_PAGES = 10;
+function checkerPerPage(){
+  const n = parseInt(($('num').value || '').trim(), 10);
+  /* Google serves ten per page whatever num says, unless num is small enough
+     that it still honours it. The offset has to step by whatever is actually
+     on the page or the pages overlap. */
+  return (n && n >= 10 && n <= 20) ? n : 10;
+}
+function buildCheckerUrl(page){
   const q = $('q').value.trim();
   if (!q) return null;
   const region = REGIONS[$('region').value] || REGIONS[0];
@@ -8572,18 +8912,56 @@ function buildCheckerUrl(){
   if (!isNaN(lat) && !isNaN(lng)) parts.push('uule=' + uuleForUrl(uuleLatLng(lat, lng, radius)));
   else if (canonical) parts.push('uule=' + uuleForUrl(uuleCanonical(canonical)));
   if (num && /^\d+$/.test(num)) parts.push('num=' + num);
+  const p = Math.max(1, parseInt(page || serpPage, 10) || 1);
+  if (p > 1) parts.push('start=' + ((p - 1) * checkerPerPage()));
   return 'https://www.google.com/search?' + parts.join('&');
+}
+/* Whether this search is pinned at all. Without a pin there is nothing for
+   pagination to lose, and the stepper says so rather than implying one. */
+function checkerPinned(){
+  const lat = parseFloat($('lat').value), lng = parseFloat($('lng').value);
+  return (!isNaN(lat) && !isNaN(lng)) || !!$('canonical').value.trim();
+}
+function renderSerpPager(){
+  const wrap = $('serpPager'), row = $('serpPagerRow'), note = $('serpPagerNote');
+  if (!wrap || !row) return;
+  if (!$('q').value.trim()){ wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  note.textContent = checkerPinned()
+    ? 'the pin is carried on every page'
+    : 'no pin set — add a location to lock these pages to it';
+  note.classList.toggle('warn', !checkerPinned());
+  row.innerHTML = '';
+  for (let i = 1; i <= SERP_PAGES; i++){
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'pager-btn' + (i === serpPage ? ' on' : '');
+    b.textContent = i;
+    b.title = 'Results ' + (((i - 1) * checkerPerPage()) + 1) + '–' + (i * checkerPerPage()) +
+      (checkerPinned() ? ', still pinned to this location' : '');
+    b.addEventListener('click', () => {
+      serpPage = i;
+      renderSerpPager(); updatePreview();
+      const u = buildCheckerUrl(i);
+      if (u){ try{ pushSerpRecent(); }catch(e){} window.open(u, '_blank', 'noopener'); }
+    });
+    row.appendChild(b);
+  }
 }
 function updatePreview(){
   const url = buildCheckerUrl();
   const box = $('preview'), acts = $('previewActs');
-  if (!url){ box.style.display = 'none'; acts.style.display = 'none'; return; }
+  if (!url){ box.style.display = 'none'; acts.style.display = 'none'; renderSerpPager(); return; }
   box.innerHTML = '';
   const a = document.createElement('a');
   a.href = url; a.textContent = url; a.target = '_blank'; a.rel = 'noopener noreferrer';
   box.appendChild(a);
   box.style.display = 'block'; acts.style.display = 'flex';
+  renderSerpPager();
 }
+/* Editing the query is a new search, so it starts again at page one rather
+   than silently opening page six of something else. */
+['q','lat','lng','canonical','num','radius'].forEach(id => $(id).addEventListener('input', () => { serpPage = 1; }));
 ['q','lat','lng','hl','gl','canonical','num','radius'].forEach(id => $(id).addEventListener('input', updatePreview));
 $('region').addEventListener('change', updatePreview);
 $('copyBtn').addEventListener('click', async () => {
@@ -9612,7 +9990,12 @@ function blankSeoLocation(label, regionIdx){
     id: uid(), label: label || '', regionIdx: regionIdx || 0, lat:null, lng:null,
     rank:null, prevRank:null, matchedTitle:null, matchedDomain:null, sourceUrl:null,
     checkedAt:null, manual:false, error:null, precision:null, matchedBy:null,
-    readCount:null, topDomains:null, partial:false, history:[]
+    readCount:null, topDomains:null, partial:false, history:[],
+    /* How deep the chase went before a miss was reported, and whether it
+       stopped because Google ran out rather than because the ladder did.
+       Both default to the same "nothing known yet" a pre-existing record
+       has, so old locations read exactly as they always did. */
+    depthRead:null, exhausted:false
   };
 }
 function migrateSeoClient(c){
@@ -9627,6 +10010,11 @@ function migrateSeoClient(c){
       if (!Array.isArray(l.history)) l.history = [];
       if (typeof l.manual !== 'boolean') l.manual = false;
       if (typeof l.precision !== 'string') l.precision = null;
+      /* Added with the deeper rank chase. Left as "unknown" on every record
+         that predates it, so an old miss says "Not found" rather than
+         claiming a depth that was never read. Nothing is overwritten. */
+      if (l.depthRead === undefined) l.depthRead = null;
+      if (typeof l.exhausted !== 'boolean') l.exhausted = false;
     });
   });
   ['projectLead','cms','allocatedHours','monthlyProgress','lastMonthlyCall','website','basecampLink','reportLink','notes','logoUrl'].forEach(k => {
@@ -9733,9 +10121,51 @@ function seoRankMixBar(ranks){
     '</span>';
 }
 
-function seoRankPill(rank){
+/* ---------- wording a miss -------------------------------------------------
+   A rank of 0 has always meant "the site was not in what we read". It used
+   to be shown as 100+, which claimed a boundary nobody had actually looked
+   at and read as a position in its own right. Now the scan chases a keyword
+   down the ladder in seoOrganicLadder(), so a miss carries the depth it was
+   chased to, and the badge states that depth instead of inventing one.
+
+   loc is optional: plenty of call sites only have the number. Without it the
+   badge falls back to the honest minimum — "not found" — never to a figure.
+--------------------------------------------------------------------------- */
+function seoMissDepth(loc){
+  if (!loc) return null;
+  const d = Number(loc.depthRead != null ? loc.depthRead : loc.readCount);
+  return (isFinite(d) && d > 0) ? d : null;
+}
+function seoMissLabel(loc){
+  const d = seoMissDepth(loc);
+  if (!d) return 'Not found';
+  /* Google ran out of results before the chase did, so there is no deeper
+     position to be at: the site is absent from the whole SERP. A depth
+     badge here would imply a page eleven that does not exist. */
+  if (loc && loc.exhausted) return 'Not ranking';
+  /* Otherwise the chase stopped at our own ceiling, and the badge names the
+     rung that was actually cleared — never a deeper one than was read. */
+  const rung = SEO_DEPTH_LADDER.filter(x => x <= d).pop();
+  return rung ? ('>' + rung) : ('>' + d);
+}
+function seoMissTitle(loc){
+  const d = seoMissDepth(loc);
+  if (!d) return 'The site was not found in this search.';
+  if (loc && loc.partial){
+    return 'Read ' + d + ' results and the site was not among them, but part of the SERP ' +
+      'did not load — worth re-scanning before treating this as an absence.';
+  }
+  if (loc && loc.exhausted){
+    return 'Read all ' + d + ' results Google returned for this search. The site is not in them.';
+  }
+  return 'Chased to ' + d + ' results at this location and the site was not among them.';
+}
+function seoRankPill(rank, loc){
   if (rank == null) return '<span class="rank-pill rp-none">—</span>';
-  if (rank === 0) return '<span class="rank-pill rp-lost">100+</span>';
+  if (rank === 0){
+    return '<span class="rank-pill rp-lost" title="' + esc(seoMissTitle(loc)) + '">' +
+      esc(seoMissLabel(loc)) + '</span>';
+  }
   return '<span class="rank-pill rp-' + rankClass(rank) + '">#' + rank + '</span>';
 }
 function fmtWhen(ts){
@@ -9901,6 +10331,13 @@ const SEO_SERP_ENDPOINTS = {
   advanced: 'https://api.dataforseo.com/v3/serp/google/organic/live/advanced',
   regular:  'https://api.dataforseo.com/v3/serp/google/organic/live/regular'
 };
+/* How far a keyword is chased before absence is reported as a fact. Each
+   rung is only ever reached because the one below it did not find the site,
+   so a keyword that ranks anywhere in the first hundred never costs more
+   than it did before. 700 is DataForSEO's per-task ceiling. */
+const SEO_DEPTH_LADDER = [100, 200, 300, 500, 700];
+/* The deepest any scan can see, used by the UI to word a genuine miss. */
+const SEO_MAX_DEPTH = SEO_DEPTH_LADDER[SEO_DEPTH_LADDER.length - 1];
 
 /* ==========================================================================
    RECOGNISING THE CLIENT IN A SET OF RESULTS
@@ -10044,26 +10481,60 @@ async function seoOrganicLadder(keyword, p, region, opts){
   const lang = labsLanguageCode(region.hl);
   const coord = p.lat.toFixed(7) + ',' + p.lng.toFixed(7);
   const country = seoCountryLocationCode(region);
-  const base = {keyword: keyword, language_code: lang, device: 'desktop', depth: depth};
+  const taskAt = (d, where) => Object.assign(
+    {keyword: keyword, language_code: lang, device: 'desktop', depth: d}, where);
+  const atCoord = {location_coordinate: coord};
 
+  /* ------------------------------------------------------------------
+     Keep digging until the site is actually located.
+
+     The old ladder asked one page-one-sized question and, if the site
+     wasn't in it, called that a real absence and printed 100+. For a site
+     sitting at 112 that is not an absence \u2014 it is a position nobody
+     bothered to go and read, and 100+ is the same badge whether the truth
+     is 101 or 640.
+
+     So depth now escalates instead of stopping: a normal first look, then
+     progressively deeper reads, and the run only ends early when the site
+     has been found. The first rung answers almost every keyword, so the
+     deeper ones cost nothing on the ones that already rank \u2014 the spend
+     lands only on the keywords that genuinely sit past page ten, which is
+     exactly where the answer was missing before.
+
+     700 is DataForSEO's ceiling for a single organic task; beyond it there
+     is nothing further to ask, and the row says so in those words instead
+     of hiding behind a round number.
+  ------------------------------------------------------------------ */
+  const first = Math.max(10, Math.min(700, depth));
+  const deeper = SEO_DEPTH_LADDER.filter(d => d > first);
   const rungs = [
-    {endpoint:'advanced', precision:'coordinate', task: Object.assign({location_coordinate: coord}, base)},
-    {endpoint:'regular',  precision:'coordinate', task: Object.assign({location_coordinate: coord}, base)}
+    {endpoint:'advanced', precision:'coordinate', depth:first, task: taskAt(first, atCoord)},
+    /* The plain endpoint, same depth: a different shape of request often
+       succeeds where the advanced one came back thin. */
+    {endpoint:'regular',  precision:'coordinate', depth:first, task: taskAt(first, atCoord)}
   ];
+  deeper.forEach(d => {
+    rungs.push({endpoint:'advanced', precision:'coordinate', depth:d, task: taskAt(d, atCoord)});
+  });
+  /* Last resort: the pin was refused, so read the country instead \u2014 at full
+     depth, because a nationwide reading is the one most likely to be deep. */
   if (country){
-    rungs.push({endpoint:'advanced', precision:'country', task: Object.assign({location_code: country}, base)});
+    const d = deeper.length ? deeper[deeper.length - 1] : first;
+    rungs.push({endpoint:'advanced', precision:'country', depth:d, task: taskAt(d, {location_code: country})});
   }
 
   /* Knowing which site we're looking for changes when it's worth spending
      another call: a rung that already found it is finished, however partial
-     the read was, and a rung that didn't find it in an incomplete read has
-     not actually answered the question yet. */
+     the read was, and a rung that didn't find it has not actually answered
+     the question yet unless there was nothing deeper left to ask. */
   const match = (opts && opts.match) || null;
   const hasSite = arr => !!match && arr.some(match);
+  const onDepth = (opts && opts.onDepth) || null;
 
-  let best = null, lastErr = null;
+  let best = null, lastErr = null, deepestRead = 0;
   for (let i = 0; i < rungs.length; i++){
     const rung = rungs[i];
+    if (onDepth) { try{ onDepth(rung.depth, i, rungs.length); }catch(e){} }
     let data;
     try{
       data = await seoDfsSerp(rung.endpoint, rung.task);
@@ -10079,17 +10550,29 @@ async function seoOrganicLadder(keyword, p, region, opts){
     out.precision = rung.precision;
     out.partial = !!data.__partial;
     out.partialNote = data.__partial || null;
+    /* How far down this rung was actually able to see. Reported on a miss so
+       the row can say "read to 300, not there" \u2014 a claim that can be checked \u2014
+       rather than a bare 100+. */
+    out.depthAsked = rung.depth;
+    out.depthRead = out.organic.length;
+    deepestRead = Math.max(deepestRead, out.organic.length);
 
-    /* Found it - nothing further to ask. */
+    /* Found it \u2014 nothing further to ask, at any depth. */
     if (hasSite(out.organic)) return out;
-    /* Didn't find it, and the whole SERP was read - that's a real absence. */
-    if (out.organic.length && !out.partial) return out;
-    /* Didn't find it and pages were missing: the next rung gets a turn,
-       because the site may well be on a page that never arrived. */
+
+    /* Not found. Keep the fullest read seen so far and go deeper, unless the
+       rung came back short of what it asked for: Google had fewer results
+       than the depth requested, so there is no page eleven to go and find. */
     if (!best || out.organic.length > best.organic.length) best = out;
+    const exhausted = !out.partial && out.organic.length > 0 && out.organic.length < rung.depth;
+    if (exhausted){
+      best.exhausted = true;
+      best.depthRead = Math.max(best.depthRead || 0, deepestRead);
+      return best;
+    }
     if (i < rungs.length - 1) await seoDelay(900);
   }
-  if (best) return best;
+  if (best){ best.depthRead = Math.max(best.depthRead || 0, deepestRead); return best; }
   const msg = lastErr && lastErr.message ? lastErr.message : 'no response';
   const err = new Error('Google couldn\u2019t be read for this keyword right now (' + msg + '). ' +
     'Open the live search from this row to check it by hand, or scan again in a few minutes.');
@@ -10121,7 +10604,8 @@ async function seoScanOne(client, kw, loc){
   try{
     const data = await seoOrganicLadder(kw.text, {lat:g.lat, lng:g.lng}, region, {
       depth,
-      match: r => !!seoIdentifyResult(r, client) || seoTitleMatchesResult(r, client)
+      match: r => !!seoIdentifyResult(r, client) || seoTitleMatchesResult(r, client),
+      onDepth: d => { if (d > seoDeepestDepth) seoDeepestDepth = d; }
     });
     const organic = data.organic || [];
     let found = null, idx = -1, how = null;
@@ -10154,14 +10638,23 @@ async function seoScanOne(client, kw, loc){
        at a glance: three results read means the scrape failed, a hundred
        results read with familiar competitors in them means the site really
        isn't there. */
-    if (found){ loc.readCount = null; loc.topDomains = null; loc.partial = false; }
+    if (found){
+      loc.readCount = null; loc.topDomains = null; loc.partial = false;
+      loc.depthRead = null; loc.exhausted = false;
+    }
     else {
       loc.readCount = organic.length;
       loc.topDomains = organic.slice(0, 3).map(r => r.domain).filter(Boolean);
       /* A miss on an incomplete read is a weaker claim than a miss on a
          full one, and the row says so rather than printing a confident
-         100+ over a SERP that was never fully fetched. */
+         number over a SERP that was never fully fetched. */
       loc.partial = !!data.partial;
+      /* How far the chase actually got, and whether it stopped because it
+         ran out of Google rather than out of patience. Between them these
+         let every screen word a miss as the measurement it is — "read to
+         300, not there" — instead of the old catch-all badge. */
+      loc.depthRead = data.depthRead != null ? data.depthRead : organic.length;
+      loc.exhausted = !!data.exhausted;
     }
     loc.checkedAt = Date.now();
     loc.manual = false;
@@ -10195,10 +10688,15 @@ function seoProgressShow(widgets, total){
     if (w.stop) w.stop.onclick = () => { seoScanStop = true; };
   });
 }
-function seoProgressUpdate(widgets, done, total){
+function seoProgressUpdate(widgets, done, total, note){
   const pct = Math.round(done / total * 100) + '%';
-  widgets.forEach(w => { w.fill.style.width = pct; w.label.textContent = 'Scanning ' + done + ' / ' + total + '\u2026'; });
+  const tail = note ? ' \u00b7 ' + note : '';
+  widgets.forEach(w => { w.fill.style.width = pct; w.label.textContent = 'Scanning ' + done + ' / ' + total + '\u2026' + tail; });
 }
+/* A deep chase can take a while, and a bar that just sits there looks stuck.
+   The deepest rung any keyword in the run has reached is reported instead, so
+   a long pause reads as work rather than a hang. */
+let seoDeepestDepth = 0;
 function seoProgressHide(widgets){
   widgets.forEach(w => { w.bar.style.display = 'none'; });
 }
@@ -10214,11 +10712,13 @@ async function seoScanAndRender(c, pairs){
   const widgets = seoProgressWidgets();
   seoProgressShow(widgets, pairs.length);
   let done = 0;
+  seoDeepestDepth = 0;
   try{
     await runPool(pairs.length, state.settings.concurrency || 6, () => seoScanStop, async (i) => {
       await seoScanOne(c, pairs[i].k, pairs[i].loc);
       done++;
-      seoProgressUpdate(widgets, done, pairs.length);
+      seoProgressUpdate(widgets, done, pairs.length,
+        seoDeepestDepth > SEO_DEPTH_LADDER[0] ? ('digging to ' + seoDeepestDepth) : '');
       if (done % 3 === 0){ save(); renderSeoKeywords(); }
     });
   } finally {
@@ -10860,6 +11360,27 @@ $('seoDeleteClientBtn').addEventListener('click', () => {
    mode — there's no API for that, by design, so a site can't silently
    toggle someone's privacy mode either way. This is the practical
    next-best thing: copy the exact link so it's one paste away. */
+/* --------------------------------------------------------------------------
+   Opening the page a position actually lives on.
+
+   loc.sourceUrl is written before the scan runs and always points at page
+   one, which is the right thing when the scan fails and you want to look for
+   yourself. Once a rank is known and it is past the first page, page one no
+   longer shows it — so the offset is appended here, at render time, from the
+   rank itself. Nothing new is stored, and the pinned uule already on the URL
+   is carried straight through, which is the whole point: Google's own
+   pagination would have dropped it and answered from the real location.
+-------------------------------------------------------------------------- */
+function seoRankPage(loc){
+  if (!loc || !(Number(loc.rank) > 10)) return 1;
+  return Math.ceil(Number(loc.rank) / 10);
+}
+function seoRankPageUrl(loc){
+  const page = seoRankPage(loc);
+  if (page < 2 || !loc.sourceUrl) return null;
+  if (/[?&]start=/.test(loc.sourceUrl)) return loc.sourceUrl;
+  return loc.sourceUrl + (loc.sourceUrl.indexOf('?') === -1 ? '?' : '&') + 'start=' + ((page - 1) * 10);
+}
 function seoCopyLink(url, btnEl){
   const isTextBtn = btnEl && btnEl.classList && btnEl.classList.contains('seo-copy-link-btn');
   const originalText = isTextBtn ? btnEl.textContent : null;
@@ -10923,7 +11444,7 @@ function seoLocGroupRow(c, k, loc){
   spark.innerHTML = sparkHtml;
 
   const rankBox = document.createElement('div');
-  rankBox.innerHTML = seoRankPill(loc.rank) + (loc.manual ? '<span class="seo-manual-tag">manual</span>' : '');
+  rankBox.innerHTML = seoRankPill(loc.rank, loc) + (loc.manual ? '<span class="seo-manual-tag">manual</span>' : '');
 
   const deltaBox = document.createElement('div');
   deltaBox.className = 'seo-loc-delta';
@@ -10948,10 +11469,20 @@ function seoLocGroupRow(c, k, loc){
     deltaBox.appendChild(flag);
   }
 
-  const sourceUrl = loc.sourceUrl || null;
+  /* Now that a rank can legitimately be past 100, page one is often the wrong
+     page to open: a position of 112 is confirmed on page twelve, not page one.
+     The offset is added to the pinned URL we already stored, so the location
+     travels with it — Google's own Next button would have dropped it. */
+  const sourceUrl = seoRankPageUrl(loc) || loc.sourceUrl || null;
   const sourceEl = document.createElement(sourceUrl ? 'a' : 'span');
   sourceEl.className = 'seo-kw-source' + (sourceUrl ? '' : ' disabled');
-  if (sourceUrl){ sourceEl.href = sourceUrl; sourceEl.target = '_blank'; sourceEl.rel = 'noopener'; sourceEl.title = 'Open the live search result'; }
+  if (sourceUrl){
+    sourceEl.href = sourceUrl; sourceEl.target = '_blank'; sourceEl.rel = 'noopener';
+    const pg = seoRankPage(loc);
+    sourceEl.title = pg > 1
+      ? ('Open the live search at page ' + pg + ', where #' + loc.rank + ' sits — still pinned to this location')
+      : 'Open the live search result';
+  }
   else sourceEl.title = 'Not scanned yet';
   sourceEl.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>';
 
@@ -11013,10 +11544,17 @@ function seoLocGroupRow(c, k, loc){
        back with six results and gave up. */
     let miss = '';
     if (loc.rank === 0 && loc.readCount != null){
-      miss = ' \u00b7 read ' + loc.readCount + ' result' + (loc.readCount === 1 ? '' : 's') +
+      const dug = seoMissDepth(loc);
+      miss = ' \u00b7 chased to ' + (dug || loc.readCount) + ' result' + ((dug || loc.readCount) === 1 ? '' : 's') +
         ', none on ' + esc(c.website || 'this site');
       if (loc.topDomains && loc.topDomains.length){
         miss += ' <span title="The results that were read, in order">(' + esc(loc.topDomains.join(', ')) + '\u2026)</span>';
+      }
+      /* Why the chase stopped matters as much as how far it got: Google
+         running out of results is an answer, the scan running out of rungs
+         is only a boundary. */
+      if (loc.exhausted){
+        miss += ' <span title="Google had no further results to hand over past this point, so this is the whole SERP \u2014 the site genuinely is not in it.">\u2014 that is the whole result set</span>';
       }
       if (loc.partial){
         miss += ' <b title="Google didn\u2019t hand over every page of results this time, so the site could be on one of the pages that never arrived. Open the live search to check, or scan again.">\u2014 incomplete read, treat this with suspicion</b>';
@@ -11650,7 +12188,9 @@ function seoBuildRows(clients){
         const region = REGIONS[loc.regionIdx || 0] || {};
         rows.push({
           Client: c.name, Keyword: k.text, Location: loc.label || '', Region: region.label || '',
-          Rank: loc.rank == null ? '' : (loc.rank === 0 ? 'Not in top results' : loc.rank),
+          Rank: loc.rank == null ? '' : (loc.rank === 0
+            ? (seoMissDepth(loc) ? ('Not in top ' + seoMissDepth(loc)) : 'Not found')
+            : loc.rank),
           Cell: seoMonitoringCell(loc.rank),
           PrevRank: loc.prevRank == null ? '' : (loc.prevRank === 0 ? 'Not in top results' : loc.prevRank),
           LastChecked: loc.checkedAt ? new Date(loc.checkedAt).toLocaleString() : '',
@@ -12463,6 +13003,11 @@ function buildSeoReportPayload(c, opts){
             manual: !!snap.manual,
             checkedAt: opts.showDates && snap.checkedAt ? snap.checkedAt : null,
             sourceUrl: opts.showLinks && loc.sourceUrl ? loc.sourceUrl : null,
+            /* How deep the scan looked before reporting a miss. Additive and
+               optional: a report published before today simply omits it and
+               its unranked rows read "Not found" rather than a depth. */
+            depthRead: (snap.rank === 0 && loc.depthRead != null) ? loc.depthRead : null,
+            exhausted: (snap.rank === 0 && loc.exhausted) ? true : null,
             /* Ten points is enough to show a direction and small enough that a
                hundred-keyword client still publishes in one write. Tied to the
                same switch as the change column, since both describe movement. */
@@ -12732,9 +13277,26 @@ function kwrTrack(rank){
   return '<span class="kwr-track" title="Position ' + rank + '">' +
     '<i style="width:' + pct + '%;background:' + band.dot + '"></i></span>';
 }
-function kwrPosPill(rank){
+/* The published report shows the same reading the tool does: a miss names the
+   depth it was chased to, never a round 100+ that was never actually read. */
+/* The published view is rendered standalone and cannot reach the tool's own
+   constants, so the rungs it words a miss against travel with it. Declared
+   above its only reader so the order it is read in is never in question. */
+const KWR_MISS_RUNGS = [100, 200, 300, 500, 700];
+function kwrPosPill(rank, loc){
   if (rank == null) return '<span class="kwr-pos p-none">—</span>';
-  if (rank === 0)   return '<span class="kwr-pos p-none">100+</span>';
+  if (rank === 0){
+    const d = loc && Number(loc.depthRead || loc.readCount);
+    const deep = d && isFinite(d) && d > 0;
+    const rung = deep ? KWR_MISS_RUNGS.filter(x => x <= d).pop() : null;
+    const txt = (loc && loc.exhausted) ? 'Not ranking' : (rung ? ('>' + rung) : 'Not found');
+    const title = !deep
+      ? 'The site was not found in this search.'
+      : (loc && loc.exhausted)
+        ? ('Read all ' + d + ' results Google returned for this search. The site is not in them.')
+        : ('Chased to ' + d + ' results at this location and the site was not among them.');
+    return '<span class="kwr-pos p-none" title="' + esc(title) + '">' + esc(txt) + '</span>';
+  }
   return '<span class="kwr-pos p-' + kwrBandOf(rank) + '">#' + rank + '</span>';
 }
 
@@ -13006,7 +13568,7 @@ function renderSeoReport(data){
 
     const rank = document.createElement('div');
     rank.className = 'kwr-rank';
-    rank.innerHTML = kwrPosPill(k.rank == null ? null : k.rank) +
+    rank.innerHTML = kwrPosPill(k.rank == null ? null : k.rank, k) +
       (k.manual ? '<span class="seo-manual-tag">manual</span>' : '');
 
     const d = kwrDeltaText(k.rank, k.prevRank);

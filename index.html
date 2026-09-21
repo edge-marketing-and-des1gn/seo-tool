@@ -3069,24 +3069,141 @@ body.pin-locked{overflow:hidden;}
 .pin-dock span{
   font-size:8.5px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--ink-3);
 }
+/* ---- the figure, in motion ------------------------------------------
+   Four moments, each doing one job: he is lifted out of the dock, carried
+   with a little weight to him, dropped, and lands. The landing is the one
+   that matters — without it a marker simply teleports, and nothing tells
+   you the drop registered. Squash on impact, a rebound, and a ring pushed
+   out across the ground read as "it landed there" in about 600ms. */
+@keyframes pegSway{
+  0%,100%{transform:translate(-50%,-92%) rotate(-5deg);}
+  50%    {transform:translate(-50%,-94%) rotate(5deg);}
+}
+@keyframes pegFall{
+  0%  {transform:translateX(-50%) translateY(-34px) scaleY(1.22) scaleX(.84); opacity:0;}
+  38% {opacity:1;}
+  62% {transform:translateX(-50%) translateY(0) scaleY(.7) scaleX(1.3);}
+  78% {transform:translateX(-50%) translateY(-7px) scaleY(1.1) scaleX(.93);}
+  90% {transform:translateX(-50%) translateY(0) scaleY(.93) scaleX(1.06);}
+  100%{transform:translateX(-50%) translateY(0) scaleY(1) scaleX(1);}
+}
+@keyframes pegShadowHit{
+  0%  {transform:translateX(-50%) scale(.3); opacity:.08;}
+  60% {transform:translateX(-50%) scale(1.5); opacity:.4;}
+  100%{transform:translateX(-50%) scale(1); opacity:.32;}
+}
+@keyframes pegRing{
+  0%  {transform:translateX(-50%) scale(.2); opacity:.85;}
+  100%{transform:translateX(-50%) scale(3.4); opacity:0;}
+}
+/* Barely-there idle, so a placed pin looks alive without pulling focus. */
+@keyframes pegBreathe{
+  0%,100%{transform:translateX(-50%) translateY(0);}
+  50%    {transform:translateX(-50%) translateY(-1.5px);}
+}
+
 /* The figure while it is following the cursor. */
 .peg-ghost{
   position:fixed; z-index:5000; pointer-events:none;
   transform:translate(-50%,-92%); color:var(--brand-deep);
-  filter:drop-shadow(0 6px 10px rgba(16,24,33,.32));
+  filter:drop-shadow(0 8px 12px rgba(16,24,33,.34));
+  animation:pegSway .85s ease-in-out infinite;
 }
-.peg-ghost .peg-fig{width:36px; height:36px;}
+.peg-ghost .peg-fig{width:38px; height:38px;}
+
 /* And where it stands once dropped. */
-.peg-marker{position:relative; width:34px; height:42px; color:var(--brand-deep); cursor:grab;}
+.peg-marker{position:relative; width:34px; height:46px; color:var(--brand-deep); cursor:grab;}
+.peg-marker:active{cursor:grabbing;}
+.peg-body{
+  position:absolute; left:50%; bottom:5px; transform:translateX(-50%);
+  transform-origin:50% 100%; display:block; line-height:0;
+  animation:pegBreathe 3.4s ease-in-out infinite;
+}
 .peg-marker .peg-fig{
-  position:absolute; left:50%; top:0; transform:translateX(-50%);
-  width:32px; height:32px;
+  width:32px; height:32px; display:block;
   filter:drop-shadow(0 3px 5px rgba(16,24,33,.34));
 }
 .peg-marker-shadow{
-  position:absolute; left:50%; bottom:1px; transform:translateX(-50%);
-  width:16px; height:5px; border-radius:50%; background:rgba(16,24,33,.32);
+  position:absolute; left:50%; bottom:2px; transform:translateX(-50%);
+  width:17px; height:5px; border-radius:50%; background:rgba(16,24,33,.32);
   filter:blur(1.5px);
+}
+.peg-ring{
+  position:absolute; left:50%; bottom:0; transform:translateX(-50%) scale(.2);
+  width:26px; height:26px; border-radius:50%; opacity:0;
+  border:2.5px solid var(--brand); pointer-events:none;
+}
+.peg-ring.go{animation:pegRing .62s cubic-bezier(.2,.75,.25,1) forwards;}
+/* While it is being dragged around the map it stops breathing and leans. */
+.peg-marker.carrying .peg-body{animation:none; transform:translateX(-50%) translateY(-6px) rotate(-6deg);}
+.peg-marker.carrying .peg-marker-shadow{transform:translateX(-50%) scale(.7); opacity:.18;}
+.peg-marker.landing .peg-body{animation:pegFall .6s cubic-bezier(.2,.8,.3,1) forwards;}
+.peg-marker.landing .peg-marker-shadow{animation:pegShadowHit .6s cubic-bezier(.2,.8,.3,1) forwards;}
+.pin-dock.dragging .peg-fig{opacity:.25;}
+
+/* ---- the zone ------------------------------------------------------- */
+.pin-zone{transition:none;}
+.pin-zone-edge{animation:zoneDash 22s linear infinite;}
+@keyframes zoneDash{to{stroke-dashoffset:-220;}}
+.pin-rad{
+  flex:none; display:inline-flex; align-items:center; gap:7px;
+  padding:3px 4px 3px 11px; border-radius:22px;
+  background:var(--card); border:1px solid var(--line); box-shadow:var(--lift);
+}
+.pin-rad-cap{
+  font-size:9.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-3);
+}
+.pin-rad select{
+  width:auto; min-width:0; margin:0; padding:5px 24px 5px 9px;
+  font-family:var(--mono); font-size:11.5px; font-weight:600; color:var(--ink);
+  background-color:var(--card-2); border:1px solid var(--line); border-radius:18px;
+  background-position:calc(100% - 12px) 52%, calc(100% - 8px) 52%; background-size:4px 4px;
+  box-shadow:none; cursor:pointer;
+}
+
+/* ---- the three ways in ---------------------------------------------- */
+.geo-methods{
+  display:flex; align-items:center; gap:7px; flex-wrap:wrap;
+  margin:0 0 9px; padding:7px 10px;
+  border:1px solid var(--line-2); border-radius:var(--r-md);
+  background:linear-gradient(180deg,var(--card-2) 0%,var(--card) 100%);
+}
+.geo-methods-cap{
+  font-size:9px; font-weight:700; letter-spacing:.11em; text-transform:uppercase;
+  color:var(--ink-3); margin-right:2px;
+}
+.geo-method{
+  display:inline-flex; align-items:center; gap:6px;
+  padding:3px 9px 3px 4px; border-radius:20px;
+  border:1px solid transparent; background:transparent;
+  font-size:10.5px; color:var(--ink-3); white-space:nowrap;
+  transition:background .2s var(--ease), border-color .2s var(--ease), color .2s var(--ease);
+}
+.geo-method i{
+  flex:none; width:16px; height:16px; border-radius:50%; font-style:normal;
+  display:grid; place-items:center;
+  font-family:var(--mono); font-size:9.5px; font-weight:700;
+  background:var(--line-2); color:var(--ink-3);
+  transition:background .2s var(--ease), color .2s var(--ease);
+}
+.geo-method b{font-weight:650; color:var(--ink-2);}
+.geo-method.on{background:var(--brand-wash); border-color:#f3d9c1; color:var(--brand-deep);}
+.geo-method.on i{background:var(--brand); color:#fff;}
+.geo-method.on b{color:var(--brand-deep);}
+.geo-method-or,.geo-method-then{
+  font-size:9.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-3);
+}
+@media (max-width:640px){
+  .geo-methods{gap:5px; padding:6px 8px;}
+  .geo-methods-cap,.geo-method-or,.geo-method-then{display:none;}
+  .geo-method{font-size:10px;}
+}
+.geo-act-zone{font-weight:700;}
+.geo-act-zone:hover{border-color:var(--brand); color:var(--brand-deep); background:var(--brand-wash);}
+
+@media (prefers-reduced-motion:reduce){
+  .peg-ghost,.peg-body,.peg-ring,.pin-zone-edge{animation:none !important;}
+  .peg-marker.landing .peg-body,.peg-marker.landing .peg-marker-shadow{animation:none !important;}
 }
 
 .pin-search{
@@ -5117,10 +5234,23 @@ function renderGeoOut(out, g){
     radiusWrap.appendChild(sel);
   }
 
+  /* Seeing the zone is a click away from the number that defines it. The
+     same map the pin was placed on reopens, centred here, with the circle
+     drawn — so "50 km" stops being a figure to imagine. */
+  let zone = null;
+  if (g.radius && typeof g.onZone === 'function'){
+    zone = document.createElement('button');
+    zone.type = 'button'; zone.className = 'geo-act geo-act-zone';
+    zone.textContent = 'Zone';
+    zone.title = 'Show this radius on the map';
+    zone.addEventListener('click', () => g.onZone());
+  }
+
   e.appendChild(coord);
   if (market) e.appendChild(market);
   e.appendChild(name);
   if (radiusWrap) e.appendChild(radiusWrap);
+  if (zone) e.appendChild(zone);
   e.appendChild(copy); e.appendChild(view);
 }
 
@@ -5146,7 +5276,10 @@ function wireGeoFinder(cfg){
        its own — it is a point, not an area — so it starts at a couple of
        blocks and is widened from the menu if that is not what was meant. */
     const auto = o.exact ? 2000 : niceRadius(bboxRadius(hit && hit.boundingbox, lat));
-    const radius = auto || 93000;
+    /* A radius chosen on the picker's map beats anything derived here — it
+       was set against a drawn circle, which is a stronger statement of
+       intent than a bounding box. */
+    const radius = Number(o.radius) || auto || 93000;
 
     if (cfg.lat && $(cfg.lat)) $(cfg.lat).value = lat;
     if (cfg.lng && $(cfg.lng)) $(cfg.lng).value = lng;
@@ -5165,14 +5298,35 @@ function wireGeoFinder(cfg){
        would just say the same thing twice. */
     setStatus(cfg.status, '', '');
     const fire = r => { if (typeof cfg.after === 'function') cfg.after({lat, lng, country, label, hit, radius: r, exact: !!o.exact}); };
+    if (typeof cfg._markMethod === 'function') cfg._markMethod(o.exact ? 'pin' : 'find');
     renderGeoOut(cfg.out, {
       lat, lng, country, label, hit, market: cfg.market,
       radius, autoRadius: auto, exact: !!o.exact,
       /* Changing the radius has to reach the same places the original value
          did, or the menu would be decoration. */
-      onRadius(v){ input.dataset.geoRadius = String(v); writeRadius(v); fire(v); }
+      onRadius(v){ input.dataset.geoRadius = String(v); writeRadius(v); fire(v); },
+      onZone(){ openPin(); }
     });
     fire(radius);
+  }
+
+  /* Opening the map: from the Drop pin button, and from the Zone action on
+     the readout. Both want the same thing — this field's current pin and
+     radius, shown on a map — so they share one door. */
+  function openPin(){
+    const sLat = parseFloat(input.dataset.geoLat || (cfg.lat && $(cfg.lat) ? $(cfg.lat).value : ''));
+    const sLng = parseFloat(input.dataset.geoLng || (cfg.lng && $(cfg.lng) ? $(cfg.lng).value : ''));
+    openPinPicker({
+      lat: isFinite(sLat) ? sLat : null,
+      lng: isFinite(sLng) ? sLng : null,
+      radius: Number(input.dataset.geoRadius) || null,
+      onPick(hit, lat, lng, label, radius){
+        /* The typed box is filled in too, so the field still reads as the
+           place it now points at rather than as whatever was there before. */
+        input.value = label;
+        applyPlace(hit, {lat, lng, label, exact: true, radius: radius});
+      }
+    });
   }
 
   const run = async () => {
@@ -5200,6 +5354,7 @@ function wireGeoFinder(cfg){
     delete input.dataset.geoLat; delete input.dataset.geoLng;
     delete input.dataset.geoRadius;
     geoOutClear(cfg.out); setStatus(cfg.status, '', '');
+    if (typeof cfg._markMethod === 'function') cfg._markMethod(null);
   });
 
   /* ---- the hand-placed pin -------------------------------------------
@@ -5213,20 +5368,38 @@ function wireGeoFinder(cfg){
   pinBtn.className = 'btn geo-pin-btn';
   pinBtn.title = 'Place the pin by hand on a map';
   pinBtn.innerHTML = GEO_PEG_SVG + '<span>Drop pin</span>';
-  pinBtn.addEventListener('click', () => {
-    const sLat = parseFloat(input.dataset.geoLat || (cfg.lat && $(cfg.lat) ? $(cfg.lat).value : ''));
-    const sLng = parseFloat(input.dataset.geoLng || (cfg.lng && $(cfg.lng) ? $(cfg.lng).value : ''));
-    openPinPicker({
-      lat: isFinite(sLat) ? sLat : null,
-      lng: isFinite(sLng) ? sLng : null,
-      onPick(hit, lat, lng, label){
-        /* The typed box is filled in too, so the field still reads as the
-           place it now points at rather than as whatever was there before. */
-        input.value = label;
-        applyPlace(hit, {lat, lng, label, exact: true});
-      }
+  pinBtn.addEventListener('click', () => openPin());
+  /* ---- the three ways in, said out loud -------------------------------
+     There are exactly three controls here and they were arriving as three
+     unrelated widgets: a button, another button, and a dropdown that only
+     appeared after one of them had been used. Naming them as one numbered
+     set turns that into a structure you can read at a glance — type it,
+     place it, then say how wide — and each step lights up once it has
+     actually been done, so the strip doubles as the state of the field. */
+  const methods = document.createElement('div');
+  methods.className = 'geo-methods';
+  methods.innerHTML =
+    '<span class="geo-methods-cap">Set this location</span>' +
+    '<span class="geo-method" data-m="find"><i>1</i>Type a place<b>Find</b></span>' +
+    '<span class="geo-method-or">or</span>' +
+    '<span class="geo-method" data-m="pin"><i>2</i>Place it by hand<b>Drop pin</b></span>' +
+    '<span class="geo-method-then">then</span>' +
+    '<span class="geo-method" data-m="radius"><i>3</i>Choose how wide<b>Radius</b></span>';
+  const fieldWrap = btn.closest('.f') || (btn.parentNode ? btn.parentNode.parentNode : null);
+  if (fieldWrap){
+    const anchor = fieldWrap.querySelector('label, .lbl');
+    if (anchor && anchor.nextSibling) fieldWrap.insertBefore(methods, anchor.nextSibling);
+    else fieldWrap.insertBefore(methods, fieldWrap.firstChild);
+  }
+  /* Which of the three has been used. Called from applyPlace, so it tracks
+     what actually happened rather than what was clicked. */
+  function markMethod(which){
+    methods.querySelectorAll('.geo-method').forEach(el => {
+      el.classList.toggle('on', el.dataset.m === which || (which && el.dataset.m === 'radius'));
     });
-  });
+  }
+  cfg._markMethod = markMethod;
+
   if (btn.parentNode){
     btn.parentNode.insertBefore(pinBtn, btn.nextSibling);
     /* The row was a two-column grid sized for an input and one button;
@@ -6667,15 +6840,23 @@ let cmpCenterMarker = null, cmpLiveMarkers = [];
    has landed it can be dragged again to nudge it.
    ========================================================================== */
 let pinPickerEl = null, pinPickerMap = null, pinPickerMarker = null,
-    pinPickerCfg = null, pinPickerLatLng = null, pinPickerLookup = 0;
+    pinPickerCfg = null, pinPickerLatLng = null, pinPickerLookup = 0,
+    pinPickerZone = null, pinPickerHalo = null, pinPickerRadius = 2000;
 
 /* The figure as it stands on the map: drawn at its feet, not its middle, so
    what it points at is what you dropped it on. */
 function pegIcon(){
   return L.divIcon({
     className: '',
-    html: '<div class="peg-marker">' + GEO_PEG_SVG + '<i class="peg-marker-shadow"></i></div>',
-    iconSize: [34, 42], iconAnchor: [17, 42]
+    /* Three layers, because the landing needs them to move independently:
+       the ring spreads on the ground, the shadow tightens as the figure
+       drops onto it, and the figure itself falls and squashes. */
+    html: '<div class="peg-marker">' +
+            '<i class="peg-ring"></i>' +
+            '<i class="peg-marker-shadow"></i>' +
+            '<span class="peg-body">' + GEO_PEG_SVG + '</span>' +
+          '</div>',
+    iconSize: [34, 46], iconAnchor: [17, 46]
   });
 }
 
@@ -6709,6 +6890,14 @@ function buildPinPicker(){
           '<span class="pin-read-coord">—</span>' +
           '<span class="pin-read-name">Nothing placed yet</span>' +
         '</div>' +
+        /* The radius lives here, beside the pin, because the two together
+           are the whole answer: a point, and how far around it gets looked
+           at. Changing it redraws the shaded zone immediately rather than
+           asking anyone to picture what 25 km covers. */
+        '<label class="pin-rad">' +
+          '<span class="pin-rad-cap">Analyse within</span>' +
+          '<select id="pinPickerRadius"></select>' +
+        '</label>' +
         '<div class="pin-acts">' +
           '<button type="button" class="btn" id="pinPickerCancel">Cancel</button>' +
           '<button type="button" class="btn btn-go" id="pinPickerUse" disabled>Use this location</button>' +
@@ -6722,6 +6911,18 @@ function buildPinPicker(){
   $('pinPickerClose').addEventListener('click', closePinPicker);
   $('pinPickerCancel').addEventListener('click', closePinPicker);
   $('pinPickerUse').addEventListener('click', usePinPicker);
+  /* Widening the zone past the edge of the viewport would otherwise look
+     like nothing happened, so the map reframes to keep the whole circle in
+     sight whenever the radius changes. */
+  $('pinPickerRadius').addEventListener('change', e => {
+    pinPickerRadius = Number(e.target.value) || pinPickerRadius;
+    drawPinZone();
+    fitPinZone();
+  });
+  /* Escape closes it, the way every other overlay in the app behaves. */
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && pinPickerEl && pinPickerEl.classList.contains('on')) closePinPicker();
+  });
 
   const jump = async () => {
     const q = ($('pinPickerSearch').value || '').trim();
@@ -6781,24 +6982,98 @@ function buildPinPicker(){
   return wrap;
 }
 
+/* ---- the zone -------------------------------------------------------
+   A radius written as "25 km" is a number you have to translate; the same
+   radius drawn on the map is the answer itself. Two shapes: a filled circle
+   for the ground that gets analysed, and a brighter ring on its edge so the
+   boundary stays visible where the fill sits over dark tiles.
+
+   It is deliberately the brand orange rather than a neutral, because on a
+   map every other colour already means something geographic. */
+function drawPinZone(){
+  if (!pinPickerMap || !pinPickerLatLng) return;
+  const r = Number(pinPickerRadius) || 2000;
+  if (!pinPickerZone){
+    pinPickerZone = L.circle(pinPickerLatLng, {
+      radius: r, className: 'pin-zone',
+      color: '#e87722', weight: 0, fillColor: '#e87722', fillOpacity: .13,
+      interactive: false
+    }).addTo(pinPickerMap);
+    pinPickerHalo = L.circle(pinPickerLatLng, {
+      radius: r, className: 'pin-zone-edge',
+      color: '#c9620f', weight: 2, dashArray: '6 5', fill: false,
+      interactive: false
+    }).addTo(pinPickerMap);
+  } else {
+    pinPickerZone.setLatLng(pinPickerLatLng); pinPickerZone.setRadius(r);
+    pinPickerHalo.setLatLng(pinPickerLatLng); pinPickerHalo.setRadius(r);
+  }
+}
+/* Frame the whole zone, not just its centre — a 1000 km radius set while the
+   map sits at street level is invisible otherwise, which is exactly when
+   seeing it matters most. */
+function fitPinZone(){
+  if (!pinPickerMap || !pinPickerZone) return;
+  try{ pinPickerMap.fitBounds(pinPickerZone.getBounds(), {padding:[42,42], maxZoom:16}); }catch(e){}
+}
+
 /* Put the figure somewhere and start reading back what is there. */
-function setPinPickerAt(latlng){
+function setPinPickerAt(latlng, opts){
   if (!pinPickerMap) return;
+  const o = opts || {};
   pinPickerLatLng = latlng;
   if (!pinPickerMarker){
     pinPickerMarker = L.marker(latlng, {icon: pegIcon(), draggable: true, autoPan: true}).addTo(pinPickerMap);
+    pinPickerMarker.on('dragstart', () => {
+      const el = pinPickerMarker.getElement();
+      if (el){ const f = el.querySelector('.peg-marker'); if (f) f.classList.add('carrying'); }
+    });
     pinPickerMarker.on('drag', e => {
       pinPickerLatLng = e.target.getLatLng();
+      drawPinZone();
       paintPinPicker(null, true);
     });
-    pinPickerMarker.on('dragend', () => lookupPinPicker());
+    pinPickerMarker.on('dragend', () => {
+      const el = pinPickerMarker.getElement();
+      if (el){ const f = el.querySelector('.peg-marker'); if (f){ f.classList.remove('carrying'); pegLand(f); } }
+      lookupPinPicker();
+    });
   } else {
     pinPickerMarker.setLatLng(latlng);
   }
+  /* The landing plays on a fresh drop, not on every nudge of the map. */
+  if (o.land !== false){
+    const el = pinPickerMarker.getElement();
+    if (el){ const f = el.querySelector('.peg-marker'); if (f) pegLand(f); }
+  }
   const dock = $('pinPickerDock');
   if (dock) dock.classList.add('placed');
+  drawPinZone();
   paintPinPicker(null, true);
   lookupPinPicker();
+}
+
+/* Restart the landing animation. Removing the class and forcing a reflow
+   before adding it back is what makes it replay — without the reflow the
+   browser coalesces the two changes and nothing moves. */
+function pegLand(el){
+  el.classList.remove('landing');
+  void el.offsetWidth;
+  el.classList.add('landing');
+  const ring = el.querySelector('.peg-ring');
+  if (ring){ ring.classList.remove('go'); void ring.offsetWidth; ring.classList.add('go'); }
+  /* The fall holds its last frame so the figure doesn't snap on the way out,
+     which also means it would sit frozen there for good. Dropping the class
+     once it has finished hands him back to the idle breathing. */
+  const body = el.querySelector('.peg-body');
+  if (body){
+    const done = () => { el.classList.remove('landing'); body.removeEventListener('animationend', done); };
+    body.addEventListener('animationend', done);
+    /* A belt-and-braces timer: animationend never fires if the element is
+       removed or the tab is hidden mid-animation, and a figure stuck in a
+       squashed pose is worse than no animation at all. */
+    setTimeout(() => { el.classList.remove('landing'); }, 900);
+  }
 }
 
 function paintPinPicker(label, pending){
@@ -6856,6 +7131,8 @@ function openPinPicker(cfg){
   }
 
   if (pinPickerMarker){ pinPickerMap.removeLayer(pinPickerMarker); pinPickerMarker = null; }
+  if (pinPickerZone){ pinPickerMap.removeLayer(pinPickerZone); pinPickerZone = null; }
+  if (pinPickerHalo){ pinPickerMap.removeLayer(pinPickerHalo); pinPickerHalo = null; }
   const dock = $('pinPickerDock');
   if (dock) dock.classList.remove('placed');
   $('pinPickerUse').disabled = true;
@@ -6864,6 +7141,23 @@ function openPinPicker(cfg){
   read.querySelector('.pin-read-coord').textContent = '—';
   read.querySelector('.pin-read-name').textContent = 'Nothing placed yet';
 
+  /* Carry in whatever radius the field already holds, so reopening the
+     picker shows the zone that is actually in force rather than resetting
+     it to a default nobody chose. */
+  pinPickerRadius = Number(cfg && cfg.radius) || 2000;
+  const rsel = $('pinPickerRadius');
+  if (rsel){
+    rsel.innerHTML = '';
+    const opts = GEO_RADIUS_STEPS.slice();
+    if (opts.indexOf(pinPickerRadius) === -1) opts.push(pinPickerRadius);
+    opts.sort((a, b) => a - b).forEach(v => {
+      const o = document.createElement('option');
+      o.value = String(v); o.textContent = radiusLabel(v);
+      rsel.appendChild(o);
+    });
+    rsel.value = String(pinPickerRadius);
+  }
+
   /* The map was laid out while the modal was still hidden, so it has to be
      told its own size before it will draw tiles in the right place. */
   setTimeout(() => { try{ pinPickerMap.invalidateSize(); }catch(e){} }, 60);
@@ -6871,7 +7165,7 @@ function openPinPicker(cfg){
   /* If the field already had a coordinate, start from it rather than from
      an empty map — nudging an existing pin is the common case. */
   if (cfg && cfg.lat != null && cfg.lng != null){
-    setTimeout(() => setPinPickerAt(L.latLng(cfg.lat, cfg.lng)), 80);
+    setTimeout(() => { setPinPickerAt(L.latLng(cfg.lat, cfg.lng)); fitPinZone(); }, 80);
   }
 }
 
@@ -6896,8 +7190,9 @@ function usePinPicker(){
     : ('Dropped pin · ' + lat.toFixed(5) + ', ' + lng.toFixed(5));
   const synthetic = hit || {lat: String(lat), lon: String(lng), address: {}, display_name: label,
                             addresstype: 'pin', class: 'place', type: 'pin', boundingbox: null};
+  const radius = Number(pinPickerRadius) || 2000;
   closePinPicker();
-  if (typeof pinPickerCfg.onPick === 'function') pinPickerCfg.onPick(synthetic, lat, lng, label);
+  if (typeof pinPickerCfg.onPick === 'function') pinPickerCfg.onPick(synthetic, lat, lng, label, radius);
 }
 
 function fitToPoints(m, pts){

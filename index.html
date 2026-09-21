@@ -2961,6 +2961,170 @@ a:focus-visible{border-radius:5px;}
   .btn:hover,.chip:hover{transform:none;}
 }
 
+/* ============================================================================
+   THE BROAD-AREA CHIP, THE RADIUS PICKER, AND THE HAND-PLACED PIN
+   ========================================================================= */
+
+/* ---- a province or a country, read at a glance -------------------------
+   Two slots with a hairline between them: what you asked for on the right,
+   behind a dot, and the wider thing it sits inside on the left in quieter
+   ink. A long comma-separated line carries the same facts and none of the
+   hierarchy, which is the whole reason this exists. */
+.geo-out .geo-scope{
+  flex:1; min-width:150px; display:inline-flex; align-items:center; gap:10px;
+  font-size:12.5px; overflow:hidden; white-space:nowrap;
+}
+.geo-out .geo-scope-outer{
+  color:var(--ink-3); font-weight:500; flex:none;
+  overflow:hidden; text-overflow:ellipsis; max-width:38%;
+}
+.geo-out .geo-scope-div{
+  flex:none; width:1px; height:15px; background:var(--line);
+  display:inline-block; border-radius:1px;
+}
+.geo-out .geo-scope-main{
+  display:inline-flex; align-items:center; gap:7px; min-width:0;
+  color:var(--ink); font-weight:650; letter-spacing:-.008em;
+  overflow:hidden; text-overflow:ellipsis;
+}
+.geo-out .geo-scope-dot{
+  flex:none; width:7px; height:7px; border-radius:50%;
+  background:var(--ink); display:inline-block;
+  box-shadow:0 0 0 3px rgba(22,29,37,.07);
+}
+
+/* ---- how far the pin reaches ---------------------------------------- */
+.geo-out .geo-rad{
+  flex:none; display:inline-flex; align-items:center; gap:6px;
+  padding:2px 3px 2px 9px; border-radius:20px;
+  background:var(--card); border:1px solid var(--line);
+}
+.geo-out .geo-rad-cap{
+  font-size:9.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--ink-3);
+}
+.geo-out .geo-rad-sel{
+  width:auto; min-width:0; padding:3px 22px 3px 7px; margin:0;
+  font-family:var(--mono); font-size:11px; font-weight:600; color:var(--ink);
+  background-color:var(--card-2); border:1px solid var(--line); border-radius:16px;
+  background-position:calc(100% - 11px) 52%, calc(100% - 7px) 52%; background-size:4px 4px;
+  box-shadow:none; cursor:pointer;
+}
+.geo-out .geo-rad-sel:focus{box-shadow:var(--ring);}
+
+/* ---- the Drop pin button beside every Find -------------------------- */
+.g-inline.has-pin{grid-template-columns:1fr auto auto;}
+.geo-pin-btn{flex:none; gap:6px; padding:10px 13px;}
+.geo-pin-btn .peg-fig{width:14px; height:14px; color:var(--brand-deep);}
+.geo-pin-btn:hover{border-color:var(--brand); color:var(--brand-deep); background:var(--brand-wash);}
+@media (max-width:620px){ .geo-pin-btn span{display:none;} .geo-pin-btn{padding:10px 12px;} }
+
+/* ---- the picker ------------------------------------------------------ */
+body.pin-locked{overflow:hidden;}
+.pin-backdrop{
+  position:fixed; inset:0; z-index:4000; display:none;
+  align-items:center; justify-content:center; padding:24px;
+  background:rgba(12,17,23,.55);
+  -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px);
+}
+.pin-backdrop.on{display:flex; animation:pop .22s var(--ease);}
+.pin-modal{
+  width:100%; max-width:920px; max-height:calc(100vh - 48px);
+  display:flex; flex-direction:column; overflow:hidden;
+  background:linear-gradient(180deg,#fff 0%,#fcfdfe 100%);
+  border-radius:var(--r-xl); box-shadow:var(--sh-3),var(--lift);
+}
+.pin-head{
+  display:flex; align-items:flex-start; justify-content:space-between; gap:16px;
+  padding:19px 22px 15px; border-bottom:1px solid var(--line-2);
+}
+.pin-head h3{font-family:var(--display); font-size:17px; font-weight:600; margin:0; letter-spacing:-.021em;}
+.pin-head p{margin:3px 0 0; font-size:12.5px; color:var(--ink-2); line-height:1.6;}
+.pin-x{
+  flex:none; width:30px; height:30px; border-radius:9px; cursor:pointer; line-height:1;
+  border:1px solid var(--line); background:var(--card); color:var(--ink-2); font-size:19px;
+  transition:all .15s var(--ease);
+}
+.pin-x:hover{border-color:var(--brand); color:var(--brand-deep); background:var(--brand-wash);}
+
+.pin-mapwrap{position:relative; flex:1; min-height:340px;}
+.pin-map{position:absolute; inset:0; background:var(--card-2);}
+.pin-map.leaflet-container{cursor:crosshair;}
+
+/* The dock the figure waits in. It lifts on hover so it reads as something
+   you can pick up rather than a legend. */
+.pin-dock{
+  position:absolute; top:12px; right:12px; z-index:500;
+  display:flex; flex-direction:column; align-items:center; gap:2px;
+  padding:9px 11px 7px; border-radius:var(--r-md); cursor:grab;
+  background:linear-gradient(180deg,#fff 0%,#f4f7f9 100%);
+  border:1px solid var(--line); box-shadow:var(--sh-2),var(--lift);
+  touch-action:none; user-select:none;
+  transition:transform .18s var(--ease), box-shadow .18s var(--ease);
+}
+.pin-dock:hover{transform:translateY(-2px); box-shadow:var(--sh-3),var(--lift);}
+.pin-dock.dragging{opacity:.35; cursor:grabbing;}
+.pin-dock.placed{opacity:.6;}
+.pin-dock .peg-fig{width:26px; height:26px; color:var(--brand-deep);}
+.pin-dock span{
+  font-size:8.5px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--ink-3);
+}
+/* The figure while it is following the cursor. */
+.peg-ghost{
+  position:fixed; z-index:5000; pointer-events:none;
+  transform:translate(-50%,-92%); color:var(--brand-deep);
+  filter:drop-shadow(0 6px 10px rgba(16,24,33,.32));
+}
+.peg-ghost .peg-fig{width:36px; height:36px;}
+/* And where it stands once dropped. */
+.peg-marker{position:relative; width:34px; height:42px; color:var(--brand-deep); cursor:grab;}
+.peg-marker .peg-fig{
+  position:absolute; left:50%; top:0; transform:translateX(-50%);
+  width:32px; height:32px;
+  filter:drop-shadow(0 3px 5px rgba(16,24,33,.34));
+}
+.peg-marker-shadow{
+  position:absolute; left:50%; bottom:1px; transform:translateX(-50%);
+  width:16px; height:5px; border-radius:50%; background:rgba(16,24,33,.32);
+  filter:blur(1.5px);
+}
+
+.pin-search{
+  /* Clear of Leaflet's zoom control, which owns the top-left corner. */
+  position:absolute; top:12px; left:58px; z-index:500; display:flex; gap:6px;
+  padding:6px; border-radius:var(--r-md); width:min(320px,calc(100% - 180px));
+  background:rgba(255,255,255,.93);
+  -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
+  border:1px solid var(--line); box-shadow:var(--sh-2);
+}
+.pin-search input{padding:7px 10px; font-size:12.5px; border-radius:8px;}
+.pin-search .btn{flex:none;}
+
+.pin-foot{
+  display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;
+  padding:14px 22px; border-top:1px solid var(--line-2); background:var(--card-2);
+}
+.pin-read{display:flex; align-items:center; gap:10px; min-width:0; flex:1;}
+.pin-read-coord{
+  flex:none; font-family:var(--mono); font-size:11.5px; font-weight:600;
+  color:var(--brand-deep); background:var(--brand-wash); border:1px solid #f3d9c1;
+  padding:3px 9px; border-radius:20px; white-space:nowrap;
+}
+.pin-read-name{
+  font-size:12px; color:var(--ink-2); min-width:0;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.pin-read-name.pending{color:var(--ink-3); font-style:italic;}
+.pin-acts{display:flex; gap:8px; flex:none;}
+.pin-acts .btn-go{padding:10px 16px;}
+
+@media (max-width:700px){
+  .pin-backdrop{padding:0;}
+  .pin-modal{max-width:none; height:100vh; max-height:100vh; border-radius:0;}
+  .pin-foot{flex-direction:column; align-items:stretch;}
+  .pin-acts .btn{flex:1;}
+}
+
 /* Nothing interactive survives a print — the bands, chips and search box are
    controls, and a PDF that shows a filter the reader can't move is a bug. The
    filter state itself does carry through, so a report printed while filtered
@@ -4740,6 +4904,103 @@ function labsLanguageCode(hl){
   return ((hl || 'en').split('-')[0] || 'en').toLowerCase();
 }
 
+/* ==========================================================================
+   READING A PLACE: HOW BIG IT IS, AND HOW BROAD IT IS
+   ==========================================================================
+   Nominatim already answers both questions and the app was throwing both
+   answers away. `boundingbox` is the place's real extent, which is exactly
+   the number a uule radius wants; `addresstype` says whether what came back
+   is a country, a province or a driveway. Between them a Find can pick a
+   sensible radius on its own and present a province differently from a
+   street address, instead of printing one long comma-soup line for both.
+   ========================================================================== */
+
+/* The little figure you pick up and drop on the map. Drawn rather than
+   imported so it inherits currentColor and stays crisp at any size — it is
+   used at 14px inside a button and at 34px standing on the map. */
+const GEO_PEG_SVG =
+  '<svg class="peg-fig" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">' +
+  '<circle cx="12" cy="5.6" r="3.15"/>' +
+  '<path d="M12 9.5c-2.63 0-4.35 1.42-4.35 3.45 0 1.2.68 2.02 1.7 2.33l.39 5.16c.06.83.75 1.47 1.58 1.47h1.36c.83 0 1.52-.64 1.58-1.47l.39-5.16c1.02-.31 1.7-1.13 1.7-2.33C16.35 10.92 14.63 9.5 12 9.5z"/>' +
+  '</svg>';
+
+/* Reverse geocoding: the other direction from nominatim(). A hand-dropped
+   pin is only a coordinate until something tells you what is there, and a
+   coordinate nobody can read back is impossible to sanity-check. Same
+   accept-language rule as the forward lookup, for the same reason — every
+   label in the app has to come back in one language. zoom=18 asks for
+   building-level detail, and Nominatim widens that by itself out in open
+   country, which is exactly the behaviour wanted. */
+async function nominatimReverse(lat, lng){
+  const url = 'https://nominatim.openstreetmap.org/reverse?format=json&addressdetails=1' +
+    '&accept-language=en&zoom=18&lat=' + encodeURIComponent(lat) + '&lon=' + encodeURIComponent(lng);
+  const res = await fetch(url, {headers:{Accept:'application/json'}});
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const data = await res.json();
+  if (!data || data.error) return null;
+  return data;
+}
+
+/* The place's own extent, in metres, as a radius. Half the longer side of
+   its bounding box: a radius drawn from the centre that reaches the far
+   edge of the place. Clamped to 500 m because Google ignores anything
+   tighter, and to 3000 km because beyond that the uule stops meaning much. */
+function bboxRadius(bb, lat){
+  if (!Array.isArray(bb) || bb.length < 4) return null;
+  const s = parseFloat(bb[0]), n = parseFloat(bb[1]), w = parseFloat(bb[2]), e = parseFloat(bb[3]);
+  if (![s, n, w, e].every(v => isFinite(v))) return null;
+  const latSpan = Math.abs(n - s) * 110574;
+  const lngSpan = Math.abs(e - w) * 111320 * Math.cos((Number(lat) || 0) * Math.PI / 180);
+  const r = Math.max(latSpan, lngSpan) / 2;
+  if (!isFinite(r) || r <= 0) return null;
+  return Math.max(500, Math.min(3000000, Math.round(r)));
+}
+/* Round the measured extent onto a human number, so the box reads "50 km"
+   rather than "47,812 m". Only ever rounds up: a radius that fell short of
+   the place it was measured from would cut the edges off the search. */
+const GEO_RADIUS_STEPS = [1000,2000,5000,10000,15000,25000,50000,93000,150000,250000,500000,1000000,2000000];
+function niceRadius(m){
+  if (!m) return null;
+  for (let i = 0; i < GEO_RADIUS_STEPS.length; i++){ if (m <= GEO_RADIUS_STEPS[i]) return GEO_RADIUS_STEPS[i]; }
+  return GEO_RADIUS_STEPS[GEO_RADIUS_STEPS.length - 1];
+}
+function radiusLabel(m){
+  const n = Number(m);
+  if (!isFinite(n)) return '';
+  return n >= 1000 ? (Math.round(n / 100) / 10).toString().replace(/\.0$/, '') + ' km' : n + ' m';
+}
+
+/* Is this a broad area — a province, a state, a country — or somewhere you
+   could stand? Administrative boundaries are the awkward case: a city and a
+   province are both class=boundary/type=administrative, so the address parts
+   break the tie. If the answer names a city, town or village, it isn't a
+   broad area however it was tagged. */
+const GEO_BROAD_TYPES = ['country','state','province','region','county','state_district',
+                         'territory','postcode','archipelago','island','continent'];
+function geoIsBroad(hit){
+  if (!hit) return false;
+  const t = String(hit.addresstype || hit.type || '').toLowerCase();
+  const a = hit.address || {};
+  const namesASettlement = !!(a.city || a.town || a.village || a.municipality || a.hamlet ||
+                              a.suburb || a.road || a.house_number);
+  if (GEO_BROAD_TYPES.indexOf(t) !== -1) return !namesASettlement || t === 'postcode' || t === 'country' || t === 'state';
+  if (String(hit.class || '').toLowerCase() === 'boundary' && t === 'administrative') return !namesASettlement;
+  return false;
+}
+/* The two halves of the broad-area chip: the place itself, and the wider
+   thing it sits inside. A province shows its country beside it; a country
+   has nothing broader to show, so that half is simply left off. */
+function geoScopeParts(hit){
+  const a = (hit && hit.address) || {};
+  const country = a.country || '';
+  const state = a.state || a.province || a.region || a['state_district'] || '';
+  let head = (hit && hit.name) || state || country ||
+             String((hit && hit.display_name) || '').split(',')[0].trim();
+  if (state && head && head !== state && head !== country) head = head + ', ' + state;
+  else if (!head) head = state || country;
+  return { head: head, outer: (head === country) ? '' : country };
+}
+
 function geoOutClear(out){ const e = typeof out === 'string' ? $(out) : out; if (e){ e.classList.remove('on'); e.innerHTML = ''; } }
 
 /* The readout every Find button shares: the coordinates that were resolved,
@@ -4756,10 +5017,39 @@ function renderGeoOut(out, g){
   coord.className = 'geo-coord';
   coord.textContent = g.lat.toFixed(6) + ', ' + g.lng.toFixed(6);
 
-  const name = document.createElement('span');
-  name.className = 'geo-name';
-  name.textContent = g.label;
-  name.title = g.label;
+  /* A province and a street address are different kinds of answer and used
+     to be printed the same way: one long comma-separated line that buried
+     which part of it you actually asked for. A broad area now gets a chip
+     that names the place and the country containing it, and nothing else.
+     Anywhere you could stand keeps the full line, because for an address
+     every part of it is worth reading. */
+  const broad = geoIsBroad(g.hit);
+  let name;
+  if (broad){
+    const parts = geoScopeParts(g.hit);
+    name = document.createElement('span');
+    name.className = 'geo-scope';
+    if (parts.outer){
+      const outer = document.createElement('span');
+      outer.className = 'geo-scope-outer';
+      outer.textContent = parts.outer;
+      name.appendChild(outer);
+      name.appendChild(document.createElement('i')).className = 'geo-scope-div';
+    }
+    const main = document.createElement('span');
+    main.className = 'geo-scope-main';
+    const dot = document.createElement('i');
+    dot.className = 'geo-scope-dot';
+    main.appendChild(dot);
+    main.appendChild(document.createTextNode(parts.head));
+    name.appendChild(main);
+    name.title = g.label;
+  } else {
+    name = document.createElement('span');
+    name.className = 'geo-name';
+    name.textContent = g.label;
+    name.title = g.label;
+  }
 
   /* Only the keyword finder sets market:true — it is the one field whose value
      is handed to a country-level API, so it is the one place worth saying out
@@ -4789,9 +5079,49 @@ function renderGeoOut(out, g){
   view.href = 'https://www.openstreetmap.org/?mlat=' + g.lat + '&mlon=' + g.lng + '#map=14/' + g.lat + '/' + g.lng;
   view.target = '_blank'; view.rel = 'noopener';
 
+  /* ---- how wide this pin reaches -------------------------------------
+     A coordinate on its own doesn't say how much ground the search should
+     cover, and the same pin means different things for a shop and for a
+     province. The default is measured from the place Nominatim actually
+     returned — its own bounding box — so finding Alberta proposes a radius
+     that covers Alberta, and finding a street proposes a few blocks. It is
+     a starting point, not a verdict: the menu overrides it, and whatever is
+     chosen is what the search URL is built with. */
+  let radiusWrap = null;
+  if (g.radius){
+    radiusWrap = document.createElement('label');
+    radiusWrap.className = 'geo-rad';
+    const cap = document.createElement('span');
+    cap.className = 'geo-rad-cap';
+    cap.textContent = 'Radius';
+    const sel = document.createElement('select');
+    sel.className = 'geo-rad-sel';
+    const opts = GEO_RADIUS_STEPS.slice();
+    if (opts.indexOf(Number(g.radius)) === -1) opts.push(Number(g.radius));
+    opts.sort((a, b) => a - b).forEach(v => {
+      const o = document.createElement('option');
+      o.value = String(v);
+      o.textContent = radiusLabel(v) + (v === Number(g.autoRadius) ? ' · fits the area' : '');
+      sel.appendChild(o);
+    });
+    sel.value = String(g.radius);
+    sel.title = g.autoRadius
+      ? ('Measured from the area itself (' + radiusLabel(g.autoRadius) + '). Change it to search a wider or tighter patch.')
+      : 'How much ground the pinned search covers.';
+    sel.addEventListener('change', () => {
+      const v = Number(sel.value) || Number(g.radius);
+      g.radius = v;
+      if (typeof g.onRadius === 'function') g.onRadius(v);
+    });
+    radiusWrap.appendChild(cap);
+    radiusWrap.appendChild(sel);
+  }
+
   e.appendChild(coord);
   if (market) e.appendChild(market);
-  e.appendChild(name); e.appendChild(copy); e.appendChild(view);
+  e.appendChild(name);
+  if (radiusWrap) e.appendChild(radiusWrap);
+  e.appendChild(copy); e.appendChild(view);
 }
 
 /* Wires one Find button to one location field. Every location input in the
@@ -4801,6 +5131,50 @@ function renderGeoOut(out, g){
 function wireGeoFinder(cfg){
   const btn = $(cfg.btn), input = $(cfg.input);
   if (!btn || !input) return;
+
+  /* One place where a resolved location lands, whichever way it was found —
+     typed into the box and looked up, or dropped by hand on the map. Both
+     routes end here, so both fill the same fields, cache the same way and
+     draw the same readout. */
+  function applyPlace(hit, opts){
+    const o = opts || {};
+    const lat = o.lat != null ? o.lat : parseFloat(parseFloat(hit.lat).toFixed(7));
+    const lng = o.lng != null ? o.lng : parseFloat(parseFloat(hit.lon).toFixed(7));
+    const country = dfsCountryName(hit);
+    const iso = dfsCountryIso(hit);
+    /* Measured from the place itself. A hand-dropped pin has no extent of
+       its own — it is a point, not an area — so it starts at a couple of
+       blocks and is widened from the menu if that is not what was meant. */
+    const auto = o.exact ? 2000 : niceRadius(bboxRadius(hit && hit.boundingbox, lat));
+    const radius = auto || 93000;
+
+    if (cfg.lat && $(cfg.lat)) $(cfg.lat).value = lat;
+    if (cfg.lng && $(cfg.lng)) $(cfg.lng).value = lng;
+    const writeRadius = v => { if (cfg.radius && $(cfg.radius)) $(cfg.radius).value = String(v); };
+    writeRadius(radius);
+
+    /* Nothing rewrites what was typed — a street address pins more precisely
+       than the city containing it, so the text is left exactly as entered. */
+    input.dataset.geoCountry = country;
+    input.dataset.geoIso = iso;
+    input.dataset.geoLat = lat; input.dataset.geoLng = lng;
+    input.dataset.geoRadius = String(radius);
+
+    const label = o.label || hit.display_name || '';
+    /* The readout already names the place, so the status line underneath it
+       would just say the same thing twice. */
+    setStatus(cfg.status, '', '');
+    const fire = r => { if (typeof cfg.after === 'function') cfg.after({lat, lng, country, label, hit, radius: r, exact: !!o.exact}); };
+    renderGeoOut(cfg.out, {
+      lat, lng, country, label, hit, market: cfg.market,
+      radius, autoRadius: auto, exact: !!o.exact,
+      /* Changing the radius has to reach the same places the original value
+         did, or the menu would be decoration. */
+      onRadius(v){ input.dataset.geoRadius = String(v); writeRadius(v); fire(v); }
+    });
+    fire(radius);
+  }
+
   const run = async () => {
     const q = input.value.trim();
     if (!q){ setStatus(cfg.status, 'Type a place or address first.', 'err'); geoOutClear(cfg.out); return; }
@@ -4812,22 +5186,7 @@ function wireGeoFinder(cfg){
         setStatus(cfg.status, 'No match. Add the city, province or country and try again.', 'err');
         geoOutClear(cfg.out); return;
       }
-      const lat = parseFloat(parseFloat(hit.lat).toFixed(7));
-      const lng = parseFloat(parseFloat(hit.lon).toFixed(7));
-      const country = dfsCountryName(hit);
-      const iso = dfsCountryIso(hit);
-      if (cfg.lat && $(cfg.lat)) $(cfg.lat).value = lat;
-      if (cfg.lng && $(cfg.lng)) $(cfg.lng).value = lng;
-      /* Nothing rewrites what was typed — a street address pins more precisely
-         than the city containing it, so the text is left exactly as entered. */
-      input.dataset.geoCountry = country;
-      input.dataset.geoIso = iso;
-      input.dataset.geoLat = lat; input.dataset.geoLng = lng;
-      /* The readout already names the place, so the status line underneath it
-         would just say the same thing twice. */
-      setStatus(cfg.status, '', '');
-      renderGeoOut(cfg.out, {lat, lng, country, label: hit.display_name, market: cfg.market});
-      if (typeof cfg.after === 'function') cfg.after({lat, lng, country, label: hit.display_name, hit});
+      applyPlace(hit);
     }catch(err){
       setStatus(cfg.status, 'Lookup failed: ' + ((err && err.message) || err), 'err');
       geoOutClear(cfg.out);
@@ -4839,8 +5198,43 @@ function wireGeoFinder(cfg){
   input.addEventListener('input', () => {
     delete input.dataset.geoCountry; delete input.dataset.geoIso;
     delete input.dataset.geoLat; delete input.dataset.geoLng;
+    delete input.dataset.geoRadius;
     geoOutClear(cfg.out); setStatus(cfg.status, '', '');
   });
+
+  /* ---- the hand-placed pin -------------------------------------------
+     Typing a name is the wrong tool when the spot you mean has no name: a
+     job site, a corner of a subdivision, the middle of a service area.
+     This button sits beside Find and opens a map to drop a figure on, and
+     wherever it lands is read back as a real address. Added here rather
+     than in the markup so all seven Find fields get it from one place. */
+  const pinBtn = document.createElement('button');
+  pinBtn.type = 'button';
+  pinBtn.className = 'btn geo-pin-btn';
+  pinBtn.title = 'Place the pin by hand on a map';
+  pinBtn.innerHTML = GEO_PEG_SVG + '<span>Drop pin</span>';
+  pinBtn.addEventListener('click', () => {
+    const sLat = parseFloat(input.dataset.geoLat || (cfg.lat && $(cfg.lat) ? $(cfg.lat).value : ''));
+    const sLng = parseFloat(input.dataset.geoLng || (cfg.lng && $(cfg.lng) ? $(cfg.lng).value : ''));
+    openPinPicker({
+      lat: isFinite(sLat) ? sLat : null,
+      lng: isFinite(sLng) ? sLng : null,
+      onPick(hit, lat, lng, label){
+        /* The typed box is filled in too, so the field still reads as the
+           place it now points at rather than as whatever was there before. */
+        input.value = label;
+        applyPlace(hit, {lat, lng, label, exact: true});
+      }
+    });
+  });
+  if (btn.parentNode){
+    btn.parentNode.insertBefore(pinBtn, btn.nextSibling);
+    /* The row was a two-column grid sized for an input and one button;
+       a third child wrapped onto its own line and stretched full width.
+       Marking the row lets it take the extra column, and only rows that
+       actually gained a button are affected. */
+    btn.parentNode.classList.add('has-pin');
+  }
 }
 
 /* ==========================================================================
@@ -6253,6 +6647,259 @@ let cmpDotLayer = L.layerGroup().addTo(cmpMap);
 let cmpSonarLayer = L.layerGroup().addTo(cmpMap);
 let cmpCenterMarker = null, cmpLiveMarkers = [];
 
+/* ==========================================================================
+   DROP A PIN BY HAND
+
+   Every Find in the app starts from a name, and a name is the wrong handle
+   for a great many of the places these scans are actually about: a job site
+   on the edge of town, one corner of a subdivision, the middle of a service
+   area that no gazetteer has ever given a label to. Typing the nearest town
+   and accepting whatever centroid comes back is how a grid ends up measured
+   from somewhere nobody chose.
+
+   So: pick the figure up, drop it where you mean, and the coordinate under
+   its feet is the one that gets used. It is read back through reverse
+   geocoding straight away, because a coordinate you cannot check is not
+   obviously better than a centroid you did not choose.
+
+   Two ways in, because both are natural and neither is discoverable on its
+   own: drag the figure out of its dock, or simply click the map. Once it
+   has landed it can be dragged again to nudge it.
+   ========================================================================== */
+let pinPickerEl = null, pinPickerMap = null, pinPickerMarker = null,
+    pinPickerCfg = null, pinPickerLatLng = null, pinPickerLookup = 0;
+
+/* The figure as it stands on the map: drawn at its feet, not its middle, so
+   what it points at is what you dropped it on. */
+function pegIcon(){
+  return L.divIcon({
+    className: '',
+    html: '<div class="peg-marker">' + GEO_PEG_SVG + '<i class="peg-marker-shadow"></i></div>',
+    iconSize: [34, 42], iconAnchor: [17, 42]
+  });
+}
+
+function buildPinPicker(){
+  if (pinPickerEl) return pinPickerEl;
+  const wrap = document.createElement('div');
+  wrap.className = 'pin-backdrop';
+  wrap.id = 'pinPickerBackdrop';
+  wrap.innerHTML =
+    '<div class="pin-modal" role="dialog" aria-modal="true" aria-label="Place a pin by hand">' +
+      '<div class="pin-head">' +
+        '<div>' +
+          '<h3>Drop the pin where you mean</h3>' +
+          '<p>Drag the figure onto the map, or just click the spot. Drag it again to nudge it.</p>' +
+        '</div>' +
+        '<button type="button" class="pin-x" id="pinPickerClose" aria-label="Close">&times;</button>' +
+      '</div>' +
+      '<div class="pin-mapwrap">' +
+        '<div class="pin-map" id="pinPickerMap"></div>' +
+        '<div class="pin-dock" id="pinPickerDock" title="Drag me onto the map">' +
+          GEO_PEG_SVG +
+          '<span>Drag me</span>' +
+        '</div>' +
+        '<div class="pin-search">' +
+          '<input type="text" id="pinPickerSearch" placeholder="Jump to a place first…" autocomplete="off"/>' +
+          '<button type="button" class="btn btn-sm" id="pinPickerGo">Go</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="pin-foot">' +
+        '<div class="pin-read" id="pinPickerRead">' +
+          '<span class="pin-read-coord">—</span>' +
+          '<span class="pin-read-name">Nothing placed yet</span>' +
+        '</div>' +
+        '<div class="pin-acts">' +
+          '<button type="button" class="btn" id="pinPickerCancel">Cancel</button>' +
+          '<button type="button" class="btn btn-go" id="pinPickerUse" disabled>Use this location</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(wrap);
+  pinPickerEl = wrap;
+
+  wrap.addEventListener('mousedown', e => { if (e.target === wrap) closePinPicker(); });
+  $('pinPickerClose').addEventListener('click', closePinPicker);
+  $('pinPickerCancel').addEventListener('click', closePinPicker);
+  $('pinPickerUse').addEventListener('click', usePinPicker);
+
+  const jump = async () => {
+    const q = ($('pinPickerSearch').value || '').trim();
+    if (!q || !pinPickerMap) return;
+    const go = $('pinPickerGo');
+    go.disabled = true; go.textContent = '…';
+    try{
+      const hit = await nominatim(q);
+      if (hit) pinPickerMap.setView([parseFloat(hit.lat), parseFloat(hit.lon)], 13);
+    }catch(err){ /* the map is still usable without the jump */ }
+    finally{ go.disabled = false; go.textContent = 'Go'; }
+  };
+  $('pinPickerGo').addEventListener('click', jump);
+  $('pinPickerSearch').addEventListener('keydown', e => {
+    if (e.key === 'Enter'){ e.preventDefault(); jump(); }
+  });
+
+  /* ---- dragging the figure out of its dock ---------------------------
+     Pointer events rather than HTML5 drag-and-drop: a drag image cannot be
+     positioned reliably over a Leaflet pane, and dragover fires against the
+     tiles rather than the map, so the drop point comes back wrong. Tracking
+     the pointer directly and converting the release point through Leaflet's
+     own containerPointToLatLng is exact, and it works with a finger. */
+  const dock = $('pinPickerDock');
+  let ghost = null;
+  const moveGhost = ev => {
+    if (!ghost) return;
+    ghost.style.left = ev.clientX + 'px';
+    ghost.style.top  = ev.clientY + 'px';
+  };
+  const endDrag = ev => {
+    document.removeEventListener('pointermove', moveGhost);
+    document.removeEventListener('pointerup', endDrag);
+    dock.classList.remove('dragging');
+    if (ghost){ ghost.remove(); ghost = null; }
+    const mapEl = $('pinPickerMap');
+    if (!mapEl || !pinPickerMap) return;
+    const r = mapEl.getBoundingClientRect();
+    const inside = ev.clientX >= r.left && ev.clientX <= r.right &&
+                   ev.clientY >= r.top  && ev.clientY <= r.bottom;
+    if (!inside) return;
+    const pt = L.point(ev.clientX - r.left, ev.clientY - r.top);
+    setPinPickerAt(pinPickerMap.containerPointToLatLng(pt));
+  };
+  dock.addEventListener('pointerdown', ev => {
+    ev.preventDefault();
+    dock.classList.add('dragging');
+    ghost = document.createElement('div');
+    ghost.className = 'peg-ghost';
+    ghost.innerHTML = GEO_PEG_SVG;
+    document.body.appendChild(ghost);
+    moveGhost(ev);
+    document.addEventListener('pointermove', moveGhost);
+    document.addEventListener('pointerup', endDrag);
+  });
+
+  return wrap;
+}
+
+/* Put the figure somewhere and start reading back what is there. */
+function setPinPickerAt(latlng){
+  if (!pinPickerMap) return;
+  pinPickerLatLng = latlng;
+  if (!pinPickerMarker){
+    pinPickerMarker = L.marker(latlng, {icon: pegIcon(), draggable: true, autoPan: true}).addTo(pinPickerMap);
+    pinPickerMarker.on('drag', e => {
+      pinPickerLatLng = e.target.getLatLng();
+      paintPinPicker(null, true);
+    });
+    pinPickerMarker.on('dragend', () => lookupPinPicker());
+  } else {
+    pinPickerMarker.setLatLng(latlng);
+  }
+  const dock = $('pinPickerDock');
+  if (dock) dock.classList.add('placed');
+  paintPinPicker(null, true);
+  lookupPinPicker();
+}
+
+function paintPinPicker(label, pending){
+  const read = $('pinPickerRead');
+  if (!read || !pinPickerLatLng) return;
+  read.querySelector('.pin-read-coord').textContent =
+    pinPickerLatLng.lat.toFixed(6) + ', ' + pinPickerLatLng.lng.toFixed(6);
+  const nameEl = read.querySelector('.pin-read-name');
+  nameEl.textContent = label || (pending ? 'Reading this spot…' : '');
+  nameEl.classList.toggle('pending', !!pending && !label);
+  $('pinPickerUse').disabled = false;
+}
+
+/* Every move starts a new read and invalidates the one before it, so a slow
+   answer for an old position can never overwrite a fresh one. */
+function lookupPinPicker(){
+  if (!pinPickerLatLng) return;
+  const token = ++pinPickerLookup;
+  const {lat, lng} = pinPickerLatLng;
+  nominatimReverse(lat.toFixed(7), lng.toFixed(7))
+    .then(hit => {
+      if (token !== pinPickerLookup) return;
+      pinPickerCfg._hit = hit;
+      paintPinPicker(hit ? (hit.display_name || '') : 'No address here — the coordinate still works', false);
+    })
+    .catch(() => {
+      if (token !== pinPickerLookup) return;
+      pinPickerCfg._hit = null;
+      paintPinPicker('Could not read this spot — the coordinate still works', false);
+    });
+}
+
+function openPinPicker(cfg){
+  if (typeof L === 'undefined'){ toast('The map library has not loaded yet', 'err'); return; }
+  pinPickerCfg = cfg || {};
+  pinPickerLatLng = null;
+  buildPinPicker();
+  pinPickerEl.classList.add('on');
+  document.body.classList.add('pin-locked');
+
+  const startLat = (cfg && cfg.lat != null) ? cfg.lat : 52.2690628;
+  const startLng = (cfg && cfg.lng != null) ? cfg.lng : -113.8141464;
+  const startZoom = (cfg && cfg.lat != null) ? 14 : 11;
+
+  if (!pinPickerMap){
+    pinPickerMap = L.map('pinPickerMap', {zoomControl:true}).setView([startLat, startLng], startZoom);
+    addBaseTiles(pinPickerMap);
+    /* Clicking is the other half of the same gesture — the dock says drag,
+       but everyone tries a click first, and being right both times is the
+       difference between a control that works and one that has to be
+       explained. */
+    pinPickerMap.on('click', e => setPinPickerAt(e.latlng));
+  } else {
+    pinPickerMap.setView([startLat, startLng], startZoom);
+  }
+
+  if (pinPickerMarker){ pinPickerMap.removeLayer(pinPickerMarker); pinPickerMarker = null; }
+  const dock = $('pinPickerDock');
+  if (dock) dock.classList.remove('placed');
+  $('pinPickerUse').disabled = true;
+  $('pinPickerSearch').value = '';
+  const read = $('pinPickerRead');
+  read.querySelector('.pin-read-coord').textContent = '—';
+  read.querySelector('.pin-read-name').textContent = 'Nothing placed yet';
+
+  /* The map was laid out while the modal was still hidden, so it has to be
+     told its own size before it will draw tiles in the right place. */
+  setTimeout(() => { try{ pinPickerMap.invalidateSize(); }catch(e){} }, 60);
+
+  /* If the field already had a coordinate, start from it rather than from
+     an empty map — nudging an existing pin is the common case. */
+  if (cfg && cfg.lat != null && cfg.lng != null){
+    setTimeout(() => setPinPickerAt(L.latLng(cfg.lat, cfg.lng)), 80);
+  }
+}
+
+function closePinPicker(){
+  if (!pinPickerEl) return;
+  pinPickerEl.classList.remove('on');
+  document.body.classList.remove('pin-locked');
+}
+
+function usePinPicker(){
+  if (!pinPickerLatLng || !pinPickerCfg) return;
+  const lat = parseFloat(pinPickerLatLng.lat.toFixed(7));
+  const lng = parseFloat(pinPickerLatLng.lng.toFixed(7));
+  const hit = pinPickerCfg._hit || null;
+  /* A dropped pin is a coordinate first and an address second. If the read
+     came back, its address parts are kept so the country still reaches the
+     APIs that need one; if it did not, the coordinate alone is enough to
+     scan with, and the label says plainly that it is a dropped pin rather
+     than inventing a street for it. */
+  const label = hit && hit.display_name
+    ? hit.display_name
+    : ('Dropped pin · ' + lat.toFixed(5) + ', ' + lng.toFixed(5));
+  const synthetic = hit || {lat: String(lat), lon: String(lng), address: {}, display_name: label,
+                            addresstype: 'pin', class: 'place', type: 'pin', boundingbox: null};
+  closePinPicker();
+  if (typeof pinPickerCfg.onPick === 'function') pinPickerCfg.onPick(synthetic, lat, lng, label);
+}
+
 function fitToPoints(m, pts){
   if (!pts || !pts.length) return;
   const b = L.latLngBounds(pts.map(p => [p.lat, p.lng]));
@@ -6519,17 +7166,18 @@ function dotPopup(p, idx, scan){
   co.textContent = p.lat.toFixed(5) + ', ' + p.lng.toFixed(5);
   d.appendChild(co);
 
-  /* Rebuilt from the rung that produced the number, not from the rung the
-     grid was built on, and rebuilt now so the uule timestamp is current. */
-  const searchHref = pointSearchUrl(scan, p);
-  const mapsHref = pointMapsUrl(scan, p);
-  const links = [['Open this exact search', searchHref], ['Open Google Maps', mapsHref]];
-  links.forEach(([txt, href]) => {
-    const line = document.createElement('div');
-    const a = document.createElement('a');
-    a.href = href; a.target = '_blank'; a.rel = 'noopener'; a.textContent = txt;
-    line.appendChild(a); d.appendChild(line);
-  });
+  /* One link, not two. Two links stacked on top of each other asked the
+     reader to decide which of them was the real one before they could check
+     anything, and the answer was never obvious from the words. The map view
+     is the one that matches what the grid is showing, so it is the one that
+     stays. Rebuilt from the rung that produced the number, not from the rung
+     the grid was built on, and rebuilt now so the uule timestamp is current. */
+  const mapsLine = document.createElement('div');
+  const mapsLink = document.createElement('a');
+  mapsLink.href = pointMapsUrl(scan, p);
+  mapsLink.target = '_blank'; mapsLink.rel = 'noopener';
+  mapsLink.textContent = 'Open Google Maps';
+  mapsLine.appendChild(mapsLink); d.appendChild(mapsLine);
 
   /* The list below is the reading. The number above is an index into it, so
      the two agree by construction - including after a manual pick, which
@@ -7814,15 +8462,15 @@ function comparePopup(p, idx, scan, gbps){
     d.appendChild(rd);
   }
 
-  /* Same pair, same words, same order as the single-profile popup — both are
-     rebuilt from p.read, so both reproduce the view the numbers came from. */
-  [['Open this exact search', pointSearchUrl(scan, p)],
-   ['Open Google Maps', pointMapsUrl(scan, p)]].forEach(([txt, href]) => {
-    const line = document.createElement('div');
-    const a = document.createElement('a');
-    a.href = href; a.target = '_blank'; a.rel = 'noopener'; a.textContent = txt;
-    line.appendChild(a); d.appendChild(line);
-  });
+  /* The same single link as the rank-grid popup, for the same reason: one
+     obvious thing to click, rebuilt from p.read so it reproduces the view
+     the numbers came from. */
+  const cmpLine = document.createElement('div');
+  const cmpLink = document.createElement('a');
+  cmpLink.href = pointMapsUrl(scan, p);
+  cmpLink.target = '_blank'; cmpLink.rel = 'noopener';
+  cmpLink.textContent = 'Open Google Maps';
+  cmpLine.appendChild(cmpLink); d.appendChild(cmpLine);
 
   const acts = document.createElement('div');
   acts.className = 'pop-acts';
@@ -8865,6 +9513,11 @@ $('cmpPdfBtn').addEventListener('click', async () => {
    ========================================================================== */
 wireGeoFinder({
   btn:'geocodeBtn', input:'loc', lat:'lat', lng:'lng',
+  /* The Advanced panel's Pin radius box is the same number the readout now
+     proposes, so the Find writes straight into it: finding Alberta fills in
+     a radius that covers Alberta instead of leaving the old default there
+     to quietly contradict the pin. */
+  radius:'radius',
   status:'geoStatus', out:'geoOut',
   after(){ updatePreview(); }
 });
@@ -10234,7 +10887,12 @@ async function seoResolveLocation(client, loc){
   // name goes to Nominatim exactly as typed, so it resolves identically.
   const hit = await nominatim(loc.label.trim());
   if (hit){
-    const g = { lat: parseFloat(parseFloat(hit.lat).toFixed(7)), lng: parseFloat(parseFloat(hit.lon).toFixed(7)) };
+    const lat = parseFloat(parseFloat(hit.lat).toFixed(7));
+    const g = { lat: lat, lng: parseFloat(parseFloat(hit.lon).toFixed(7)) };
+    /* Same measurement the Find button makes, so a location resolved during
+       an unattended scan covers the same ground as one pinned by hand. */
+    const r = niceRadius(bboxRadius(hit.boundingbox, lat));
+    if (r) g.radius = r;
     client.locationCache[key] = g;
     return g;
   }
@@ -10598,9 +11256,12 @@ async function seoScanOne(client, kw, loc){
      coordinate-pinned Google URL the Live SERP tool builds, and it is most
      useful precisely when the lookup fails - that is the moment you want to
      open the search yourself and see what is actually there. */
-  /* City-wide on purpose, unlike a grid point - pinned explicitly so the
-     zoom-derived default used by the grid does not narrow it. */
-  loc.sourceUrl = buildScanUrl(kw.text, g.lat, g.lng, {hl:region.hl, gl:region.gl, depth, surface:'web', radius:'93000'});
+  /* City-wide unless this location was pinned with a radius of its own -
+     pinned explicitly either way, so the zoom-derived default used by the
+     grid does not narrow it. A location saved before radii existed has none
+     and keeps the 93 km it has always used. */
+  const locRadius = (g && g.radius) || (loc && loc.radius) || '93000';
+  loc.sourceUrl = buildScanUrl(kw.text, g.lat, g.lng, {hl:region.hl, gl:region.gl, depth, surface:'web', radius:String(locRadius)});
   try{
     const data = await seoOrganicLadder(kw.text, {lat:g.lat, lng:g.lng}, region, {
       depth,
@@ -11895,7 +12556,13 @@ function seoCacheLocation(label, g){
   const c = activeSeoClient();
   if (!c || !label) return;
   if (!c.locationCache) c.locationCache = {};
-  c.locationCache[label.trim().toLowerCase()] = { lat: g.lat, lng: g.lng };
+  /* The radius travels with the coordinate now. It is optional on purpose:
+     a cache entry written before this existed simply has no radius and the
+     scan falls back to the city-wide default it always used, so nothing
+     already saved changes meaning. */
+  const entry = { lat: g.lat, lng: g.lng };
+  if (g.radius) entry.radius = Number(g.radius);
+  c.locationCache[label.trim().toLowerCase()] = entry;
   save();
 }
 wireGeoFinder({

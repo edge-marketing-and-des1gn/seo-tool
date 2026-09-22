@@ -3421,6 +3421,238 @@ body.pin-locked{overflow:hidden;}
   .kwr-band{opacity:1 !important;}
   .kwr-chip{border-color:#d7dde3 !important;}
 }
+
+/* ============================================================================
+   REFINEMENT LAYER
+   ============================================================================
+   Written last so it wins the cascade without unpicking what is above it.
+
+   The instrument metaphor was right and the execution had drifted: buttons had
+   grown to the width of whatever container they were in, every one of them
+   carried the same visual weight, and a full-width gradient slab was being
+   used for actions that are not the point of the screen. Weight is the only
+   thing that tells a person what to press, so it is spent here rather than
+   spread evenly.
+
+   Three rules:
+     · One primary per view. It is the only filled brand control on screen.
+     · Buttons are sized by their label, not by their container.
+     · Data reads as data — monospace, aligned in columns, never bold prose.
+   ========================================================================= */
+
+/* ---- buttons -------------------------------------------------------- */
+.btn{
+  padding:8px 13px; font-size:12px; border-radius:10px; gap:6px;
+  border-width:1px; letter-spacing:-.003em;
+  box-shadow:0 1px 1.5px rgba(20,28,36,.05);
+}
+.btn svg{width:13px; height:13px; flex:none;}
+.btn:hover{transform:none; box-shadow:0 2px 6px rgba(20,28,36,.09); border-color:#cbd6de;}
+.btn:active{transform:translateY(.5px);}
+.btn-sm{padding:6px 10px; font-size:11px; border-radius:8px;}
+.btn-sm svg{width:12px; height:12px;}
+
+/* The primary. Still unmistakable, no longer a slab: the shadow does the
+   lifting instead of the surface area. */
+.btn-go{
+  padding:9px 17px; font-size:12.5px; border-radius:10px;
+  box-shadow:0 2px 4px -1px rgba(184,87,15,.35), 0 8px 16px -8px rgba(184,87,15,.55),
+             inset 0 1px 0 rgba(255,255,255,.26);
+}
+.btn-go:hover{
+  filter:brightness(1.03);
+  box-shadow:0 3px 6px -1px rgba(184,87,15,.4), 0 12px 22px -8px rgba(184,87,15,.6),
+             inset 0 1px 0 rgba(255,255,255,.26);
+}
+/* A full-width control is for a form you have just filled in, and even then
+   it does not need to be as wide as the monitor. */
+.btn-full{width:100%; max-width:320px; margin-left:auto; margin-right:auto; display:flex;}
+
+/* The tertiary tier that was missing. Tools, not decisions. */
+.btn-quiet{
+  background:transparent; background-image:none; border-color:transparent;
+  color:var(--ink-2); box-shadow:none; font-weight:600;
+}
+.btn-quiet svg{opacity:.65;}
+.btn-quiet:hover{
+  background:var(--card-2); border-color:var(--line); color:var(--ink);
+  box-shadow:none;
+}
+.btn-quiet:hover svg{opacity:1;}
+.btn-dark{box-shadow:0 2px 5px -1px rgba(20,28,36,.28);}
+.btn-dark:hover{box-shadow:0 4px 10px -2px rgba(20,28,36,.32);}
+
+/* ---- the keyword composer ------------------------------------------- */
+.seo-kw-toolbar{gap:12px; padding:18px 20px;}
+.seo-kw-add{grid-template-columns:minmax(0,1fr) minmax(150px,220px) auto; gap:10px;}
+.seo-kw-add .f > label{
+  font-size:9.5px; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-3);
+}
+.seo-kw-add input, .seo-kw-add select{
+  height:40px; border-radius:10px; font-size:13px; background:var(--card);
+  border-color:var(--line);
+}
+.seo-kw-add input:focus, .seo-kw-add select:focus{
+  border-color:var(--brand); box-shadow:0 0 0 3px rgba(232,119,34,.13); outline:none;
+}
+.seo-kw-add > button{height:40px; padding-inline:16px;}
+
+/* The optional half of the composer, stated rather than shown. */
+.seo-kw-loc{
+  border:1px solid var(--line-2); border-radius:11px; background:var(--card-2);
+  overflow:hidden;
+}
+.seo-kw-loc > summary{
+  display:flex; align-items:center; gap:9px; cursor:pointer; user-select:none;
+  padding:10px 13px; list-style:none; font-size:12px; color:var(--ink-2);
+  transition:background .15s var(--ease);
+}
+.seo-kw-loc > summary::-webkit-details-marker{display:none;}
+.seo-kw-loc > summary:hover{background:rgba(0,0,0,.022);}
+.seo-kw-loc > summary > svg{width:14px; height:14px; flex:none; stroke:var(--ink-3);}
+.seo-kw-loc-cap{
+  font-size:9.5px; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-3); flex:none;
+}
+.seo-kw-loc-summary, .seo-kw-loc b{
+  font-weight:600; color:var(--ink-3); font-style:italic;
+  min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.seo-kw-loc b.on{color:var(--brand-deep); font-style:normal;}
+.seo-kw-loc-chev{margin-left:auto; display:inline-flex; flex:none; color:var(--ink-3);}
+.seo-kw-loc-chev svg{width:13px; height:13px; transition:transform .2s var(--ease);}
+.seo-kw-loc[open] .seo-kw-loc-chev svg{transform:rotate(180deg);}
+.seo-kw-loc-body{
+  padding:4px 13px 13px; border-top:1px solid var(--line-2);
+  animation:rise .2s var(--ease);
+}
+.seo-kw-loc-body .f{margin:0;}
+.seo-kw-loc-body .geo-out{margin-top:10px;}
+
+/* ---- the action bar --------------------------------------------------- */
+.seo-kw-actions{
+  display:flex; align-items:center; gap:4px; flex-wrap:wrap;
+  padding-top:13px; border-top:1px solid var(--line-2);
+}
+.seo-kw-actions .btn-go{margin-right:0;}
+.seo-kw-actions-gap{flex:1 1 20px;}
+@media (max-width:760px){
+  .seo-kw-actions-gap{display:none;}
+  .seo-kw-actions .btn-go{width:100%; max-width:none;}
+}
+
+/* ---- the keyword list ------------------------------------------------- */
+/* The right-hand end of every row carries the same five things, so they are
+   given the same five columns. Left to flow, each row placed them wherever
+   its own text ran out and the eye had to re-find the rank on every line. */
+.seo-lg-top{display:flex; align-items:center; gap:10px;}
+.seo-lg-text{font-size:13px; font-weight:600; letter-spacing:-.005em;}
+.seo-lg-metrics{
+  flex:none; display:grid; align-items:center; gap:7px;
+  grid-template-columns:64px 46px 34px 28px 28px auto 30px;
+  justify-items:center;
+}
+.seo-lg-metrics > *{min-width:0;}
+.seo-lg-metrics svg.spark{display:block;}
+@media (max-width:820px){
+  .seo-lg-metrics{grid-template-columns:auto auto auto auto auto auto; gap:6px;}
+}
+.seo-lg-row{padding:11px 10px; gap:5px;}
+.seo-lg-row:hover{background:var(--card-2);}
+
+/* Rank: the number is the point of the row, so it is the only thing on the
+   line set in the data face at full weight. */
+.rank-pill{
+  font-family:var(--mono); font-weight:700; font-size:11.5px;
+  padding:3px 9px; border-radius:7px; letter-spacing:-.01em;
+}
+.seo-loc-delta{font-size:10.5px; letter-spacing:-.01em;}
+
+/* The metadata line under each keyword. It was three grey things of equal
+   weight; the timestamp is context and the two links are actions. */
+.seo-loc-status{font-size:10.5px; color:var(--ink-3); letter-spacing:.005em;}
+.seo-loc-status a, .seo-copy-link-btn{font-size:10.5px;}
+.seo-loc-adv summary{font-size:10.5px; letter-spacing:.02em;}
+
+/* ---- location group cards --------------------------------------------- */
+.seo-lg-head{padding:14px 20px; gap:11px;}
+.seo-lg-label{font-size:14px;}
+.seo-lg-count{font-size:10px; padding:3px 9px;}
+.seo-lg-card{border-radius:14px; box-shadow:0 1px 2px rgba(20,28,36,.05);}
+.seo-lg-card.open{box-shadow:0 2px 10px -2px rgba(20,28,36,.1); border-color:#dfe6ec;}
+.seo-lg-body{padding:0 20px 12px;}
+
+/* ---- the module banner ------------------------------------------------ */
+/* Read once on the first visit, then in the way on every visit after it. */
+/* ---- the scan controls ------------------------------------------------
+   One primary, then two tools beside it. They were three stretched bars of
+   identical width, which read as an empty toolbar rather than as one action
+   with a couple of alternatives. */
+.runbar{display:flex; flex-direction:column; align-items:center; gap:9px;}
+.runbar .row{
+  display:flex; grid-template-columns:none; gap:7px;
+  justify-content:center; flex-wrap:wrap; width:auto;
+}
+.runbar .row .btn{width:auto; flex:none;}
+.runbar .prog, .runbar .status{width:100%;}
+
+.mod-intro[data-intro]{position:relative; padding-right:44px;}
+.mod-intro.collapsed{display:none;}
+.intro-dismiss{
+  position:absolute; top:10px; right:10px; width:26px; height:26px;
+  border-radius:8px; border:1px solid transparent; background:transparent;
+  color:var(--ink-3); cursor:pointer; line-height:1; font-size:16px;
+  display:grid; place-items:center; transition:all .15s var(--ease);
+}
+.intro-dismiss:hover{background:var(--card-2); border-color:var(--line); color:var(--ink);}
+
+/* ---- inputs, everywhere ----------------------------------------------- */
+input[type=text], input[type=password], input[type=number], select, textarea{
+  transition:border-color .16s var(--ease), box-shadow .16s var(--ease);
+}
+input[type=text]:focus, input[type=password]:focus, input[type=number]:focus,
+select:focus, textarea:focus{
+  border-color:var(--brand); box-shadow:0 0 0 3px rgba(232,119,34,.13); outline:none;
+}
+
+/* ---- the three-mode switch, tightened --------------------------------- */
+.geo-modes{padding:2px; border-radius:11px; gap:2px;}
+.geo-mode{padding:6px 8px; font-size:11px; border-radius:9px; gap:6px;}
+.geo-mode i{width:15px; height:15px; font-size:9px;}
+.geo-mode-note{font-size:10.5px; margin:-2px 0 9px; color:var(--ink-3);}
+
+/* ---- the readout row -------------------------------------------------- */
+.geo-out{padding:8px 10px; gap:7px; border-radius:11px;}
+.geo-out .geo-act{
+  padding:4px 9px; font-size:10px; border-radius:7px; letter-spacing:.05em;
+  background:transparent; border-color:transparent; color:var(--ink-3);
+}
+.geo-out .geo-act:hover{background:var(--card); border-color:var(--line); color:var(--brand-deep);}
+.geo-out .geo-area{font-size:10px; padding:3px 9px;}
+.geo-out .geo-coord{font-size:11px; padding:3px 8px;}
+.geo-out .geo-rad-sel{font-size:10.5px;}
+
+/* ---- the step cards --------------------------------------------------- */
+.step-head{padding-block:13px;}
+.step-title{font-size:13.5px;}
+.step-n{width:25px; height:25px; font-size:11px;}
+
+/* ---- tables ----------------------------------------------------------- */
+.tbl-card{border-radius:14px;}
+table th{
+  font-size:9.5px; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-3);
+}
+table td{font-size:12.5px;}
+
+/* ---- the top bar and rail --------------------------------------------- */
+.modes button, .seg button{font-size:12px; padding:6px 13px;}
+
+/* ---- respect the reduced-motion preference throughout ----------------- */
+@media (prefers-reduced-motion:reduce){
+  .btn, .btn-go, .geo-mode, .seo-kw-loc-chev svg{transition:none !important;}
+}
 </style>
 </head>
 <body>
@@ -3612,7 +3844,7 @@ body.pin-locked{overflow:hidden;}
 
     <div class="panels">
 
-      <div class="mod-intro">
+      <div class="mod-intro" data-intro>
         <div class="mod-intro-ico"><svg viewBox="0 0 24 24"><path d="M12 21s-7-5.33-7-11a7 7 0 0 1 14 0c0 5.67-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></div>
         <div class="mod-intro-txt">
           <h3>GBP Tracker</h3>
@@ -4140,7 +4372,7 @@ body.pin-locked{overflow:hidden;}
     </header>
 
     <div class="panels">
-      <div class="mod-intro">
+      <div class="mod-intro" data-intro>
         <div class="mod-intro-ico"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg></div>
         <div class="mod-intro-txt">
           <h3>Live SERP</h3>
@@ -4419,7 +4651,7 @@ body.pin-locked{overflow:hidden;}
 
     <div class="panels">
 
-      <div class="mod-intro">
+      <div class="mod-intro" data-intro>
         <div class="mod-intro-ico"><svg viewBox="0 0 24 24"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg></div>
         <div class="mod-intro-txt">
           <h3>SEO Clients</h3>
@@ -4655,32 +4887,55 @@ body.pin-locked{overflow:hidden;}
         <div id="seoKeywordsView" style="display:none">
 
           <div class="card seo-kw-toolbar">
+            <!-- The composer. Adding a keyword is one line: type it, pick the
+                 market, press the button. The starting location is optional and
+                 used on a minority of keywords, so it sits in a disclosure
+                 underneath that states what it is currently set to — it used to
+                 take a third of the row and, once the three-mode switch moved
+                 in, it was tall enough to drag the other two labels out of
+                 alignment with it. -->
             <div class="seo-kw-add">
               <div class="f">
                 <label for="seoNewKeyword">Keyword</label>
                 <input id="seoNewKeyword" type="text" placeholder="e.g. concrete contractor red deer" autocomplete="off"/>
               </div>
               <div class="f">
-                <label for="seoNewLocation">Starting location <span class="opt">optional</span></label>
-                <div class="g-inline">
-                  <input id="seoNewLocation" type="text" placeholder="City, region, or address" autocomplete="off"/>
-                  <button class="btn" id="seoNewLocFindBtn" type="button">Find</button>
-                </div>
-              </div>
-              <div class="f">
-                <label for="seoNewRegion">Region</label>
+                <label for="seoNewRegion">Market</label>
                 <select id="seoNewRegion"></select>
               </div>
-              <button class="btn btn-dark" id="seoAddKeywordBtn">Add keyword</button>
+              <button class="btn btn-dark" id="seoAddKeywordBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg><span>Add keyword</span></button>
             </div>
-            <div class="status" id="seoNewLocStatus"></div>
-            <div class="geo-out" id="seoNewLocOut"></div>
+
+            <details class="seo-kw-loc" id="seoKwLocWrap">
+              <summary>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                <span class="seo-kw-loc-cap">Starting location</span>
+                <b id="seoKwLocSummary">Not set — searched across the market</b>
+                <i class="seo-kw-loc-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></i>
+              </summary>
+              <div class="seo-kw-loc-body">
+                <div class="f">
+                  <label for="seoNewLocation">Where these searches are measured from</label>
+                  <div class="g-inline">
+                    <input id="seoNewLocation" type="text" placeholder="City, region, or address" autocomplete="off"/>
+                    <button class="btn" id="seoNewLocFindBtn" type="button">Find</button>
+                  </div>
+                </div>
+                <div class="status" id="seoNewLocStatus"></div>
+                <div class="geo-out" id="seoNewLocOut"></div>
+              </div>
+            </details>
+
+            <!-- One primary action, then the rest as quiet tools. They were
+                 five buttons of equal weight, which made "Scan all keywords"
+                 no easier to find than "Save now". -->
             <div class="seo-kw-actions">
-              <button class="btn btn-go" id="seoScanAllBtn">Scan all keywords</button>
-              <button class="btn" id="seoBulkImportBtn">Bulk import…</button>
-              <button class="btn" id="seoShareReportBtn">Share / embed…</button>
-              <button class="btn" id="seoExportClientBtn">Export .xlsx</button>
-              <button class="btn" id="seoKwSaveBtn" type="button" title="Write this client’s keywords to the browser and the cloud right now (Ctrl+S)"><span class="save-now-label">Save now</span></button>
+              <button class="btn btn-go" id="seoScanAllBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><span>Scan all keywords</span></button>
+              <span class="seo-kw-actions-gap"></span>
+              <button class="btn btn-quiet" id="seoBulkImportBtn" title="Paste a whole list of keywords at once"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 11l4 4 4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg><span>Bulk import</span></button>
+              <button class="btn btn-quiet" id="seoShareReportBtn" title="Share or embed this client’s report"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg><span>Share</span></button>
+              <button class="btn btn-quiet" id="seoExportClientBtn" title="Download this client’s keywords as an Excel file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 11l4 4 4-4"/><path d="M4 21h16"/></svg><span>Export .xlsx</span></button>
+              <button class="btn btn-quiet" id="seoKwSaveBtn" type="button" title="Write this client’s keywords to the browser and the cloud right now (Ctrl+S)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg><span class="save-now-label">Save now</span></button>
             </div>
             <div class="seo-scan-progress" id="seoScanProgress" style="display:none">
               <div class="seo-scan-bar"><i id="seoScanBarFill"></i></div>
@@ -5078,12 +5333,152 @@ const REGIONS = [
   {label:"Japan — 日本語", gl:"JP", hl:"ja"},
   {label:"Singapore — English", gl:"SG", hl:"en"},
   {label:"South Africa — English", gl:"ZA", hl:"en"},
-  {label:"United Arab Emirates — English", gl:"AE", hl:"en"}
+  {label:"United Arab Emirates — English", gl:"AE", hl:"en"},
+  /* ---- the rest of the world -------------------------------------
+     Appended, never reordered or inserted into: a saved profile stores
+     its market as an INDEX into this array, so moving an entry would
+     silently repoint every client that used it. The picker sorts them
+     alphabetically for display instead, which is a view concern. */
+  {label:"Argentina — Español", gl:"AR", hl:"es"},
+  {label:"Chile — Español", gl:"CL", hl:"es"},
+  {label:"Colombia — Español", gl:"CO", hl:"es"},
+  {label:"Peru — Español", gl:"PE", hl:"es"},
+  {label:"Uruguay — Español", gl:"UY", hl:"es"},
+  {label:"Paraguay — Español", gl:"PY", hl:"es"},
+  {label:"Bolivia — Español", gl:"BO", hl:"es"},
+  {label:"Ecuador — Español", gl:"EC", hl:"es"},
+  {label:"Venezuela — Español", gl:"VE", hl:"es"},
+  {label:"Costa Rica — Español", gl:"CR", hl:"es"},
+  {label:"Panama — Español", gl:"PA", hl:"es"},
+  {label:"Guatemala — Español", gl:"GT", hl:"es"},
+  {label:"Dominican Republic — Español", gl:"DO", hl:"es"},
+  {label:"Puerto Rico — Español", gl:"PR", hl:"es"},
+  {label:"Finland — Suomi", gl:"FI", hl:"fi"},
+  {label:"Iceland — Íslenska", gl:"IS", hl:"is"},
+  {label:"Estonia — Eesti", gl:"EE", hl:"et"},
+  {label:"Latvia — Latviešu", gl:"LV", hl:"lv"},
+  {label:"Lithuania — Lietuvių", gl:"LT", hl:"lt"},
+  {label:"Czechia — Čeština", gl:"CZ", hl:"cs"},
+  {label:"Slovakia — Slovenčina", gl:"SK", hl:"sk"},
+  {label:"Hungary — Magyar", gl:"HU", hl:"hu"},
+  {label:"Romania — Română", gl:"RO", hl:"ro"},
+  {label:"Bulgaria — Български", gl:"BG", hl:"bg"},
+  {label:"Greece — Ελληνικά", gl:"GR", hl:"el"},
+  {label:"Croatia — Hrvatski", gl:"HR", hl:"hr"},
+  {label:"Slovenia — Slovenščina", gl:"SI", hl:"sl"},
+  {label:"Serbia — Српски", gl:"RS", hl:"sr"},
+  {label:"Bosnia & Herzegovina — Bosanski", gl:"BA", hl:"bs"},
+  {label:"North Macedonia — Македонски", gl:"MK", hl:"mk"},
+  {label:"Albania — Shqip", gl:"AL", hl:"sq"},
+  {label:"Ukraine — Українська", gl:"UA", hl:"uk"},
+  {label:"Türkiye — Türkçe", gl:"TR", hl:"tr"},
+  {label:"Israel — עברית", gl:"IL", hl:"he"},
+  {label:"Saudi Arabia — العربية", gl:"SA", hl:"ar"},
+  {label:"Qatar — العربية", gl:"QA", hl:"ar"},
+  {label:"Kuwait — العربية", gl:"KW", hl:"ar"},
+  {label:"Bahrain — العربية", gl:"BH", hl:"ar"},
+  {label:"Oman — العربية", gl:"OM", hl:"ar"},
+  {label:"Jordan — العربية", gl:"JO", hl:"ar"},
+  {label:"Lebanon — العربية", gl:"LB", hl:"ar"},
+  {label:"Egypt — العربية", gl:"EG", hl:"ar"},
+  {label:"Morocco — Français", gl:"MA", hl:"fr"},
+  {label:"Tunisia — Français", gl:"TN", hl:"fr"},
+  {label:"Algeria — Français", gl:"DZ", hl:"fr"},
+  {label:"Nigeria — English", gl:"NG", hl:"en"},
+  {label:"Kenya — English", gl:"KE", hl:"en"},
+  {label:"Ghana — English", gl:"GH", hl:"en"},
+  {label:"Tanzania — English", gl:"TZ", hl:"en"},
+  {label:"Uganda — English", gl:"UG", hl:"en"},
+  {label:"Ethiopia — English", gl:"ET", hl:"en"},
+  {label:"Zimbabwe — English", gl:"ZW", hl:"en"},
+  {label:"Zambia — English", gl:"ZM", hl:"en"},
+  {label:"Botswana — English", gl:"BW", hl:"en"},
+  {label:"Namibia — English", gl:"NA", hl:"en"},
+  {label:"Mauritius — English", gl:"MU", hl:"en"},
+  {label:"China — 简体中文", gl:"CN", hl:"zh-CN"},
+  {label:"Hong Kong — 繁體中文", gl:"HK", hl:"zh-TW"},
+  {label:"Taiwan — 繁體中文", gl:"TW", hl:"zh-TW"},
+  {label:"South Korea — 한국어", gl:"KR", hl:"ko"},
+  {label:"Thailand — ไทย", gl:"TH", hl:"th"},
+  {label:"Vietnam — Tiếng Việt", gl:"VN", hl:"vi"},
+  {label:"Indonesia — Bahasa Indonesia", gl:"ID", hl:"id"},
+  {label:"Malaysia — Bahasa Melayu", gl:"MY", hl:"ms"},
+  {label:"Philippines — English", gl:"PH", hl:"en"},
+  {label:"Pakistan — English", gl:"PK", hl:"en"},
+  {label:"Bangladesh — বাংলা", gl:"BD", hl:"bn"},
+  {label:"Sri Lanka — English", gl:"LK", hl:"en"},
+  {label:"Nepal — नेपाली", gl:"NP", hl:"ne"},
+  {label:"Kazakhstan — Русский", gl:"KZ", hl:"ru"},
+  {label:"Russia — Русский", gl:"RU", hl:"ru"},
+  {label:"Belarus — Русский", gl:"BY", hl:"ru"},
+  {label:"Georgia — ქართული", gl:"GE", hl:"ka"},
+  {label:"Armenia — Հայերեն", gl:"AM", hl:"hy"},
+  {label:"Azerbaijan — Azərbaycan", gl:"AZ", hl:"az"},
+  {label:"Luxembourg — Français", gl:"LU", hl:"fr"},
+  {label:"Malta — English", gl:"MT", hl:"en"},
+  {label:"Cyprus — Ελληνικά", gl:"CY", hl:"el"},
+  {label:"Monaco — Français", gl:"MC", hl:"fr"},
+  {label:"Andorra — Català", gl:"AD", hl:"ca"},
+  {label:"Liechtenstein — Deutsch", gl:"LI", hl:"de"},
+  {label:"Fiji — English", gl:"FJ", hl:"en"},
+  {label:"Papua New Guinea — English", gl:"PG", hl:"en"},
+  {label:"Jamaica — English", gl:"JM", hl:"en"},
+  {label:"Trinidad & Tobago — English", gl:"TT", hl:"en"},
+  {label:"Barbados — English", gl:"BB", hl:"en"},
+  {label:"Bahamas — English", gl:"BS", hl:"en"},
+  {label:"Bermuda — English", gl:"BM", hl:"en"},
+  {label:"Cayman Islands — English", gl:"KY", hl:"en"},
+  {label:"Canada — Français (Québec)", gl:"CA", hl:"fr-CA"},
+  {label:"Switzerland — Français", gl:"CH", hl:"fr"},
+  {label:"Switzerland — Italiano", gl:"CH", hl:"it"},
+  {label:"Belgium — Français", gl:"BE", hl:"fr"},
+  {label:"India — हिन्दी", gl:"IN", hl:"hi"},
+  {label:"South Africa — Afrikaans", gl:"ZA", hl:"af"},
+  {label:"United States — 中文", gl:"US", hl:"zh-CN"},
+  {label:"Spain — Català", gl:"ES", hl:"ca"}
 ];
 function fillRegions(sel){
   if (!sel) return;
-  REGIONS.forEach((r,i) => { const o = document.createElement('option'); o.value = i; o.textContent = r.label; sel.appendChild(o); });
+  /* Sorted for reading, indexed by position for storing. The option's value is
+     always the entry's real index in REGIONS, so the display order can change
+     freely without touching a single saved profile. */
+  REGIONS.map((r, i) => ({r, i}))
+    .sort((a, b) => a.r.label.localeCompare(b.r.label, 'en'))
+    .forEach(({r, i}) => {
+      const o = document.createElement('option');
+      o.value = i; o.textContent = r.label;
+      sel.appendChild(o);
+    });
   sel.value = 0;
+}
+
+/* Which market entry belongs to a country. Pinning a location in Kenya and
+   leaving the market on Canada is a silent wrong answer — Google is asked
+   for Canadian results about a Kenyan place — so resolving a location now
+   moves the market with it. An exact language match wins, then any entry for
+   that country. */
+function regionIdxForCountry(iso, preferHl){
+  const code = String(iso || '').toUpperCase();
+  if (!code) return -1;
+  const norm = c => c === 'GB' ? 'UK' : c;
+  const want = norm(code);
+  let best = -1;
+  for (let i = 0; i < REGIONS.length; i++){
+    if (norm(String(REGIONS[i].gl).toUpperCase()) !== want) continue;
+    if (best === -1) best = i;
+    if (preferHl && REGIONS[i].hl === preferHl) return i;
+  }
+  return best;
+}
+function syncRegionSelect(selId, iso){
+  const sel = typeof selId === 'string' ? $(selId) : selId;
+  if (!sel || !iso) return false;
+  const idx = regionIdxForCountry(iso);
+  if (idx < 0) return false;
+  if (String(sel.value) === String(idx)) return false;
+  sel.value = String(idx);
+  sel.dispatchEvent(new Event('change', {bubbles:true}));
+  return true;
 }
 
 /* ---------- uule ---------- */
@@ -5407,14 +5802,60 @@ const GEO_SCOPE_WORD = {
    rung takes the parts that belong to it and the one above for context,
    which is how "Lacombe, Alberta" and "Alberta, Canada" both come out
    readable. */
-function geoScopeName(hit, zoom){
+/* ==========================================================================
+   READING AN ADDRESS ANYWHERE IN THE WORLD
+   ==========================================================================
+   Nominatim does not use the same keys in every country. A first-level
+   division is `state` in the US and Australia, `province` in Canada and
+   China, `region` in France and Italy, `state_district` in India, `county`
+   in Ireland and Norway. Reading only `state` meant a province resolved
+   cleanly in Alberta and came back blank in Tuscany — which then produced a
+   canonical name Google could not match, and a search that quietly fell back
+   to wherever the browser was.
+
+   So each rung of the ladder has a list of the keys that can fill it, tried
+   in order, and every function that reads an address reads it through here.
+   A key already used by a broader rung is not reused by a narrower one, or a
+   region with no county would report its own name twice.
+   ========================================================================== */
+const GEO_ADDR_KEYS = {
+  country: ['country'],
+  state:   ['state','province','region','state_district','territory','prefecture',
+            'oblast','governorate','emirate','canton','department','federal_state'],
+  region:  ['state_district','county','region','province','district','division',
+            'municipality','subregion'],
+  city:    ['city','town','municipality','village','hamlet','borough',
+            'city_district','isolated_dwelling','locality'],
+  local:   ['suburb','neighbourhood','quarter','city_district','borough','district',
+            'subdistrict','residential','allotments'],
+  street:  ['road','pedestrian','footway','path','street','place']
+};
+function addrPart(a, kind, taken){
+  const keys = GEO_ADDR_KEYS[kind] || [];
+  for (let i = 0; i < keys.length; i++){
+    const v = a && a[keys[i]];
+    if (v && (!taken || taken.indexOf(v) === -1)) return v;
+  }
+  return '';
+}
+/* Every rung at once, each one distinct from the ones above it. */
+function geoAddrLadder(hit){
   const a = (hit && hit.address) || {};
-  const country = a.country || '';
-  const state   = a.state || a.province || '';
-  const region  = a.state_district || a.county || a.region || '';
-  const city    = a.city || a.town || a.village || a.municipality || a.hamlet || '';
-  const local   = a.suburb || a.neighbourhood || a.quarter || a.city_district || '';
-  const street  = [a.house_number, a.road].filter(Boolean).join(' ');
+  const country = addrPart(a, 'country');
+  const used = [country];
+  const state = addrPart(a, 'state', used);  used.push(state);
+  const region = addrPart(a, 'region', used); used.push(region);
+  const city = addrPart(a, 'city', used);     used.push(city);
+  const local = addrPart(a, 'local', used);   used.push(local);
+  const road = addrPart(a, 'street', used);
+  const street = [a.house_number, road].filter(Boolean).join(' ');
+  return {country, state, region, city, local, street};
+}
+
+function geoScopeName(hit, zoom){
+  const L = geoAddrLadder(hit);
+  const country = L.country, state = L.state, region = L.region,
+        city = L.city, local = L.local, street = L.street;
   const z = Number(zoom) || 18;
 
   let parts;
@@ -5504,11 +5945,8 @@ function boundsFit(centre, b){
    nearest town — a lat/lng uule always resolves to a locality, which is why
    a search meant for Alberta came back headed "Lacombe, AB". */
 function geoCanonicalName(hit, zoom){
-  const a = (hit && hit.address) || {};
-  const country = a.country || '';
-  const state   = a.state || a.province || '';
-  const county  = a.state_district || a.county || '';
-  const city    = a.city || a.town || a.village || a.municipality || '';
+  const L = geoAddrLadder(hit);
+  const country = L.country, state = L.state, county = L.region, city = L.city;
   const z = Number(zoom) || 18;
   let parts;
   if      (z <= 3)  parts = [country];
@@ -5623,7 +6061,13 @@ function fillRadiusSelect(sel, value, autoValue){
    break the tie. If the answer names a city, town or village, it isn't a
    broad area however it was tagged. */
 const GEO_BROAD_TYPES = ['country','state','province','region','county','state_district',
-                         'territory','postcode','archipelago','island','continent'];
+                         'territory','postcode','archipelago','island','continent',
+                         /* first-level divisions are called different things in
+                            different countries, and every one of these is an
+                            area rather than somewhere you could stand */
+                         'prefecture','oblast','governorate','emirate','canton',
+                         'department','division','federal_state','subregion',
+                         'autonomous_region','union_territory','district'];
 function geoIsBroad(hit){
   if (!hit) return false;
   const t = String(hit.addresstype || hit.type || '').toLowerCase();
@@ -5638,9 +6082,9 @@ function geoIsBroad(hit){
    thing it sits inside. A province shows its country beside it; a country
    has nothing broader to show, so that half is simply left off. */
 function geoScopeParts(hit){
-  const a = (hit && hit.address) || {};
-  const country = a.country || '';
-  const state = a.state || a.province || a.region || a['state_district'] || '';
+  const L = geoAddrLadder(hit);
+  const country = L.country;
+  const state = L.state || L.region;
   let head = (hit && hit.name) || state || country ||
              String((hit && hit.display_name) || '').split(',')[0].trim();
   if (state && head && head !== state && head !== country) head = head + ', ' + state;
@@ -5779,10 +6223,12 @@ function renderGeoOut(out, g){
     setTimeout(() => { copy.textContent = 'Copy'; }, 1400);
   });
 
-  const view = document.createElement('a');
-  view.className = 'geo-act'; view.textContent = 'Map';
-  view.href = 'https://www.openstreetmap.org/?mlat=' + g.lat + '&mlon=' + g.lng + '#map=14/' + g.lat + '/' + g.lng;
-  view.target = '_blank'; view.rel = 'noopener';
+  /* There used to be a "Map" link here that opened openstreetmap.org in a new
+     tab. OSM is the engine this tool runs on, not a destination to send people
+     to — the app has its own map, which shows the same place with the radius,
+     the boundary and the figure on it. The link was an exit out of the product
+     in the middle of a task. The tile and geocoder attribution stays, because
+     that is a condition of using the data. */
 
   /* ---- how wide, but only where width is the question -----------------
      Radius mode is the only one that has a radius, so it is the only one
@@ -5827,7 +6273,7 @@ function renderGeoOut(out, g){
   e.appendChild(name);
   if (radiusWrap) e.appendChild(radiusWrap);
   if (openMap) e.appendChild(openMap);
-  e.appendChild(copy); e.appendChild(view);
+  e.appendChild(copy);
 }
 
 /* The circle outgrew the province it was drawn in, so the search IS the
@@ -6036,6 +6482,7 @@ function wireGeoFinder(cfg){
       input.dataset.geoScope = t.name || '';
       input.dataset.geoCanonical = t.canonical || '';
       input.dataset.geoWanted = String(t.requested);
+      if (cfg.region) syncRegionSelect(cfg.region, dfsCountryIso(t.hit));
       /* The headroom, so the menu can offer the two radii that mean
          something here: the widest circle that stays inside the province,
          and the one that reaches its far corner. */
@@ -6183,6 +6630,11 @@ function wireGeoFinder(cfg){
                                              addresstype:hit.addresstype || hit.type || ''});
     } else delete input.dataset.geoOsm;
 
+    /* The market follows the place. Pinning Nairobi while the market still
+       reads "Canada — English" asks Google for Canadian results about a
+       Kenyan address, and nothing on screen says so. */
+    if (cfg.region) syncRegionSelect(cfg.region, iso);
+
     /* Naming the place to Google, rather than handing it a coordinate and
        hoping. A lat/lng uule always resolves to the nearest locality, which
        is why a search meant for Alberta came back headed "Lacombe, AB"; a
@@ -6327,6 +6779,45 @@ function restoreGeoField(input, centre, finder){
   if (centre.osm) input.dataset.geoOsm = JSON.stringify(centre.osm); else delete input.dataset.geoOsm;
   if (setMode) setMode(centre.mode || 'place', {keep:true});
 }
+
+/* ==========================================================================
+   THE MODULE BANNERS
+   ==========================================================================
+   Each module opens with a paragraph explaining what it is for. That is worth
+   reading once and is furniture on every visit afterwards, so each one can be
+   put away and stays away. Remembered per module in localStorage rather than
+   in the workspace, because it is a preference of this browser, not a fact
+   about the client's data — dismissing it should not travel to a colleague
+   through the cloud sync or land in an exported file.
+   ========================================================================== */
+const INTRO_KEY = 'meridian-intros-dismissed';
+function dismissedIntros(){
+  try{ return JSON.parse(localStorage.getItem(INTRO_KEY) || '[]') || []; }
+  catch(err){ return []; }
+}
+function wireIntroBanners(){
+  let gone = dismissedIntros();
+  document.querySelectorAll('[data-intro]').forEach((el, i) => {
+    const title = el.querySelector('h3');
+    const key = (title && title.textContent.trim()) || ('intro-' + i);
+    if (gone.indexOf(key) !== -1){ el.classList.add('collapsed'); return; }
+    if (el.querySelector('.intro-dismiss')) return;
+    const x = document.createElement('button');
+    x.type = 'button';
+    x.className = 'intro-dismiss';
+    x.setAttribute('aria-label', 'Hide this introduction');
+    x.title = 'Hide this — it will not come back';
+    x.innerHTML = '&times;';
+    x.addEventListener('click', () => {
+      el.classList.add('collapsed');
+      gone = dismissedIntros();
+      if (gone.indexOf(key) === -1) gone.push(key);
+      try{ localStorage.setItem(INTRO_KEY, JSON.stringify(gone)); }catch(err){}
+    });
+    el.appendChild(x);
+  });
+}
+try{ wireIntroBanners(); }catch(err){}
 
 /* ==========================================================================
    STATE
@@ -7382,13 +7873,13 @@ function renderGridInfo(){
 /* ---------- geocoding buttons ---------- */
 tLocFinder = wireGeoFinder({
   btn:'tGeocodeBtn', input:'tLoc', lat:'tLat', lng:'tLng',
-  status:'tGeoStatus', out:'tGeoOut',
+  status:'tGeoStatus', out:'tGeoOut', region:'tRegion',
   after(){ persistGbp(); recenterMap(); },
   onClear(){ persistGbp(); recenterMap(); }
 });
 wireGeoFinder({
   btn:'cmpGeocodeBtn', input:'cmpLoc', lat:'cmpLat', lng:'cmpLng',
-  status:'cmpGeoStatus', out:'cmpGeoOut',
+  status:'cmpGeoStatus', out:'cmpGeoOut', region:'cmpRegion',
   /* The comparison map gets the same treatment as the main one: a province
      is framed whole, a point is centred on. */
   after(res){
@@ -11312,7 +11803,7 @@ wireGeoFinder({
      an area resolves to a name Google knows, and that name is what gets
      sent. It stays editable. */
   canonical:'canonical',
-  status:'geoStatus', out:'geoOut',
+  status:'geoStatus', out:'geoOut', region:'region',
   after(){ updatePreview(); },
   onClear(){ updatePreview(); }
 });
@@ -11320,7 +11811,7 @@ wireGeoFinder({
    also rewrites the field into the punctuation their API will accept. */
 wireGeoFinder({
   btn:'kwGeocodeBtn', input:'kwLocationName',
-  status:'kwGeoStatus', out:'kwGeoOut', market:true
+  status:'kwGeoStatus', out:'kwGeoOut', market:true, region:'kwRegion'
 });
 /* --------------------------------------------------------------------------
    PAGE TWO AND BEYOND, WITHOUT LOSING THE PIN
@@ -13993,7 +14484,15 @@ function seoLocGroupRow(c, k, loc){
     save(); renderSeoKeywords();
   });
 
-  [check, text, spark, rankBox, deltaBox, sourceEl, copyEl, scanBtn, delBtn].forEach(el => top.appendChild(el));
+  /* The six things at the right-hand end of every row go into one grid with
+     fixed column widths, so the rank sits at the same x on every line. Left
+     to flow, each row put its rank wherever its own keyword text happened to
+     stop, and scanning a column of rankings meant re-finding the number on
+     every row. */
+  const metrics = document.createElement('div');
+  metrics.className = 'seo-lg-metrics';
+  [spark, rankBox, deltaBox, sourceEl, copyEl, scanBtn, delBtn].forEach(el => metrics.appendChild(el));
+  [check, text, metrics].forEach(el => top.appendChild(el));
 
   /* ---- secondary line: quiet status, plus an optional drawer for the
      things you rarely touch — the exact location text, its pinned
@@ -14445,17 +14944,34 @@ function seoCacheLocation(label, g){
 wireGeoFinder({
   btn:'seoApplyLocFindBtn', input:'seoApplyLocInput',
   lat:'seoApplyLocLat', lng:'seoApplyLocLng',
-  status:'seoApplyLocStatus', out:'seoApplyLocOut',
+  status:'seoApplyLocStatus', out:'seoApplyLocOut', region:'seoApplyLocRegion',
   after(g){ seoCacheLocation($('seoApplyLocInput').value, g); }
 });
+/* The disclosure's own line has to say what is inside it, or it is just a
+   closed drawer. It reports the location in force, so the composer can stay
+   one line without hiding what it is set to. */
+function paintKwLocSummary(g){
+  const el = $('seoKwLocSummary');
+  if (!el) return;
+  if (!g || g.lat == null){
+    el.textContent = 'Not set \u2014 searched across the market';
+    el.classList.remove('on');
+    return;
+  }
+  const where = (g.scopeName || g.label || '').split(',').slice(0, 2).join(',').trim();
+  el.textContent = g.area ? ('All of ' + where) : where;
+  el.title = g.label || '';
+  el.classList.add('on');
+}
 wireGeoFinder({
   btn:'seoNewLocFindBtn', input:'seoNewLocation',
-  status:'seoNewLocStatus', out:'seoNewLocOut',
-  after(g){ seoCacheLocation($('seoNewLocation').value, g); }
+  status:'seoNewLocStatus', out:'seoNewLocOut', region:'seoNewRegion',
+  after(g){ seoCacheLocation($('seoNewLocation').value, g); paintKwLocSummary(g); },
+  onClear(){ paintKwLocSummary(null); }
 });
 wireGeoFinder({
   btn:'seoBulkLocFindBtn', input:'seoBulkDefaultLocation',
-  status:'seoBulkLocStatus', out:'seoBulkLocOut',
+  status:'seoBulkLocStatus', out:'seoBulkLocOut', region:'seoBulkDefaultRegion',
   after(g){ seoCacheLocation($('seoBulkDefaultLocation').value, g); }
 });
 $('seoApplyLocOk').addEventListener('click', async () => {

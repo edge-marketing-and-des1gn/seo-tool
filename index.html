@@ -717,6 +717,10 @@ kbd{font-family:var(--mono);font-size:10.5px;background:#fff;border:1px solid va
 /* The exact request behind the number, so it can be checked rather than
    believed. Set in the data face because it is data, and quiet because it is
    evidence rather than a headline. */
+.pop-links{display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 12px; margin:2px 0 4px;}
+.pop-link-main{font-weight:700; color:var(--brand-deep);}
+.pop-link-alt{font-size:11px; color:var(--ink-3); text-decoration:underline; text-decoration-color:var(--line);}
+.pop-link-alt:hover{color:var(--ink-2);}
 .pop-sent{
   font-family:var(--mono); font-size:9.5px; line-height:1.55; color:var(--ink-3);
   background:var(--card-2); border:1px solid var(--line-2); border-radius:7px;
@@ -3992,12 +3996,14 @@ table td{font-size:12.5px;}
                   <div class="f">
                     <label for="zoomSel">How wide each point looks</label>
                     <select id="zoomSel">
+                      <option value="auto" selected>Match the spacing — recommended</option>
                       <option value="16">Tight — a few blocks</option>
-                      <option value="14" selected>Normal — a city district</option>
+                      <option value="14">Normal — a city district</option>
                       <option value="12">Wide — the whole town and its outskirts</option>
                       <option value="10">Very wide — the surrounding region</option>
                     </select>
-                    <div class="hint">This is the map view each search is run at. A tight view on the edge of town can come back with only a handful of listings, which is how a profile gets missed. Normal suits most towns; go wider for rural grids.</div>
+                    <div class="hint">The map view each search runs at. Each point stands for the ground halfway to its neighbours, so the view has to reach that far or the grid has holes in it and a profile gets reported missing from places it is plainly visible. <b>Match the spacing</b> works that out from the grid you have set; the fixed options are there for when you want a specific view and know what you are asking for.</div>
+                    <div class="hint" id="zoomWarn" style="display:none"></div>
                   </div>
                   <div class="hint" id="gridInfo"></div>
                   <div class="divider"></div>
@@ -5529,6 +5535,54 @@ const uuleForUrl = u => u.slice(0,2) + u.slice(2).replace(/\+/g,'%2B').replace(/
    API was shown. A fixed radius cannot do that: at 14z it is roughly 3 km,
    at 10z roughly 47 km, and asking for the wrong one is asking a different
    question. Clamped at 500 m because Google ignores anything tighter. */
+/* ==========================================================================
+   THE VIEW HAS TO REACH THE NEXT POINT
+   ==========================================================================
+   A grid point is not a pin, it is a cell: it stands for the ground halfway
+   to its neighbours in every direction. If the map view each search runs at
+   is narrower than that cell, the grid has holes in it, and a business two
+   kilometres outside every view is reported absent from a town it is
+   perfectly visible in.
+
+   That is exactly what a 7 km grid read at 14z does. At 51 degrees north a
+   14z view is about 6 km across, so a point does not even see as far as its
+   own neighbour, never mind the corners of its cell 9.9 km away. Eight
+   misses and one hit is then the honest reading of a badly cut grid rather
+   than a measurement of anything.
+
+   So the view is derived from the spacing instead of picked from a list of
+   adjectives. The search has to span the cell's diagonal — spacing times
+   root two — or the corners of the cell are never looked at.
+   ========================================================================== */
+function viewWidthM(zoom, lat){
+  const z = Math.max(1, Math.min(21, Number(zoom) || 14));
+  return 1000 * 156543.03392 * Math.cos((Number(lat) || 0) * Math.PI / 180) / Math.pow(2, z);
+}
+const GRID_ZOOM_MIN = 9, GRID_ZOOM_MAX = 17;
+function autoGridZoom(spacingKm, lat){
+  const s = Math.max(0.05, Number(spacingKm) || 1.5) * 1000;
+  const need = s * Math.SQRT2;                 // reach the corner of the cell
+  const span = 156543.03392 * Math.cos((Number(lat) || 0) * Math.PI / 180) * 1000;
+  const z = Math.floor(Math.log2(span / need));
+  if (!isFinite(z)) return 14;
+  return Math.max(GRID_ZOOM_MIN, Math.min(GRID_ZOOM_MAX, z));
+}
+/* A profile's zoom may be the string 'auto', so every reader goes through
+   here rather than parsing it themselves. */
+function gridZoom(g){
+  if (!g) return 14;
+  if (g.zoom === 'auto' || g.zoom == null){
+    return autoGridZoom(g.spacingKm, (g.center && g.center.lat) || 0);
+  }
+  const n = parseInt(g.zoom, 10);
+  return isFinite(n) ? n : 14;
+}
+/* How well a view covers the cell it stands for. Below 1 the grid has gaps. */
+function gridCoverage(zoom, spacingKm, lat){
+  const s = Math.max(0.05, Number(spacingKm) || 1.5) * 1000;
+  return viewWidthM(zoom, lat) / (s * Math.SQRT2);
+}
+
 function zoomRadius(zoom, lat){
   const z = Math.max(1, Math.min(21, Number(zoom) || 14));
   const perPx = 156543.03392 * Math.cos((Number(lat) || 0) * Math.PI / 180) / Math.pow(2, z);
@@ -7174,7 +7228,10 @@ let memoryStore = null;
 function blankGbp(name){
   return {
     id:uid(), name:name || 'Main location', bizName:'', gbpLink:'', phone:'', website:'', cid:null, placeId:null,
-    center:{lat:null,lng:null,label:'',mode:'place',area:false,radius:null,bounds:null,osm:null,level:null}, regionIdx:0, gridSize:7, spacingKm:1.5, surface:'local', zoom:14,
+    center:{lat:null,lng:null,label:'',mode:'place',area:false,radius:null,bounds:null,osm:null,level:null}, regionIdx:0, gridSize:7, spacingKm:1.5, surface:'local',
+    /* Derived from the spacing rather than fixed at 14z, so a new grid cannot
+       be born with holes in it. */
+    zoom:'auto',
     keywords:[], activeKeywordId:null
   };
 }
@@ -7203,7 +7260,8 @@ function migrateClient(c){
       if (!Array.isArray(g.keywords)) g.keywords = [];
       if (!g.center) g.center = {lat:null,lng:null,label:''};
       if (!g.name) g.name = g.bizName || 'Profile';
-      if (typeof g.zoom !== 'number') g.zoom = 14;
+      /* 'auto' is a legitimate value now, so only junk is corrected. */
+      if (g.zoom !== 'auto' && typeof g.zoom !== 'number') g.zoom = 'auto';
       g.keywords.forEach(k => { if (!Array.isArray(k.scans)) k.scans = []; });
     });
   }
@@ -8097,7 +8155,7 @@ function loadGbpIntoForm(){
   $('spacing').value = g ? g.spacingKm : 1.5;
   $('surface').value = g ? g.surface : 'local';
   $('tRegion').value = g ? g.regionIdx : 0;
-  $('zoomSel').value = g ? (g.zoom || 14) : 14;
+  $('zoomSel').value = g ? String(g.zoom || 'auto') : 'auto';
   renderMeter(); renderKeywords(); renderHistory(); renderGridInfo(); refreshStepState();
   const kw = activeKeyword();
   drawScan(kw && kw.scans.length ? kw.scans[kw.scans.length - 1] : null);
@@ -8130,7 +8188,8 @@ function persistGbp(){
   g.spacingKm = parseFloat($('spacing').value) || 1.5;
   g.surface = $('surface').value;
   g.regionIdx = parseInt($('tRegion').value, 10) || 0;
-  g.zoom = parseInt($('zoomSel').value, 10) || 14;
+  const zv = $('zoomSel').value;
+  g.zoom = zv === 'auto' ? 'auto' : (parseInt(zv, 10) || 14);
 
   const cid = g.gbpLink.match(/[?&](?:cid|ludocid)=(\d+)/);
   if (cid) g.cid = cid[1];
@@ -8191,6 +8250,13 @@ function renderGridInfo(){
   if (!g){ $('gridInfo').textContent = ''; return; }
   const n = g.gridSize, sp = g.spacingKm;
   const span = ((n - 1) * sp).toFixed(1);
+  /* Does each search actually reach the ground the point stands for? Below 1
+     it does not, and every number on the grid is then a reading of a view
+     that never looked at most of its own cell. */
+  const lat = (g.center && g.center.lat) || 0;
+  const z = gridZoom(g);
+  const cover = gridCoverage(z, sp, lat);
+  const viewKm = viewWidthM(z, lat) / 1000;
   const lanes = state.settings.provider === 'direct' ? 1 : (state.settings.concurrency || 6);
   const secs = Math.max(4, Math.round((n * n) * 1.6 / lanes));
   const mins = secs >= 90 ? (Math.round(secs / 6) / 10) + ' min' : secs + ' sec';
@@ -8201,6 +8267,28 @@ function renderGridInfo(){
   /* A grid centred on a city is the ordinary case and needs no warning — a
      9 km square over a town is exactly what this tool is for. It is only a
      county, a state or a country that a grid this size cannot stand for. */
+  /* The gap warning, stated in kilometres rather than as a ratio, because
+     "a 6 km view, 9.9 km to the corner" is a fact anyone can act on and
+     "coverage 0.6" is not. */
+  const warnEl = $('zoomWarn');
+  if (warnEl){
+    const diag = sp * Math.SQRT2;
+    warnEl.style.display = '';
+    if (cover < 0.98){
+      warnEl.style.color = '';
+      warnEl.innerHTML = '<b style="color:var(--alert)">This grid has gaps.</b> Each search looks at ' +
+        'about <b>' + viewKm.toFixed(1) + ' km</b> of map, but every point stands for ground up to ' +
+        '<b>' + diag.toFixed(1) + ' km</b> away at the corners of its cell. A profile sitting in one ' +
+        'of those gaps is reported missing from places it is plainly visible. Set the view to ' +
+        '<b>Match the spacing</b> (' + autoGridZoom(sp, lat) + 'z here), or bring the spacing down to ' +
+        'about <b>' + (viewWidthM(z, lat) / 1000 / Math.SQRT2).toFixed(1) + ' km</b>.';
+    } else {
+      warnEl.style.color = 'var(--good)';
+      warnEl.innerHTML = 'Each search looks at about <b>' + viewKm.toFixed(1) + ' km</b> of map, which ' +
+        'covers the whole of the ' + sp + ' km cell it stands for — no gaps.';
+    }
+  }
+
   const tooBig = g.center && g.center.area && (g.center.level == null || g.center.level <= 3);
   const areaWarn = tooBig
     ? '<br><b style="color:var(--brand-deep)">This grid is centred on ' +
@@ -8210,7 +8298,8 @@ function renderGridInfo(){
       'setting for a Live SERP pin, not for a grid.'
     : '';
   $('gridInfo').innerHTML = '<strong>' + (n*n) + ' searches</strong> covering roughly ' + span + ' km × ' + span +
-    ' km \u00b7 about <strong>' + mins + '</strong> at ' + lanes + ' point' + (lanes === 1 ? '' : 's') + ' at a time. ' +
+    ' km \u00b7 each read at ' + z + 'z, a view about <strong>' + viewKm.toFixed(1) + ' km</strong> across' +
+    ' \u00b7 about <strong>' + mins + '</strong> at ' + lanes + ' point' + (lanes === 1 ? '' : 's') + ' at a time. ' +
     'A point that finds the profile costs one call; a point that finds nothing costs up to five while GBP Reporter checks whether it is missing here or missing everywhere.' +
     areaWarn;
 }
@@ -9876,18 +9965,41 @@ function dotPopup(p, idx, scan){
     d.appendChild(q);
   }
 
-  /* One link, not two. Two links stacked on top of each other asked the
-     reader to decide which of them was the real one before they could check
-     anything, and the answer was never obvious from the words. The map view
-     is the one that matches what the grid is showing, so it is the one that
-     stays. Rebuilt from the rung that produced the number, not from the rung
-     the grid was built on, and rebuilt now so the uule timestamp is current. */
-  const mapsLine = document.createElement('div');
+  /* TWO links, because they are not the same promise and pretending otherwise
+     is what made "open the result" look wrong.
+
+     A Google Maps URL carries a viewport and nothing else. It has no way to
+     say WHERE THE SEARCHER IS, so Maps answers it from the browser's own
+     location and sign-in, and the list you get is yours rather than the one
+     this point was read at. It is useful for looking at the area; it cannot
+     reproduce a reading and never could.
+
+     The pinned search can. tbm=lcl carries a uule, which is the parameter
+     that actually tells Google to answer as though the searcher were standing
+     at this coordinate, with this radius, with personalisation off. That is
+     the link to check a number against, so it goes first and says so. */
+  const links = document.createElement('div');
+  links.className = 'pop-links';
+
+  const pinned = document.createElement('a');
+  pinned.href = pointSearchUrl(scan, p);
+  pinned.target = '_blank'; pinned.rel = 'noopener';
+  pinned.className = 'pop-link-main';
+  pinned.textContent = 'Open the pinned search';
+  pinned.title = 'The local results as if you were standing at this exact coordinate, ' +
+    'with personalisation off. This is the one that reproduces the reading.';
+  links.appendChild(pinned);
+
   const mapsLink = document.createElement('a');
   mapsLink.href = pointMapsUrl(scan, p);
   mapsLink.target = '_blank'; mapsLink.rel = 'noopener';
+  mapsLink.className = 'pop-link-alt';
   mapsLink.textContent = 'Open Google Maps';
-  mapsLine.appendChild(mapsLink); d.appendChild(mapsLine);
+  mapsLink.title = 'The same patch of ground on Maps. A Maps URL cannot carry a ' +
+    'location pin, so Google answers it from where your browser is \u2014 useful for ' +
+    'looking around, not for checking a rank.';
+  links.appendChild(mapsLink);
+  d.appendChild(links);
 
   /* The list below is the reading. The number above is an index into it, so
      the two agree by construction - including after a manual pick, which
@@ -9914,7 +10026,9 @@ function dotPopup(p, idx, scan){
     const note = document.createElement('div');
     if (p.read){
       note.className = 'pop-warn';
-      note.textContent = 'The link rebuilds the view this number came from. Google still tailors live results to the browser asking, so the list above is the record.';
+      note.textContent = 'The pinned search rebuilds the exact request above. Google still ' +
+        'serves live results, so the order can move between then and now \u2014 the list above ' +
+        'is the record of what was actually read.';
     } else {
       note.className = 'pop-warn stale';
       note.textContent = 'Read before the view was recorded, so the link may open a wider or narrower search than the number came from. Read it again to pin the two together.';
@@ -10299,7 +10413,7 @@ function createScan(){
 
   const region = REGIONS[g.regionIdx] || REGIONS[0];
   const depth = state.settings.depth || 100;
-  const zoom = g.zoom || 14;
+  const zoom = gridZoom(g);
   /* zoom travels with the options now, so the frozen URL a point starts life
      with already matches the view it is about to be read at. Once it has been
      read, p.read supersedes this and the link is rebuilt from that instead. */
@@ -10485,7 +10599,7 @@ async function retrySingle(scan, idx, quiet){
   telemetry(TEL_MAIN, {index:idx+1, total:scan.points.length, lat:p.lat, lng:p.lng, step:'re-reading this point\u2026'});
   try{
     await resolvePoint(scan.keyword, p, region, g, {
-      zoom: scan.zoom || g.zoom || 14, surface: scan.surface || g.surface,
+      zoom: scan.zoom || gridZoom(g), surface: scan.surface || g.surface,
       onStep: (step, si, done) => telemetry(TEL_MAIN, {step: done ? stepWording(done, si) : 'reading at ' + step.zoom + 'z\u2026'})
     });
   }catch(err){ p.error = err.message; }

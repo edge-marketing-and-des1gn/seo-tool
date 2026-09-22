@@ -3683,6 +3683,21 @@ table td{font-size:12.5px;}
 @media (prefers-reduced-motion:reduce){
   .btn, .btn-go, .geo-mode, .seo-kw-loc-chev svg{transition:none !important;}
 }
+
+/* ---- the folder copy control ------------------------------------------ */
+.claude-btn{position:relative; padding-left:24px;}
+.claude-btn::before{
+  content:""; position:absolute; left:10px; top:50%; margin-top:-3px;
+  width:6px; height:6px; border-radius:50%;
+  background:#6d7b89; box-shadow:0 0 0 3px rgba(109,123,137,.18);
+  transition:background .2s var(--ease), box-shadow .2s var(--ease);
+}
+.claude-btn.on::before{background:var(--good); box-shadow:0 0 0 3px rgba(15,122,88,.22);}
+.claude-btn.warn::before{background:var(--brand); box-shadow:0 0 0 3px rgba(232,119,34,.22);}
+.claude-status{
+  margin-top:6px; padding:0 2px;
+  font-size:10px; line-height:1.5; color:#7d8b98; letter-spacing:.01em;
+}
 </style>
 </head>
 <body>
@@ -3855,6 +3870,10 @@ table td{font-size:12.5px;}
         <button class="mini-btn" id="importBtn">Import</button>
         <input id="importFile" type="file" accept="application/json" style="display:none"/>
       </div>
+      <div class="mini-row" style="margin-top:6px">
+        <button class="mini-btn claude-btn" data-claude-sync type="button">Keep a copy for Claude</button>
+      </div>
+      <div class="claude-status" id="claudeSyncStatus"></div>
       <div class="mini-row" style="margin-top:6px">
         <button class="mini-btn" id="signOutBtn">Sign out</button>
       </div>
@@ -4660,6 +4679,9 @@ table td{font-size:12.5px;}
         <button class="mini-btn" id="seoImportBtn">Import clients</button>
         <button class="mini-btn" id="seoExportAllBtn">Export all (.xlsx)</button>
         <input id="seoImportFile" type="file" accept="application/json" style="display:none"/>
+      </div>
+      <div class="mini-row" style="margin-top:6px">
+        <button class="mini-btn claude-btn" data-claude-sync type="button">Keep a copy for Claude</button>
       </div>
     </div>
   </aside>
@@ -7174,6 +7196,403 @@ function restoreGeoField(input, centre, finder){
   if (setMode) setMode(centre.mode || 'place', {keep:true});
 }
 
+
+/* ==========================================================================
+   KEEPING A COPY FOR CLAUDE
+   ==========================================================================
+   Everything this tool knows lives in the browser's localStorage and, when
+   signed in, in Firestore. Neither is a place an assistant can read. Handing
+   over the app's own HTML tells it nothing at all — that is the program, not
+   the data — and exporting by hand every time you want to ask a question is
+   not a workflow anybody keeps up.
+
+   So the tool can keep a copy of itself, as a file, in a folder you choose.
+   Pick the folder once; from then on every save writes a fresh snapshot into
+   it. Connect that folder to the Claude desktop app and the answer to "how is
+   Advance Construction doing?" is always current, with no copying, no
+   pasting, and nothing published to anyone.
+
+   Two files are written:
+
+     gbp-reporter-snapshot.json   every client, profile, keyword and scan,
+                                  with each grid point's rank, coordinate and
+                                  what it matched. The precise record.
+     gbp-reporter-brief.md        the same thing written out in sentences,
+                                  for reading at a glance.
+
+   NEITHER CONTAINS CREDENTIALS. The DataForSEO login and password, the Serper
+   key and the proxy prefix are stripped before anything is written. A file
+   that syncs to a folder is a file that can end up in a backup, in a shared
+   drive, or in a chat window, and an API password has no business in any of
+   them.
+   ========================================================================== */
+const CLAUDE_DIR_DB = 'gbp-reporter-claude';
+const CLAUDE_DIR_KEY = 'folder';
+const CLAUDE_SNAPSHOT = 'gbp-reporter-snapshot.json';
+const CLAUDE_BRIEF = 'gbp-reporter-brief.md';
+
+/* A directory handle cannot go in localStorage — it is a live object, not a
+   string — so it lives in IndexedDB, which is the only store that will keep
+   one across reloads. */
+function claudeIdb(){
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(CLAUDE_DIR_DB, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore('h');
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function claudeDirGet(){
+  try{
+    const db = await claudeIdb();
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction('h', 'readonly').objectStore('h').get(CLAUDE_DIR_KEY);
+      tx.onsuccess = () => resolve(tx.result || null);
+      tx.onerror = () => reject(tx.error);
+    });
+  }catch(err){ return null; }
+}
+async function claudeDirSet(handle){
+  try{
+    const db = await claudeIdb();
+    await new Promise((resolve, reject) => {
+      const st = db.transaction('h', 'readwrite').objectStore('h');
+      const rq = handle ? st.put(handle, CLAUDE_DIR_KEY) : st.delete(CLAUDE_DIR_KEY);
+      rq.onsuccess = () => resolve();
+      rq.onerror = () => reject(rq.error);
+    });
+    return true;
+  }catch(err){ return false; }
+}
+
+const claudeSyncSupported = () => typeof window !== 'undefined' && !!window.showDirectoryPicker;
+let claudeDir = null, claudeLastWrite = null, claudeWriteTimer = null, claudeWriting = false;
+let claudeLastError = null;
+
+/* Permission is not permanent. Chrome drops it when the browser restarts, so
+   it is re-requested rather than assumed, and a refusal turns the feature off
+   loudly instead of failing silently on every save from then on. */
+async function claudeDirReady(ask){
+  if (!claudeDir) return false;
+  try{
+    const opts = {mode: 'readwrite'};
+    let perm = await claudeDir.queryPermission(opts);
+    if (perm === 'granted') return true;
+    if (!ask) return false;
+    perm = await claudeDir.requestPermission(opts);
+    return perm === 'granted';
+  }catch(err){ return false; }
+}
+
+/* ---- what gets written ---------------------------------------------- */
+function claudeCentreOf(g){
+  const c = (g && g.center) || {};
+  const lvl = c.level ? geoLevelInfo(c.level).word : null;
+  return {
+    label: c.label || null,
+    lat: c.lat, lng: c.lng,
+    searchedAs: c.area ? ('the whole ' + (lvl || 'area')) : (lvl || 'a point'),
+    namedToGoogle: c.canonical || null
+  };
+}
+function claudeGridOf(g){
+  const lat = (g.center && g.center.lat) || 0;
+  const z = gridZoom(g);
+  const cover = gridCoverage(z, g.spacingKm, lat);
+  return {
+    size: g.gridSize + ' × ' + g.gridSize,
+    spacingKm: g.spacingKm,
+    zoom: z,
+    viewSetTo: g.zoom === 'auto' ? 'matched to the spacing' : 'fixed',
+    eachSearchCoversKm: Math.round(viewWidthM(z, lat) / 100) / 10,
+    cellDiagonalKm: Math.round(g.spacingKm * Math.SQRT2 * 10) / 10,
+    /* The single most important thing to know before trusting any number
+       below it: did the searches actually look at the ground they report on? */
+    coversEveryCell: cover >= 0.98,
+    warning: cover >= 0.98 ? null
+      : 'This grid has gaps — each search looks at ' +
+        (Math.round(viewWidthM(z, lat) / 100) / 10) + ' km but every point stands for ground up to ' +
+        (Math.round(g.spacingKm * Math.SQRT2 * 10) / 10) + ' km away. Misses may be gaps rather than absences.',
+    surface: g.surface === 'web' ? 'web results' : 'map pack (Google Maps)'
+  };
+}
+function claudeScanSummary(scan){
+  const pts = scan.points || [];
+  const read = pts.filter(p => p.rank != null);
+  const found = read.filter(p => p.rank >= 1);
+  const avg = found.length ? Math.round(found.reduce((s, p) => s + p.rank, 0) / found.length * 10) / 10 : null;
+  return {
+    at: new Date(scan.at || Date.now()).toISOString(),
+    pointsRead: read.length,
+    pointsTotal: pts.length,
+    appearances: found.length,
+    top3: found.filter(p => p.rank <= 3).length,
+    averageRank: avg,
+    visiblePct: read.length ? Math.round(found.length / read.length * 100) : 0,
+    foundOnlyOnAWiderView: pts.filter(p => p.wideRank).length,
+    sponsoredOnly: pts.filter(p => p.adOnly).length,
+    failed: pts.filter(p => p.rank == null && p.error).length
+  };
+}
+function claudePoint(p){
+  const o = {row: p.row + 1, col: p.col + 1,
+             lat: Number(Number(p.lat).toFixed(6)), lng: Number(Number(p.lng).toFixed(6)),
+             rank: p.rank};
+  if (p.matched) o.matched = p.matched;
+  if (p.wideRank){ o.notHereButAt = p.wideRank; o.onAWiderViewOf = p.wideZoom + 'z'; }
+  if (p.adRank) o.sponsoredSlot = p.adRank;
+  if (p.names) o.listingsRead = p.names.length;
+  if (p.rank == null && p.error) o.error = p.error;
+  return o;
+}
+function buildClaudeSnapshot(){
+  const gbpClients = (state.clients || []).map(c => ({
+    client: c.name,
+    profiles: (c.gbps || []).map(g => ({
+      profile: g.name || g.bizName || 'Untitled',
+      business: g.bizName || null,
+      website: g.website || null,
+      phone: g.phone || null,
+      market: (REGIONS[g.regionIdx] || REGIONS[0]).label,
+      centre: claudeCentreOf(g),
+      grid: claudeGridOf(g),
+      keywords: (g.keywords || []).map(k => {
+        const scans = k.scans || [];
+        const latest = scans[scans.length - 1];
+        return {
+          keyword: k.text,
+          scanCount: scans.length,
+          latest: latest ? Object.assign(claudeScanSummary(latest), {
+            /* Full detail for the newest scan: this is what "where do I rank"
+               is actually asking about. */
+            points: (latest.points || []).map(claudePoint)
+          }) : null,
+          /* Older scans as summaries plus a bare list of ranks, which is
+             enough to say what moved without carrying every coordinate
+             through history. */
+          history: scans.slice(0, -1).slice(-11).map(s => Object.assign(claudeScanSummary(s), {
+            ranks: (s.points || []).map(p => p.rank)
+          }))
+        };
+      })
+    }))
+  }));
+
+  const seoClients = (state.seoClients || []).map(c => ({
+    client: c.name,
+    website: c.website || null,
+    status: c.status || null,
+    keywords: (c.keywords || []).map(k => ({
+      keyword: k.text,
+      locations: (k.locations || []).map(l => ({
+        location: l.label,
+        searchedAs: l.area ? 'the whole area' : 'a point',
+        rank: l.rank,
+        previousRank: l.prevRank,
+        checkedAt: l.checkedAt ? new Date(l.checkedAt).toISOString() : null,
+        matched: l.matchedTitle || null,
+        matchedDomain: l.matchedDomain || null,
+        history: (l.history || []).slice(-12).map(h => ({
+          rank: h.rank, at: h.at ? new Date(h.at).toISOString() : null
+        }))
+      }))
+    }))
+  }));
+
+  return {
+    tool: 'GBP Reporter',
+    snapshotVersion: 1,
+    generatedAt: new Date().toISOString(),
+    readMe: 'Written automatically by GBP Reporter so an assistant can answer ' +
+            'questions about this workspace. Rank 0 means the profile was not in ' +
+            'the results at that point’s own map view; null means the point could ' +
+            'not be read at all. A "notHereButAt" value is a sighting on a WIDER ' +
+            'view and is not a rank at that point. No credentials are included.',
+    gbpTracker: {clients: gbpClients},
+    seoClients: {clients: seoClients}
+  };
+}
+
+/* The same thing in sentences. Cheap to write, and it means a question can be
+   answered from a glance rather than by parsing a few hundred kilobytes. */
+function buildClaudeBrief(snap){
+  const L = [];
+  L.push('# GBP Reporter — workspace brief');
+  L.push('');
+  L.push('_Written automatically at ' + new Date(snap.generatedAt).toLocaleString() + '. No credentials._');
+  L.push('');
+  L.push('Rank **0** means the profile was not in the results at that point’s own map view.');
+  L.push('A sighting "on a wider view" is **not** a rank at that point.');
+  L.push('');
+
+  (snap.gbpTracker.clients || []).forEach(c => {
+    L.push('## ' + c.client + ' — local grids');
+    (c.profiles || []).forEach(p => {
+      L.push('');
+      L.push('### ' + p.profile + (p.business && p.business !== p.profile ? ' (' + p.business + ')' : ''));
+      L.push('- Centre: ' + (p.centre.label || '—') + ', searched as ' + p.centre.searchedAs);
+      L.push('- Grid: ' + p.grid.size + ' at ' + p.grid.spacingKm + ' km, read at ' + p.grid.zoom +
+             'z (a ' + p.grid.eachSearchCoversKm + ' km view) on the ' + p.grid.surface);
+      if (p.grid.warning) L.push('- **' + p.grid.warning + '**');
+      else L.push('- Coverage is clean: every cell is fully inside the view it was read at.');
+      if (!p.keywords.length){ L.push('- No keywords yet.'); return; }
+      L.push('');
+      L.push('| Keyword | Visible | Top 3 | Avg rank | Only on a wider view | Last scanned |');
+      L.push('|---|---|---|---|---|---|');
+      p.keywords.forEach(k => {
+        const s = k.latest;
+        L.push('| ' + k.keyword + ' | ' +
+          (s ? s.appearances + '/' + s.pointsRead + ' (' + s.visiblePct + '%)' : '—') + ' | ' +
+          (s ? s.top3 : '—') + ' | ' +
+          (s && s.averageRank != null ? s.averageRank : '—') + ' | ' +
+          (s ? s.foundOnlyOnAWiderView : '—') + ' | ' +
+          (s ? new Date(s.at).toLocaleDateString() : 'never') + ' |');
+      });
+      /* What actually moved, which is the question that gets asked most. */
+      const moved = p.keywords.map(k => {
+        if (!k.latest || !k.history.length) return null;
+        const prev = k.history[k.history.length - 1];
+        if (k.latest.averageRank == null || prev.averageRank == null) return null;
+        const d = Math.round((prev.averageRank - k.latest.averageRank) * 10) / 10;
+        return d ? {kw: k.keyword, d} : null;
+      }).filter(Boolean).sort((a, b) => Math.abs(b.d) - Math.abs(a.d));
+      if (moved.length){
+        L.push('');
+        L.push('**Since the previous scan:** ' + moved.slice(0, 6).map(m =>
+          m.kw + ' ' + (m.d > 0 ? 'improved ' + m.d : 'slipped ' + Math.abs(m.d))).join('; ') + '.');
+      }
+    });
+    L.push('');
+  });
+
+  (snap.seoClients.clients || []).forEach(c => {
+    L.push('## ' + c.client + ' — keyword rankings' + (c.website ? ' (' + c.website + ')' : ''));
+    if (!c.keywords.length){ L.push('No keywords yet.'); L.push(''); return; }
+    L.push('');
+    L.push('| Keyword | Location | Rank | Was | Checked |');
+    L.push('|---|---|---|---|---|');
+    c.keywords.forEach(k => (k.locations || []).forEach(l => {
+      L.push('| ' + k.keyword + ' | ' + (l.location || '—') + ' | ' +
+        (l.rank === 0 ? 'not ranking' : (l.rank == null ? '—' : '#' + l.rank)) + ' | ' +
+        (l.previousRank ? '#' + l.previousRank : '—') + ' | ' +
+        (l.checkedAt ? new Date(l.checkedAt).toLocaleDateString() : 'never') + ' |');
+    }));
+    L.push('');
+  });
+
+  return L.join('\n');
+}
+
+/* ---- writing ---------------------------------------------------------- */
+async function claudeWriteNow(){
+  if (claudeWriting || !claudeDir) return false;
+  if (!(await claudeDirReady(false))){
+    claudeLastError = 'permission';
+    renderClaudeSync();
+    return false;
+  }
+  claudeWriting = true;
+  try{
+    const snap = buildClaudeSnapshot();
+    const files = [
+      [CLAUDE_SNAPSHOT, JSON.stringify(snap, null, 2)],
+      [CLAUDE_BRIEF, buildClaudeBrief(snap)]
+    ];
+    for (const [name, body] of files){
+      const fh = await claudeDir.getFileHandle(name, {create: true});
+      const w = await fh.createWritable();
+      await w.write(body);
+      await w.close();
+    }
+    claudeLastWrite = Date.now();
+    claudeLastError = null;
+    return true;
+  }catch(err){
+    claudeLastError = (err && err.message) || 'write failed';
+    return false;
+  }finally{
+    claudeWriting = false;
+    renderClaudeSync();
+  }
+}
+/* Debounced, because save() fires on every keystroke in a text field and
+   writing two files per character would be absurd. */
+function claudeSyncTouch(){
+  if (!claudeDir || isPublicView()) return;
+  clearTimeout(claudeWriteTimer);
+  claudeWriteTimer = setTimeout(claudeWriteNow, 2500);
+}
+
+async function claudeSyncChoose(){
+  if (!claudeSyncSupported()){
+    toast('This browser cannot keep a folder copy — use Export instead', 'err');
+    return;
+  }
+  try{
+    const dir = await window.showDirectoryPicker({id: 'gbp-claude', mode: 'readwrite'});
+    claudeDir = dir;
+    await claudeDirSet(dir);
+    const ok = await claudeWriteNow();
+    toast(ok ? 'Keeping a copy for Claude in that folder' : 'Folder chosen, but the first write failed',
+          ok ? 'ok' : 'err');
+  }catch(err){
+    /* The picker throws when it is dismissed, which is not an error. */
+    if (err && err.name !== 'AbortError') toast('Could not use that folder', 'err');
+  }
+  renderClaudeSync();
+}
+async function claudeSyncStop(){
+  claudeDir = null;
+  claudeLastWrite = null;
+  claudeLastError = null;
+  await claudeDirSet(null);
+  renderClaudeSync();
+  toast('Stopped keeping a copy');
+}
+
+function claudeSyncStatusText(){
+  if (!claudeSyncSupported()) return 'Folder copies need Chrome or Edge';
+  if (!claudeDir) return 'Not keeping a copy for Claude';
+  if (claudeLastError === 'permission') return 'Folder access expired — click to restore';
+  if (claudeLastError) return 'Last write failed: ' + claudeLastError;
+  if (!claudeLastWrite) return 'Keeping a copy — nothing written yet';
+  const mins = Math.round((Date.now() - claudeLastWrite) / 60000);
+  return 'Copy written ' + (mins < 1 ? 'just now' : mins + ' min ago');
+}
+function renderClaudeSync(){
+  document.querySelectorAll('[data-claude-sync]').forEach(btn => {
+    btn.textContent = claudeDir ? 'Claude copy: on' : 'Keep a copy for Claude';
+    btn.classList.toggle('on', !!claudeDir && !claudeLastError);
+    btn.classList.toggle('warn', !!claudeLastError);
+    btn.title = claudeSyncStatusText() +
+      (claudeDir ? '\nWrites ' + CLAUDE_SNAPSHOT + ' and ' + CLAUDE_BRIEF +
+                   ' into your chosen folder on every save. No credentials are included.' +
+                   '\nShift-click to stop.'
+                 : '\nPick a folder and this workspace is written there on every save, so an ' +
+                   'assistant with access to that folder can answer questions about it.');
+  });
+  const s = $('claudeSyncStatus');
+  if (s) s.textContent = claudeSyncStatusText();
+}
+function wireClaudeSync(){
+  document.querySelectorAll('[data-claude-sync]').forEach(btn => {
+    if (btn.dataset.wired) return;
+    btn.dataset.wired = '1';
+    btn.addEventListener('click', e => {
+      if (e.shiftKey && claudeDir) return claudeSyncStop();
+      claudeSyncChoose();
+    });
+  });
+  claudeDirGet().then(async h => {
+    if (!h) { renderClaudeSync(); return; }
+    claudeDir = h;
+    /* Held from a previous session. The handle survives; the permission may
+       not, so it is checked rather than assumed and the button says which. */
+    if (await claudeDirReady(false)) claudeWriteNow();
+    else { claudeLastError = 'permission'; renderClaudeSync(); }
+  });
+}
+
 /* ==========================================================================
    THE MODULE BANNERS
    ==========================================================================
@@ -7212,6 +7631,7 @@ function wireIntroBanners(){
   });
 }
 try{ wireIntroBanners(); }catch(err){}
+try{ wireClaudeSync(); }catch(err){}
 
 /* ==========================================================================
    STATE
@@ -7554,6 +7974,8 @@ function save(){
   try{
     localStorage.setItem(STORE_KEY, JSON.stringify(state));
     localWriteFailed = false;
+    /* And, if a folder has been chosen, keep the readable copy beside it. */
+    try{ claudeSyncTouch(); }catch(err){}
   }catch(e){
     /* A full localStorage used to fail silently, which looked exactly like
        "my keywords didn't save". Say so once, then carry on — the cloud

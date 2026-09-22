@@ -3152,6 +3152,26 @@ body.pin-locked{overflow:hidden;}
 .pin-zone{transition:none;}
 .pin-zone-edge{animation:zoneDash 22s linear infinite;}
 @keyframes zoneDash{to{stroke-dashoffset:-220;}}
+.pin-clip{
+  flex:none; display:inline-flex; align-items:center; gap:8px;
+  padding:6px 13px; border-radius:22px; cursor:pointer;
+  background:var(--card); border:1px solid var(--line); box-shadow:var(--lift);
+  font-family:var(--ui); font-size:11.5px; font-weight:650; color:var(--ink-2);
+  white-space:nowrap; transition:all .15s var(--ease);
+}
+.pin-clip:hover{border-color:var(--brand); color:var(--brand-deep);}
+.pin-clip .geo-clip-box{
+  flex:none; width:14px; height:14px; border-radius:4px;
+  border:1.5px solid var(--ink-3); background:var(--card-2);
+  position:relative; transition:all .15s var(--ease);
+}
+.pin-clip .geo-clip-box.on{background:var(--brand); border-color:var(--brand);}
+.pin-clip .geo-clip-box.on::after{
+  content:""; position:absolute; left:4px; top:1px;
+  width:3.5px; height:7.5px; border:solid #fff; border-width:0 2px 2px 0;
+  transform:rotate(42deg);
+}
+
 .pin-rad{
   flex:none; display:inline-flex; align-items:center; gap:7px;
   padding:3px 4px 3px 11px; border-radius:22px;
@@ -3241,6 +3261,35 @@ body.pin-locked{overflow:hidden;}
   border:1px solid #f3d9c1; padding:3px 10px; border-radius:20px;
 }
 .geo-out .geo-area b{font-weight:inherit;}
+/* A clipped circle is reporting an area, so it wears the area's colours
+   rather than the point's. */
+.geo-out .geo-area.is-clipped{
+  color:var(--brand-deep); background:var(--brand-wash); border-color:#f3d9c1;
+}
+.geo-out .geo-area.is-clipped i{
+  width:11px; height:11px; border-radius:3px; background:none;
+  border:1.5px dashed var(--brand-deep); box-shadow:none; opacity:.85;
+}
+.geo-out .geo-clip{
+  flex:none; display:inline-flex; align-items:center; gap:7px;
+  padding:3px 10px 3px 7px; border-radius:20px; cursor:pointer;
+  border:1px solid var(--line); background:var(--card); color:var(--ink-2);
+  font-family:var(--ui); font-size:10.5px; font-weight:700;
+  letter-spacing:.03em; white-space:nowrap;
+  transition:all .15s var(--ease);
+}
+.geo-out .geo-clip:hover{border-color:var(--brand); color:var(--brand-deep);}
+.geo-out .geo-clip-box{
+  flex:none; width:13px; height:13px; border-radius:4px;
+  border:1.5px solid var(--ink-3); background:var(--card-2);
+  position:relative; transition:all .15s var(--ease);
+}
+.geo-out .geo-clip-box.on{background:var(--brand); border-color:var(--brand);}
+.geo-out .geo-clip-box.on::after{
+  content:""; position:absolute; left:3.5px; top:.5px;
+  width:3.5px; height:7px; border:solid #fff; border-width:0 2px 2px 0;
+  transform:rotate(42deg);
+}
 .geo-out .geo-area i{
   flex:none; width:11px; height:11px; border-radius:3px;
   border:1.5px dashed var(--brand-deep); opacity:.85;
@@ -3336,7 +3385,10 @@ body.pin-locked{overflow:hidden;}
   display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;
   padding:14px 22px; border-top:1px solid var(--line-2); background:var(--card-2);
 }
-.pin-read{display:flex; align-items:center; gap:10px; min-width:0; flex:1;}
+/* Four things now live in this bar. Given flex:1 and nothing else the name
+   collapsed to a single letter rather than wrapping, so it keeps a floor and
+   takes its own line when the bar runs out of room. */
+.pin-read{display:flex; align-items:center; gap:10px; flex:1 1 300px; min-width:240px;}
 .pin-read-coord{
   flex:none; font-family:var(--mono); font-size:11.5px; font-weight:600;
   color:var(--brand-deep); background:var(--brand-wash); border:1px solid #f3d9c1;
@@ -5392,10 +5444,159 @@ async function geoScopeFor(lat, lng, radius){
   let out = null;
   try{
     const hit = await nominatimReverse(Number(lat).toFixed(7), Number(lng).toFixed(7), step.zoom);
-    if (hit) out = {name: geoScopeName(hit, step.zoom), hit: hit, zoom: step.zoom, kind: step.kind};
+    if (hit) out = {name: geoScopeName(hit, step.zoom), hit: hit, zoom: step.zoom,
+                    kind: step.kind, canonical: geoCanonicalName(hit, step.zoom),
+                    bounds: bboxBounds(hit.boundingbox)};
   }catch(err){ out = null; }
   geoScopeCache.set(key, out);
   return out;
+}
+
+
+/* ==========================================================================
+   A CIRCLE IS NOT A PROVINCE
+   ==========================================================================
+   Dragging a radius out from Lacombe until it "covered Alberta" covered most
+   of western Canada instead, and that is not a bug in the dragging — it is
+   what circles are. Alberta is a tall rectangle about 660 km wide and
+   1,220 km deep. From Lacombe the nearest provincial border (the
+   Saskatchewan line) is about 250 km away and the far corner about 935 km,
+   so ANY circle big enough to reach the far corner has already swallowed a
+   quarter of British Columbia, a slice of Saskatchewan and a piece of
+   Montana. There is no radius that equals a province.
+
+   So once a circle outgrows the province it is drawn in, what the person
+   actually means is the province. The circle is clipped to it: the search
+   becomes the province's own boundary, framed and named as the province,
+   exactly as though it had been typed into Find a place. Below that size
+   nothing changes and a circle stays a circle.
+
+   Left switchable, because "a 900 km circle from here, whatever it crosses"
+   is a legitimate thing to ask for — it just should not be what you get by
+   accident.
+   ========================================================================== */
+
+/* The two radii that matter for a box: the largest circle from this centre
+   that stays inside it, and the smallest that swallows it whole. Measured
+   against the bounding box rather than the real boundary — the question is
+   "has this outgrown the province", and a box answers it within a few
+   percent for a fraction of the work. */
+function boundsFit(centre, b){
+  if (!centre || !b) return null;
+  let S, N, W, E;
+  try{ S = b.getSouth(); N = b.getNorth(); W = b.getWest(); E = b.getEast(); }
+  catch(err){ return null; }
+  const mLat = 110574;
+  const mLng = 111320 * Math.max(0.05, Math.cos(centre.lat * Math.PI / 180));
+  const dN = (N - centre.lat) * mLat, dS = (centre.lat - S) * mLat;
+  const dE = (E - centre.lng) * mLng, dW = (centre.lng - W) * mLng;
+  /* A centre outside the box has no circle that stays inside it. */
+  const inside = Math.max(0, Math.min(dN, dS, dE, dW));
+  const cover = Math.max(Math.hypot(dN, dE), Math.hypot(dN, dW),
+                         Math.hypot(dS, dE), Math.hypot(dS, dW));
+  if (!isFinite(inside) || !isFinite(cover)) return null;
+  return {inside: Math.round(inside), cover: Math.round(cover)};
+}
+
+/* Google's canonical location name: comma-separated, no spaces, most
+   specific first. "Alberta,Canada" is a geo-target Google knows by name, and
+   naming it is the only way to stop Google answering a wide search with the
+   nearest town — a lat/lng uule always resolves to a locality, which is why
+   a search meant for Alberta came back headed "Lacombe, AB". */
+function geoCanonicalName(hit, zoom){
+  const a = (hit && hit.address) || {};
+  const country = a.country || '';
+  const state   = a.state || a.province || '';
+  const county  = a.state_district || a.county || '';
+  const city    = a.city || a.town || a.village || a.municipality || '';
+  const z = Number(zoom) || 18;
+  let parts;
+  if      (z <= 3)  parts = [country];
+  else if (z <= 5)  parts = [state, country];
+  else if (z <= 8)  parts = [county || city, state, country];
+  else              parts = [city || county, state, country];
+  const seen = [];
+  parts.filter(Boolean).forEach(p => { if (seen.indexOf(p) === -1) seen.push(p); });
+  return seen.join(',');
+}
+
+/* The canonical name for a place at whatever level it already is — used
+   when a Find resolves straight to a province or a country. */
+function geoCanonicalForHit(hit){
+  const t = String((hit && (hit.addresstype || hit.type)) || '').toLowerCase();
+  const z = t === 'country' ? 3
+          : (t === 'state' || t === 'province' || t === 'region') ? 5
+          : (t === 'county' || t === 'state_district') ? 8 : 10;
+  return geoCanonicalName(hit, z);
+}
+
+/* The province, state or region a point sits in — the unit a radius gets
+   clipped to. Always asked at state level rather than at the level the
+   radius implies, which is the whole point: a 700 km circle "implies" a
+   country, and answering with Canada is how it ended up covering Canada.
+   Cached per ~10 km of centre, because the answer does not change within a
+   province and this is asked on every drag. */
+const geoContainerCache = new Map();
+async function geoContainerFor(lat, lng){
+  const key = Number(lat).toFixed(1) + ',' + Number(lng).toFixed(1);
+  if (geoContainerCache.has(key)) return geoContainerCache.get(key);
+  let out = null;
+  try{
+    const hit = await nominatimReverse(Number(lat).toFixed(7), Number(lng).toFixed(7), 5);
+    if (hit){
+      const a = hit.address || {};
+      const isState = !!(a.state || a.province);
+      out = {
+        name: geoScopeName(hit, 5),
+        canonical: geoCanonicalName(hit, 5),
+        bounds: bboxBounds(hit.boundingbox),
+        /* Where the province actually is, which is not where the circle was
+           centred — the pin handed to Google has to be the area's own centre
+           or it is still a pin in a field somewhere. */
+        lat: parseFloat(hit.lat), lng: parseFloat(hit.lon),
+        osm: hit.osm_id ? {osm_id:hit.osm_id, osm_type:hit.osm_type,
+                           addresstype:hit.addresstype || hit.type || 'state'} : null,
+        hit: hit,
+        kind: isState ? 'province' : 'country'
+      };
+      if (!out.bounds) out = null;   // without an extent there is nothing to clip to
+    }
+  }catch(err){ out = null; }
+  geoContainerCache.set(key, out);
+  return out;
+}
+
+/* What a radius in radius mode actually resolves to. Either a circle, or —
+   once the circle has outgrown the province it sits in — that province.
+   Everything downstream reads this one answer, so the map, the readout and
+   the search URL cannot disagree about what is being searched. */
+async function resolveRadiusTarget(lat, lng, radius, clip){
+  const r = Number(radius) || 10000;
+  const container = await geoContainerFor(lat, lng);
+  const fit = container ? boundsFit(L.latLng(lat, lng), container.bounds) : null;
+  const spills = !!(fit && r > fit.inside);
+
+  if (clip !== false && container && spills){
+    const areaR = niceRadius(bboxRadius(container.hit.boundingbox, container.lat)) || 500000;
+    return {
+      clipped: true, area: true, container: container, fit: fit,
+      requested: r,
+      name: container.name, canonical: container.canonical,
+      bounds: container.bounds, osm: container.osm,
+      lat: container.lat, lng: container.lng, radius: areaR,
+      hit: container.hit
+    };
+  }
+  /* Still a circle. Named at the level it covers, as before. */
+  const scope = await geoScopeFor(lat, lng, r);
+  return {
+    clipped: false, area: false, container: container, fit: fit,
+    requested: r,
+    name: (scope && scope.name) || '', canonical: (scope && scope.canonical) || '',
+    bounds: null, osm: null,
+    lat: lat, lng: lng, radius: r,
+    hit: (scope && scope.hit) || null, kind: scope && scope.kind
+  };
 }
 
 function fillRadiusSelect(sel, value, autoValue){
@@ -5479,6 +5680,7 @@ function renderGeoOut(out, g){
      depending on which mode produced them. */
   const tag = document.createElement('span');
   tag.className = 'geo-area' + (isArea ? '' : ' is-point');
+  tag.dataset.role = 'tag';
   const glyph = document.createElement('i');
   tag.appendChild(glyph);
   if (isArea){
@@ -5628,6 +5830,77 @@ function renderGeoOut(out, g){
   e.appendChild(copy); e.appendChild(view);
 }
 
+/* The circle outgrew the province it was drawn in, so the search IS the
+   province now. Patched onto the existing readout rather than re-rendering
+   it, because the radius menu may be open and mid-use. */
+/* "Keep inside Alberta", on by default. A circle that crosses provincial
+   borders is a legitimate thing to ask for — it just should not be what you
+   get by accident when you meant the province. Only shown once we know
+   which province we are in and how much room there is. */
+function paintGeoClipToggle(out, t, on, onToggle){
+  const e = typeof out === 'string' ? $(out) : out;
+  if (!e || !t || !t.container) return;
+  const short = (t.container.name || '').split(',')[0];
+  if (!short) return;
+  let chip = e.querySelector('.geo-clip');
+  if (!chip){
+    chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'geo-clip';
+    const tagEl = e.querySelector('.geo-area');
+    if (tagEl && tagEl.nextSibling) e.insertBefore(chip, tagEl.nextSibling);
+    else e.appendChild(chip);
+  }
+  chip.innerHTML = '';
+  const box = document.createElement('i');
+  box.className = 'geo-clip-box' + (on ? ' on' : '');
+  chip.appendChild(box);
+  chip.appendChild(document.createTextNode('Keep inside ' + short));
+  chip.setAttribute('aria-pressed', on ? 'true' : 'false');
+  chip.title = on
+    ? ('A circle bigger than ' + short + ' becomes ' + short + '. The widest circle that '
+       + 'stays inside it from here is about ' + radiusLabel(t.fit && t.fit.inside) + '.')
+    : ('Circles may cross out of ' + short + ' freely. A big one will reach into the '
+       + 'provinces either side of it.');
+  chip.onclick = () => onToggle(!on);
+}
+
+function paintGeoClip(out, t){
+  const e = typeof out === 'string' ? $(out) : out;
+  if (!e) return;
+  const tag = e.querySelector('.geo-area');
+  const w = e.querySelector('.geo-within');
+  const coord = e.querySelector('.geo-coord');
+  if (!tag) return;
+
+  if (t && t.clipped){
+    tag.classList.remove('is-point');
+    tag.classList.add('is-clipped');
+    const dist = tag.querySelector('.geo-dist');
+    const short = (t.name || 'this area').split(',')[0];
+    if (dist) dist.textContent = 'All of ' + short;
+    tag.title = 'A ' + radiusLabel(t.requested) + ' circle from here reaches well past ' +
+      short + ', so the search is ' + short + ' itself \u2014 its own boundary, not a circle ' +
+      'that spills into the provinces either side of it.';
+    if (w){
+      w.classList.remove('pending');
+      w.textContent = t.name + ' \u00b7 your ' + radiusLabel(t.requested) + ' circle was clipped to it';
+      w.title = 'The widest circle that stays inside ' + short + ' from this centre is about ' +
+        radiusLabel(t.fit && t.fit.inside) + '. Anything past that leaves the province.';
+    }
+    if (coord){
+      coord.classList.add('is-ref');
+      coord.textContent = 'centre ~ ' + Number(t.lat).toFixed(6) + ', ' + Number(t.lng).toFixed(6);
+      coord.title = 'The centre of ' + short + ', which is what gets sent \u2014 not the middle of your circle.';
+    }
+  } else {
+    tag.classList.remove('is-clipped');
+    tag.classList.add('is-point');
+    const dist = tag.querySelector('.geo-dist');
+    if (dist && t) dist.textContent = 'Within ' + radiusLabel(t.radius);
+  }
+}
+
 function paintGeoDistance(out, radius){
   const e = typeof out === 'string' ? $(out) : out;
   if (!e) return;
@@ -5743,20 +6016,73 @@ function wireGeoFinder(cfg){
     });
   });
 
-  /* Naming the ground a circle covers. Re-run whenever the circle changes
-     size or moves, because a radius pulled from 10 km to 500 km is asking
-     about a province rather than a town and the label has to keep up. */
+  /* What a circle in radius mode actually resolves to. Re-run whenever it
+     changes size or moves, because the answer genuinely changes: a circle
+     pulled from 10 km to 500 km stops being a question about a town, and
+     past the provincial border it stops being a circle at all. */
   let scopeSeq = 0;
+  let radiusCentre = null, radiusWanted = null;
+  const clipOn = () => input.dataset.geoClip !== '0';
+
   function refreshScope(lat, lng, r, m){
     if (m !== 'radius') return;
     const token = ++scopeSeq;
     const el = typeof cfg.out === 'string' ? $(cfg.out) : cfg.out;
     const w = el && el.querySelector('.geo-within');
     if (w){ w.textContent = 'Reading the area\u2026'; w.classList.add('pending'); }
-    geoScopeFor(lat, lng, r).then(sc => {
+
+    resolveRadiusTarget(lat, lng, r, clipOn()).then(t => {
       if (token !== scopeSeq) return;
-      input.dataset.geoScope = (sc && sc.name) || '';
-      paintGeoScope(cfg.out, sc);
+      input.dataset.geoScope = t.name || '';
+      input.dataset.geoCanonical = t.canonical || '';
+      input.dataset.geoWanted = String(t.requested);
+      /* The headroom, so the menu can offer the two radii that mean
+         something here: the widest circle that stays inside the province,
+         and the one that reaches its far corner. */
+      if (t.fit){
+        input.dataset.geoFitInside = String(t.fit.inside);
+        input.dataset.geoFitCover = String(t.fit.cover);
+      }
+
+      if (t.clipped){
+        /* The circle has outgrown its province, so the province is the
+           search. Everything downstream is told that, including the map,
+           which frames the whole of it. */
+        input.dataset.geoArea = '1';
+        input.dataset.geoLat = t.lat; input.dataset.geoLng = t.lng;
+        input.dataset.geoRadius = String(t.radius);
+        const bArr = boundsToArr(t.bounds);
+        if (bArr) input.dataset.geoBounds = JSON.stringify(bArr);
+        if (t.osm) input.dataset.geoOsm = JSON.stringify(t.osm);
+        if (cfg.lat && $(cfg.lat)) $(cfg.lat).value = t.lat;
+        if (cfg.lng && $(cfg.lng)) $(cfg.lng).value = t.lng;
+        if (cfg.radius && $(cfg.radius)) $(cfg.radius).value = String(t.radius);
+        if (cfg.canonical && $(cfg.canonical)) $(cfg.canonical).value = t.canonical || '';
+        paintGeoClip(cfg.out, t);
+        if (typeof cfg.after === 'function'){
+          cfg.after({lat:t.lat, lng:t.lng, country: dfsCountryName(t.hit),
+                     label: input.value, hit: t.hit, radius: t.radius, mode:'radius',
+                     area:true, bounds:t.bounds, canonical:t.canonical,
+                     clipped:true, requested:t.requested, exact:false});
+        }
+      } else {
+        delete input.dataset.geoArea; delete input.dataset.geoBounds;
+        delete input.dataset.geoOsm;
+        input.dataset.geoRadius = String(t.radius);
+        if (cfg.canonical && $(cfg.canonical)) $(cfg.canonical).value = '';
+        paintGeoClip(cfg.out, t);
+        paintGeoScope(cfg.out, {name: t.name, hit: t.hit, kind: t.kind});
+        if (typeof cfg.after === 'function'){
+          cfg.after({lat, lng, country: dfsCountryName(t.hit), label: input.value,
+                     hit: t.hit, radius: t.radius, mode:'radius', area:false,
+                     bounds:null, canonical:t.canonical, clipped:false,
+                     requested:t.requested, exact:false});
+        }
+      }
+      paintGeoClipToggle(cfg.out, t, clipOn(), on => {
+        input.dataset.geoClip = on ? '1' : '0';
+        refreshScope(lat, lng, Number(input.dataset.geoWanted) || r, m);
+      });
     });
   }
 
@@ -5765,7 +6091,10 @@ function wireGeoFinder(cfg){
     delete input.dataset.geoLat; delete input.dataset.geoLng;
     delete input.dataset.geoRadius; delete input.dataset.geoArea;
     delete input.dataset.geoBounds; delete input.dataset.geoOsm;
-    delete input.dataset.geoScope;
+    delete input.dataset.geoScope; delete input.dataset.geoCanonical;
+    delete input.dataset.geoWanted; delete input.dataset.geoFitInside;
+    delete input.dataset.geoFitCover;
+    if (cfg.canonical && $(cfg.canonical)) $(cfg.canonical).value = '';
     scopeSeq++;   // any answer still in flight is for the old circle
     input.dataset.geoMode = mode;
     geoOutClear(cfg.out); setStatus(cfg.status, '', '');
@@ -5783,23 +6112,58 @@ function wireGeoFinder(cfg){
     const country = dfsCountryName(hit);
     const iso = dfsCountryIso(hit);
     const m = o.mode || mode;
+    const fit = niceRadius(bboxRadius(hit && hit.boundingbox, lat));
 
-    /* An area's extent is its own bounding box; that is what the map frames
+    /* ---- radius mode keeps its own source of truth ---------------------
+       The circle the person drew — its centre and how wide they pulled it —
+       is remembered separately from whatever that circle resolves to. It has
+       to be: once a circle outgrows its province the resolved answer is the
+       province, centred somewhere else entirely, and re-resolving from THAT
+       would walk the circle across the map a step at a time. */
+    if (m === 'radius'){
+      radiusCentre = {lat: lat, lng: lng};
+      radiusWanted = Number(o.requested) || Number(o.radius) || fit || 25000;
+      input.dataset.geoCountry = country;
+      input.dataset.geoIso = iso;
+      input.dataset.geoMode = m;
+      input.dataset.geoWanted = String(radiusWanted);
+      input.dataset.geoLat = lat; input.dataset.geoLng = lng;
+      input.dataset.geoRadius = String(radiusWanted);
+      if (cfg.lat && $(cfg.lat)) $(cfg.lat).value = lat;
+      if (cfg.lng && $(cfg.lng)) $(cfg.lng).value = lng;
+      setStatus(cfg.status, '', '');
+
+      /* Drawn straight away from the circle that was asked for, so the field
+         is never blank while the area it covers is being read back. What it
+         resolves to arrives a moment later and patches this in place. */
+      renderGeoOut(cfg.out, {
+        lat, lng, country, label: o.label || hit.display_name || '',
+        hit, market: cfg.market, mode: 'radius', area: false, bounds: null,
+        radius: radiusWanted, autoRadius: fit, scope: o.scope || null,
+        onRadius(v){
+          radiusWanted = v;
+          input.dataset.geoWanted = String(v);
+          paintGeoDistance(cfg.out, v);
+          refreshScope(radiusCentre.lat, radiusCentre.lng, v, 'radius');
+        },
+        onMap(){ openMap(); }
+      });
+      refreshScope(lat, lng, radiusWanted, m);
+      return;
+    }
+
+    /* ---- the two exact modes, and a named area ------------------------
+       An area's extent is its own bounding box; that is what the map frames
        and what the uule is given, so Google is shown the same ground. An
        exact point gets the tightest radius Google will honour, because it
-       is a point. A circle gets whatever the circle was set to. */
+       is a point. */
     const bounds = o.bounds || bboxBounds(hit && hit.boundingbox);
-    const fit = niceRadius(bboxRadius(hit && hit.boundingbox, lat));
     const area = !!o.area;
-    let radius;
-    if (m === 'radius') radius = Number(o.radius) || fit || 25000;
-    else if (area)      radius = Number(o.radius) || fit || 93000;
-    else                radius = GEO_EXACT_RADIUS;
+    const radius = area ? (Number(o.radius) || fit || 93000) : GEO_EXACT_RADIUS;
 
     if (cfg.lat && $(cfg.lat)) $(cfg.lat).value = lat;
     if (cfg.lng && $(cfg.lng)) $(cfg.lng).value = lng;
-    const writeRadius = v => { if (cfg.radius && $(cfg.radius)) $(cfg.radius).value = String(v); };
-    writeRadius(radius);
+    if (cfg.radius && $(cfg.radius)) $(cfg.radius).value = String(radius);
 
     /* Nothing rewrites what was typed — a street address pins more precisely
        than the city containing it, so the text is left exactly as entered. */
@@ -5819,32 +6183,29 @@ function wireGeoFinder(cfg){
                                              addresstype:hit.addresstype || hit.type || ''});
     } else delete input.dataset.geoOsm;
 
+    /* Naming the place to Google, rather than handing it a coordinate and
+       hoping. A lat/lng uule always resolves to the nearest locality, which
+       is why a search meant for Alberta came back headed "Lacombe, AB"; a
+       canonical name is answered as the place itself. */
+    const canonical = area ? geoCanonicalForHit(hit) : '';
+    if (canonical) input.dataset.geoCanonical = canonical;
+    else delete input.dataset.geoCanonical;
+    if (cfg.canonical && $(cfg.canonical)) $(cfg.canonical).value = canonical;
+
     const label = o.label || hit.display_name || '';
     /* The readout already names the place, so the status line underneath it
        would just say the same thing twice. */
     setStatus(cfg.status, '', '');
-    const fire = r => {
-      if (typeof cfg.after === 'function'){
-        cfg.after({lat, lng, country, label, hit, radius: r, mode: m,
-                   area: area, bounds: bounds, exact: !area && m !== 'radius'});
-      }
-    };
     renderGeoOut(cfg.out, {
       lat, lng, country, label, hit, market: cfg.market,
       mode: m, area, bounds, radius, autoRadius: fit, scope: o.scope || null,
-      /* Changing the radius has to reach the same places the original value
-         did, or the menu would be decoration. And a different radius is a
-         different question, so the area it names is read again. */
-      onRadius(v){
-        input.dataset.geoRadius = String(v); writeRadius(v); fire(v);
-        paintGeoDistance(cfg.out, v);
-        refreshScope(lat, lng, v, m);
-      },
       onMap(){ openMap(); }
     });
-    if (o.scope && o.scope.name) input.dataset.geoScope = o.scope.name;
-    else refreshScope(lat, lng, radius, m);
-    fire(radius);
+    if (typeof cfg.after === 'function'){
+      cfg.after({lat, lng, country, label, hit, radius, mode: m,
+                 area: area, bounds: bounds, canonical: canonical,
+                 exact: !area});
+    }
   }
 
   /* ---- the map -------------------------------------------------------
@@ -5852,8 +6213,14 @@ function wireGeoFinder(cfg){
      modes that need it, and from the readout. It always opens showing what
      the field currently holds. */
   function openMap(){
-    const sLat = parseFloat(input.dataset.geoLat || (cfg.lat && $(cfg.lat) ? $(cfg.lat).value : ''));
-    const sLng = parseFloat(input.dataset.geoLng || (cfg.lng && $(cfg.lng) ? $(cfg.lng).value : ''));
+    /* In radius mode the map has to open on the circle the person drew, not
+       on the province that circle resolved to — otherwise reopening it walks
+       the circle to the middle of Alberta. */
+    const useC = mode === 'radius' && radiusCentre;
+    const sLat = useC ? radiusCentre.lat
+      : parseFloat(input.dataset.geoLat || (cfg.lat && $(cfg.lat) ? $(cfg.lat).value : ''));
+    const sLng = useC ? radiusCentre.lng
+      : parseFloat(input.dataset.geoLng || (cfg.lng && $(cfg.lng) ? $(cfg.lng).value : ''));
     let bounds = null, osm = null;
     try{ bounds = arrToBounds(JSON.parse(input.dataset.geoBounds || 'null')); }catch(err){}
     /* The two integers that let the picker ask OSM for this region's real
@@ -5863,8 +6230,9 @@ function wireGeoFinder(cfg){
       mode: mode,
       lat: isFinite(sLat) ? sLat : null,
       lng: isFinite(sLng) ? sLng : null,
-      radius: Number(input.dataset.geoRadius) || null,
+      radius: Number(input.dataset.geoWanted) || Number(input.dataset.geoRadius) || null,
       area: input.dataset.geoArea === '1',
+      clip: input.dataset.geoClip !== '0',
       bounds: bounds,
       osm: osm,
       label: input.value.trim(),
@@ -5874,10 +6242,21 @@ function wireGeoFinder(cfg){
            place it now points at rather than as whatever was there before. */
         if (res.label) input.value = res.label;
         if (res.mode && res.mode !== mode) setMode(res.mode, {keep:true});
-        applyPlace(res.hit, {
-          lat: res.lat, lng: res.lng, label: res.label, mode: res.mode || mode,
-          radius: res.radius, area: res.area, bounds: res.bounds, scope: res.scope
-        });
+        if (res.clip != null) input.dataset.geoClip = res.clip ? '1' : '0';
+        if (res.mode === 'radius'){
+          /* Hand back the circle, not what it resolved to — applyPlace
+             re-resolves it and would otherwise be resolving a province. */
+          const c = res.centre || {lat: res.lat, lng: res.lng};
+          applyPlace(res.hit, {
+            lat: c.lat, lng: c.lng, label: res.label, mode: 'radius',
+            requested: res.requested || res.radius
+          });
+        } else {
+          applyPlace(res.hit, {
+            lat: res.lat, lng: res.lng, label: res.label, mode: res.mode || mode,
+            radius: res.radius, area: res.area, bounds: res.bounds, scope: res.scope
+          });
+        }
       }
     });
   }
@@ -7180,12 +7559,20 @@ function buildScanUrl(keyword, lat, lng, opts){
   const o = opts || {};
   /* radius follows the zoom unless one is handed in explicitly */
   const radius = o.radius || zoomRadius(o.zoom, lat);
+  /* A single search aimed at a whole area names the area, because a lat/lng
+     uule is always answered as the nearest locality. Grid points never do
+     this — the whole point of a grid is that every point is a DIFFERENT
+     coordinate, and naming them all "Alberta" would collapse it to one
+     search repeated forty-nine times. */
+  const uule = (o.area && o.canonical)
+    ? uuleCanonical(o.canonical)
+    : uuleLatLng(lat, lng, radius);
   const p = [
     'q=' + encodeURIComponent(keyword),
     'hl=' + encodeURIComponent(o.hl),
     'gl=' + encodeURIComponent(o.gl),
     'ie=utf-8','oe=utf-8','pws=0',
-    'uule=' + uuleForUrl(uuleLatLng(lat, lng, radius))
+    'uule=' + uuleForUrl(uule)
   ];
   /* Google stopped honouring num= in September 2025 and now serves ten
      results whatever it is set to. Sending num=100 made an opened page look
@@ -7420,7 +7807,8 @@ let pinPickerEl = null, pinPickerMap = null, pinPickerCfg = null,
     pinPickerMode = 'pin', pinPickerLatLng = null, pinPickerLookup = 0,
     pinPickerRadius = GEO_EXACT_RADIUS, pinPickerHit = null,
     pinPickerArea = false, pinPickerBounds = null, pinPickerLabel = '',
-    pinPickerOsm = null, pinPickerScope = null;
+    pinPickerOsm = null, pinPickerScope = null,
+    pinPickerClip = true, pinPickerTarget = null;
 /* Every layer the picker can put on the map. Kept in one object because
    switching modes has to be able to take all of them off again — a circle
    left behind after a switch to Drop pin is a radius nobody asked for,
@@ -7428,7 +7816,8 @@ let pinPickerEl = null, pinPickerMap = null, pinPickerCfg = null,
 const pinLayers = {
   peg:null, zoneFill:null, zoneEdge:null,
   radHandle:null, radCentre:null, radSpoke:null,
-  areaShape:null, areaBox:null
+  areaShape:null, areaBox:null,
+  clipArea:null, ghostRing:null
 };
 
 /* The figure as it stands on the map: drawn at its feet, not its middle, so
@@ -7641,6 +8030,8 @@ function setPickerMode(m, opts){
   if (dock) dock.style.display = (m === 'pin') ? '' : 'none';
   const radWrap = $('pinPickerRadWrap');
   if (radWrap) radWrap.style.display = (m === 'radius') ? '' : 'none';
+  const clipRow = $('pinPickerClipRow');
+  if (clipRow && m !== 'radius') clipRow.style.display = 'none';
   const search = document.querySelector('.pin-search');
   if (search) search.style.display = '';
   if ($('pinPickerSearch')){
@@ -7648,7 +8039,8 @@ function setPickerMode(m, opts){
   }
 
   /* Leaving a mode takes its own furniture with it. */
-  if (m !== 'radius') clearPinLayers(['zoneFill','zoneEdge','radHandle','radCentre','radSpoke']);
+  if (m !== 'radius') clearPinLayers(['zoneFill','zoneEdge','radHandle','radCentre','radSpoke',
+                                     'clipArea','ghostRing']);
   if (m !== 'pin')    clearPinLayers(['peg']);
   if (m !== 'place')  { clearPinLayers(['areaShape','areaBox']); pinPickerArea = false; }
 
@@ -7915,6 +8307,109 @@ function pegLand(el){
   }
 }
 
+
+/* ---- showing the clip on the map ------------------------------------
+   When the circle has outgrown its province, the province is drawn solid —
+   that is the search — and the circle that was asked for is left behind as
+   a faint dashed ring so it is obvious what happened and by how much. The
+   alternative, silently shrinking the circle, would look like the drag had
+   broken. */
+function drawClipOverlay(t){
+  if (!pinPickerMap) return;
+  clearPinLayers(['clipArea','ghostRing']);
+
+  /* Once the circle is clipped it is no longer the search, so it stops being
+     drawn like one: the shading moves to the province. Two filled shapes
+     stacked on each other read as one muddy blob and hide which of them is
+     the answer. */
+  const clipped = !!(t && t.clipped);
+  if (pinLayers.zoneFill) pinLayers.zoneFill.setStyle({fillOpacity: clipped ? 0 : .13});
+  if (pinLayers.zoneEdge) pinLayers.zoneEdge.setStyle({opacity: clipped ? 0 : 1});
+  if (!clipped) return;
+
+  if (t.osm || t.bounds){
+    const b = t.bounds;
+    if (b){
+      pinLayers.clipArea = L.rectangle(b, {
+        color:'#b8570f', weight:2.5, dashArray:'7 6',
+        fillColor:'#e87722', fillOpacity:.14, interactive:false
+      }).addTo(pinPickerMap);
+    }
+    /* The real boundary replaces the box as soon as OSM answers. */
+    if (t.osm){
+      const token = pinPickerLookup;
+      geoAreaOutline(t.osm).then(geo => {
+        if (token !== pinPickerLookup || !geo || pinPickerMode !== 'radius') return;
+        if (pinLayers.clipArea){ try{ pinPickerMap.removeLayer(pinLayers.clipArea); }catch(e){} }
+        pinLayers.clipArea = L.geoJSON(geo, {
+          className:'geo-area-shape',
+          style:{color:'#b8570f', weight:2.5, dashArray:'7 6',
+                 fillColor:'#e87722', fillOpacity:.14},
+          interactive:false
+        }).addTo(pinPickerMap);
+        fitClipView(t);
+      }).catch(() => {});
+    }
+  }
+
+  /* The circle that was asked for, kept visible so the clip is legible as a
+     clip rather than as the drag having stopped working. */
+  pinLayers.ghostRing = L.circle(pinPickerLatLng, {
+    radius: t.requested, color:'#8b98a3', weight:1.5, dashArray:'3 6',
+    fill:false, opacity:.75, interactive:false
+  }).addTo(pinPickerMap);
+
+  fitClipView(t);
+}
+
+function fitClipView(t){
+  if (!pinPickerMap) return;
+  try{
+    const b = (pinLayers.clipArea && pinLayers.clipArea.getBounds)
+      ? pinLayers.clipArea.getBounds() : t.bounds;
+    if (b) pinPickerMap.fitBounds(b, {padding:[28,28]});
+  }catch(e){}
+}
+
+/* The footer's clip control: what it did, and the switch to stop it. */
+function paintPinClip(t){
+  const foot = pinPickerEl && pinPickerEl.querySelector('.pin-foot');
+  if (!foot) return;
+  let row = $('pinPickerClipRow');
+  if (!row){
+    row = document.createElement('button');
+    row.type = 'button';
+    row.id = 'pinPickerClipRow';
+    row.className = 'pin-clip';
+    const radWrap = $('pinPickerRadWrap');
+    if (radWrap) foot.insertBefore(row, radWrap);
+    else foot.appendChild(row);
+  }
+  if (pinPickerMode !== 'radius' || !t || !t.container){ row.style.display = 'none'; return; }
+  row.style.display = '';
+  const short = (t.container.name || '').split(',')[0];
+  row.innerHTML = '';
+  const box = document.createElement('i');
+  box.className = 'geo-clip-box' + (pinPickerClip ? ' on' : '');
+  row.appendChild(box);
+  const txt = document.createElement('span');
+  txt.textContent = t.clipped
+    ? ('Clipped to ' + short)
+    : ('Keep inside ' + short);
+  row.appendChild(txt);
+  row.title = t.clipped
+    ? ('Your ' + radiusLabel(t.requested) + ' circle reaches well past ' + short +
+       ' — the widest one that stays inside it from here is about ' +
+       radiusLabel(t.fit && t.fit.inside) + '. The search is ' + short + ' itself. ' +
+       'Switch this off to let the circle cross the border.')
+    : ('A circle bigger than ' + short + ' will become ' + short +
+       '. There is about ' + radiusLabel(t.fit && t.fit.inside) + ' of room from here.');
+  row.onclick = () => {
+    pinPickerClip = !pinPickerClip;
+    lookupPinPicker();
+  };
+}
+
 function paintPinPicker(label, pending){
   const read = $('pinPickerRead');
   if (!read) return;
@@ -7932,8 +8427,13 @@ function paintPinPicker(label, pending){
   if (pinPickerArea && pinPickerMode === 'place'){
     coordEl.textContent = 'Whole area';
   } else if (pinPickerMode === 'radius'){
-    coordEl.textContent = radiusLabel(pinPickerRadius) + ' around ' +
-      pinPickerLatLng.lat.toFixed(4) + ', ' + pinPickerLatLng.lng.toFixed(4);
+    /* A clipped circle is reporting a province, so the pill says the
+       province — printing the circle's own centre there would put the
+       emphasis back on a coordinate nobody chose. */
+    coordEl.textContent = (pinPickerTarget && pinPickerTarget.clipped)
+      ? ('All of ' + (pinPickerTarget.name || '').split(',')[0])
+      : (radiusLabel(pinPickerRadius) + ' around ' +
+         pinPickerLatLng.lat.toFixed(4) + ', ' + pinPickerLatLng.lng.toFixed(4));
   } else {
     coordEl.textContent = pinPickerLatLng.lat.toFixed(6) + ', ' + pinPickerLatLng.lng.toFixed(6);
   }
@@ -7956,14 +8456,16 @@ function lookupPinPicker(){
      address under the point, which is a different question. */
   if (pinPickerMode === 'radius'){
     paintPinPicker('', true);   // clear the old area's name while the new one loads
-    geoScopeFor(lat, lng, pinPickerRadius).then(sc => {
+    resolveRadiusTarget(lat, lng, pinPickerRadius, pinPickerClip).then(t => {
       if (token !== pinPickerLookup) return;
-      pinPickerScope = sc;
-      /* The scope's own hit still carries the country, which is what the
+      pinPickerTarget = t;
+      pinPickerScope = {name: t.name, canonical: t.canonical, hit: t.hit, kind: t.kind};
+      /* The resolved hit still carries the country, which is what the
          country-level APIs downstream need. */
-      pinPickerHit = (sc && sc.hit) || null;
-      paintPinPicker(sc && sc.name ? sc.name
-        : 'Could not name this area \u2014 the circle still works', false);
+      pinPickerHit = t.hit || null;
+      drawClipOverlay(t);
+      paintPinClip(t);
+      paintPinPicker(t.name || 'Could not name this area \u2014 the circle still works', false);
     });
     return;
   }
@@ -8019,6 +8521,8 @@ function openPinPicker(cfg){
   pinPickerRadius = Number(cfg && cfg.radius) || GEO_EXACT_RADIUS;
   pinPickerOsm = (cfg && cfg.osm) || null;
   pinPickerScope = null;
+  pinPickerTarget = null;
+  pinPickerClip = (cfg && cfg.clip != null) ? !!cfg.clip : true;
   if (cfg && cfg.label) pinPickerLabel = cfg.label;
 
   const dock = $('pinPickerDock');
@@ -8086,8 +8590,10 @@ function usePinPicker(){
     : ((hit && hit.display_name && pinPickerMode !== 'radius')
         ? hit.display_name
         : (pinPickerMode === 'radius'
-            ? (radiusLabel(pinPickerRadius) + ' around ' +
-               ((pinPickerScope && pinPickerScope.name) || (lat.toFixed(5) + ', ' + lng.toFixed(5))))
+            ? ((pinPickerTarget && pinPickerTarget.clipped)
+                ? ('All of ' + (pinPickerTarget.name || '').split(',')[0])
+                : (radiusLabel(pinPickerRadius) + ' around ' +
+                   ((pinPickerScope && pinPickerScope.name) || (lat.toFixed(5) + ', ' + lng.toFixed(5)))))
             : ('Dropped pin · ' + lat.toFixed(5) + ', ' + lng.toFixed(5))));
   /* An area handed back has to stay an area: its extent and its OSM identity
      travel with it, or the field it lands in would see a bare coordinate and
@@ -8108,11 +8614,24 @@ function usePinPicker(){
     ? (Number(pinPickerRadius) || 10000)
     : (area ? (Number(pinPickerRadius) || 93000) : GEO_EXACT_RADIUS);
   const bounds = area ? (pinPickerBounds || bboxBounds(hit && hit.boundingbox)) : null;
+  const t = pinPickerTarget;
   closePinPicker();
   if (typeof pinPickerCfg.onPick === 'function'){
-    pinPickerCfg.onPick({hit: synthetic, lat, lng, label, radius,
-                         mode: pinPickerMode, area: area, bounds: bounds,
-                         scope: pinPickerMode === 'radius' ? pinPickerScope : null});
+    pinPickerCfg.onPick({
+      hit: synthetic, lat, lng, label, radius,
+      mode: pinPickerMode, area: area, bounds: bounds,
+      scope: pinPickerMode === 'radius' ? pinPickerScope : null,
+      /* Radius mode hands back the circle itself — where its centre is and
+         how wide it was pulled — plus whether it had to be clipped. The
+         field re-resolves from the circle, so what it resolved to here is
+         only along for the readout. */
+      centre: pinPickerMode === 'radius' ? {lat: lat, lng: lng} : null,
+      requested: pinPickerMode === 'radius'
+        ? ((t && t.requested) || Number(pinPickerRadius) || 10000) : null,
+      clipped: !!(t && t.clipped),
+      clip: pinPickerMode === 'radius' ? pinPickerClip : null,
+      canonical: (t && t.canonical) || ''
+    });
   }
 }
 
@@ -10789,8 +11308,13 @@ wireGeoFinder({
      a radius that covers Alberta instead of leaving the old default there
      to quietly contradict the pin. */
   radius:'radius',
+  /* The Advanced panel's Named location box is filled in automatically now:
+     an area resolves to a name Google knows, and that name is what gets
+     sent. It stays editable. */
+  canonical:'canonical',
   status:'geoStatus', out:'geoOut',
-  after(){ updatePreview(); }
+  after(){ updatePreview(); },
+  onClear(){ updatePreview(); }
 });
 /* The keyword finder's Area box feeds DataForSEO, not a map pin, so this one
    also rewrites the field into the punctuation their API will accept. */
@@ -10833,7 +11357,14 @@ function buildCheckerUrl(page){
   const rRaw = $('radius').value.trim();
   const radius = /^\d+$/.test(rRaw) ? rRaw : '93000';
   const parts = ['q=' + encodeURIComponent(q), 'hl=' + encodeURIComponent(hl), 'gl=' + encodeURIComponent(gl), 'ie=utf-8','oe=utf-8','pws=0'];
-  if (!isNaN(lat) && !isNaN(lng)) parts.push('uule=' + uuleForUrl(uuleLatLng(lat, lng, radius)));
+  /* A whole area is named, not pinned. Google answers a lat/lng uule by
+     resolving it to the nearest locality however wide the radius is — which
+     is exactly how a search meant for Alberta came back headed "Lacombe,
+     AB". A canonical name is answered as the place itself, so an area gets
+     one and a point keeps its coordinates. */
+  const isArea = $('loc').dataset.geoArea === '1';
+  if (isArea && canonical) parts.push('uule=' + uuleForUrl(uuleCanonical(canonical)));
+  else if (!isNaN(lat) && !isNaN(lng)) parts.push('uule=' + uuleForUrl(uuleLatLng(lat, lng, radius)));
   else if (canonical) parts.push('uule=' + uuleForUrl(uuleCanonical(canonical)));
   if (num && /^\d+$/.test(num)) parts.push('num=' + num);
   const p = Math.max(1, parseInt(page || serpPage, 10) || 1);
@@ -12171,6 +12702,7 @@ async function seoResolveLocation(client, loc){
        whole of it instead of zooming to its centre of mass. */
     if (geoIsBroad(hit)){
       g.area = true;
+      g.canonical = geoCanonicalForHit(hit);
       g.bounds = boundsToArr(bboxBounds(hit.boundingbox));
       if (hit.osm_id) g.osm = {osm_id:hit.osm_id, osm_type:hit.osm_type,
                                addresstype:hit.addresstype || hit.type || ''};
@@ -12543,7 +13075,9 @@ async function seoScanOne(client, kw, loc){
      grid does not narrow it. A location saved before radii existed has none
      and keeps the 93 km it has always used. */
   const locRadius = (g && g.radius) || (loc && loc.radius) || '93000';
-  loc.sourceUrl = buildScanUrl(kw.text, g.lat, g.lng, {hl:region.hl, gl:region.gl, depth, surface:'web', radius:String(locRadius)});
+  loc.sourceUrl = buildScanUrl(kw.text, g.lat, g.lng, {hl:region.hl, gl:region.gl, depth,
+    surface:'web', radius:String(locRadius),
+    area: !!(g && g.area), canonical: (g && g.canonical) || ''});
   try{
     const data = await seoOrganicLadder(kw.text, {lat:g.lat, lng:g.lng}, region, {
       depth,
@@ -13591,13 +14125,15 @@ function seoLocGroupRow(c, k, loc){
                : area ? (Number(opts.radius) || fit || 93000)
                : GEO_EXACT_RADIUS;
     loc.bounds = area ? (boundsToArr(opts.bounds || bboxBounds(hit && hit.boundingbox))) : null;
+    loc.canonical = area ? geoCanonicalForHit(hit) : '';
     loc.osm = area && hit && hit.osm_id
       ? {osm_id:hit.osm_id, osm_type:hit.osm_type, addresstype:hit.addresstype || hit.type || ''}
       : null;
     labelInput.value = loc.label;
     latInput.value = loc.lat; lngInput.value = loc.lng;
     const entry = {lat: loc.lat, lng: loc.lng, radius: loc.radius};
-    if (area){ entry.area = true; entry.bounds = loc.bounds; entry.osm = loc.osm; }
+    if (area){ entry.area = true; entry.bounds = loc.bounds; entry.osm = loc.osm;
+               entry.canonical = loc.canonical; }
     c.locationCache[(loc.label || '').toLowerCase()] = entry;
     setStatus(statusEl,
       (area ? 'Whole area \u00b7 ' : (mode === 'radius' ? radiusLabel(loc.radius) + ' around \u00b7 ' : 'Exact point \u00b7 ')) +
@@ -13894,6 +14430,7 @@ function seoCacheLocation(label, g){
   const entry = { lat: g.lat, lng: g.lng };
   if (g.radius) entry.radius = Number(g.radius);
   if (g.mode) entry.mode = g.mode;
+  if (g.canonical) entry.canonical = g.canonical;
   /* A whole area carries its extent, so the scan and anything that draws it
      later both know this is a region rather than a point. */
   if (g.area){

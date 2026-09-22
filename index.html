@@ -5542,6 +5542,303 @@ async function nominatim(q){
   return data.length ? data[0] : null;
 }
 
+
+/* ==========================================================================
+   ADMINISTRATIVE LEVEL: WHAT YOU TYPED IS WHAT YOU GET
+   ==========================================================================
+   Typing "United States" was returning Kansas. Not a coincidence and not
+   Nominatim being wrong: the lookup asked for `limit=1` on a free-text query
+   and took whatever came back first, and the geographic centre of the
+   contiguous United States is a field outside Lebanon, Kansas. A country
+   name resolved to a point, that point got read back at state level, and the
+   answer was a state nobody had asked for.
+
+   The fix is to stop treating "a place" as one undifferentiated thing.
+   Places have levels, the level is the answer, and the text decides it:
+
+     United States          -> country      the whole country
+     Kansas, US             -> state        that state
+     Sedgwick County, KS    -> county       that county
+     Wichita, Kansas        -> city         that city
+     Douglas Ave, Wichita   -> street
+     123 Douglas Ave …      -> address      a point
+
+   Every rung is an area except the last, every rung is framed and searched
+   as itself, and this is the same ladder in every country — the level names
+   differ (state / province / région / prefecture / oblast) but the shape
+   does not.
+   ========================================================================== */
+const GEO_LEVELS = [
+  {lvl:1, key:'country', word:'country', zoom:3,
+   types:['country']},
+  {lvl:2, key:'state',   word:'state or province', zoom:5,
+   types:['state','province','region','territory','federal_state','prefecture',
+          'oblast','governorate','emirate','canton','autonomous_region',
+          'union_territory','administrative_area_level_1']},
+  {lvl:3, key:'county',  word:'county or district', zoom:8,
+   types:['county','state_district','district','division','subregion','department',
+          'municipality_district','metropolitan_area']},
+  {lvl:4, key:'city',    word:'city or town', zoom:10,
+   types:['city','town','municipality','village','hamlet','borough','locality',
+          'isolated_dwelling','island']},
+  {lvl:5, key:'suburb',  word:'suburb', zoom:14,
+   types:['suburb','neighbourhood','quarter','city_district','subdistrict',
+          'residential','allotments','postcode']},
+  {lvl:6, key:'street',  word:'street', zoom:16,
+   types:['road','pedestrian','street','footway','path','highway']},
+  {lvl:7, key:'address', word:'address', zoom:18,
+   types:['building','house','house_number','yes','amenity','shop','office',
+          'place','tourism','leisure','craft','healthcare']}
+];
+const GEO_LEVEL_BY_TYPE = (function(){
+  const m = {};
+  GEO_LEVELS.forEach(L => L.types.forEach(t => { m[t] = L.lvl; }));
+  return m;
+})();
+function geoLevelInfo(lvl){
+  return GEO_LEVELS.find(L => L.lvl === lvl) || GEO_LEVELS[GEO_LEVELS.length - 1];
+}
+/* What level a geocoder result actually sits at. addresstype is the reliable
+   signal; class/type is the fallback for results that do not carry one. */
+function geoLevelOf(hit){
+  if (!hit) return 7;
+  const at = String(hit.addresstype || '').toLowerCase();
+  if (GEO_LEVEL_BY_TYPE[at]) return GEO_LEVEL_BY_TYPE[at];
+  const t = String(hit.type || '').toLowerCase();
+  if (GEO_LEVEL_BY_TYPE[t]) return GEO_LEVEL_BY_TYPE[t];
+  /* An administrative boundary with no usable addresstype: fall back to the
+     address parts, taking the narrowest one that is filled in. */
+  const a = hit.address || {};
+  if (a.house_number || a.road) return 7;
+  if (a.suburb || a.neighbourhood) return 5;
+  if (a.city || a.town || a.village) return 4;
+  if (a.county || a.state_district) return 3;
+  if (a.state || a.province) return 2;
+  if (a.country) return 1;
+  return 7;
+}
+/* Anything above an address is an area: it has an extent, and the extent is
+   the answer. This replaces the old hand-maintained "is it broad" list. */
+function geoIsArea(hit){ return geoLevelOf(hit) <= 5; }
+
+/* ---- countries, as people actually type them -------------------------
+   Nominatim will not match "us" or "uk" to a country on its own, and those
+   are exactly what gets typed. Only the shorthand needs listing — a full
+   country name resolves by itself. */
+const GEO_COUNTRY_ALIASES = {
+  'us':'United States','usa':'United States','u.s.':'United States',
+  'u.s.a.':'United States','united states of america':'United States',
+  'america':'United States','states':'United States',
+  'uk':'United Kingdom','u.k.':'United Kingdom','britain':'United Kingdom',
+  'great britain':'United Kingdom','gb':'United Kingdom','england':'England',
+  'uae':'United Arab Emirates','u.a.e.':'United Arab Emirates',
+  'holland':'Netherlands','nl':'Netherlands','deutschland':'Germany',
+  'ca':'Canada','can':'Canada','aus':'Australia','nz':'New Zealand',
+  'rsa':'South Africa','sa':'Saudi Arabia','ksa':'Saudi Arabia',
+  'roi':'Ireland','eire':'Ireland','turkey':'Türkiye','czech republic':'Czechia',
+  'ivory coast':'Côte d’Ivoire','burma':'Myanmar','swaziland':'Eswatini',
+  'macedonia':'North Macedonia','south korea':'South Korea','korea':'South Korea',
+  'drc':'Democratic Republic of the Congo','ph':'Philippines','ksa ':'Saudi Arabia'
+};
+function geoCountryAlias(s){
+  const k = String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  return GEO_COUNTRY_ALIASES[k] || null;
+}
+
+/* ==========================================================================
+   BOUNDS THAT SURVIVE THE ANTIMERIDIAN
+   ==========================================================================
+   The United States' bounding box runs from -179.2 to +179.8 degrees of
+   longitude, because the Aleutian Islands cross the date line. Fed to a map
+   that straight, it frames the entire planet and the country is a smear
+   across it. Every longitude is therefore pulled into the same turn of the
+   globe as the country's own centre before the bounds are built: the
+   Aleutians become -180.2 rather than +179.8, and the United States frames
+   as North America, which is what anyone asking for it meant.
+   ========================================================================== */
+function unwrapLng(lng, refLng){
+  let v = Number(lng);
+  if (!isFinite(v) || !isFinite(refLng)) return v;
+  while (v - refLng > 180) v -= 360;
+  while (refLng - v > 180) v += 360;
+  return v;
+}
+/* A bounding box that wraps the date line cannot be repaired, because two
+   numbers cannot say "the mainland AND the Aleutians but nothing in
+   between". Unwrapping it turns the United States into a one-degree sliver
+   off Attu. So a wrapping box is reported as unusable and the real boundary
+   polygon — which has every vertex, and can therefore be shifted properly —
+   is what frames the map. */
+function bboxWraps(bb){
+  if (!Array.isArray(bb) || bb.length < 4) return false;
+  const w = parseFloat(bb[2]), e = parseFloat(bb[3]);
+  return isFinite(w) && isFinite(e) && (e - w) > 180;
+}
+function bboxBoundsSafe(bb, refLng){
+  if (typeof L === 'undefined' || !Array.isArray(bb) || bb.length < 4) return null;
+  if (bboxWraps(bb)) return null;
+  const s = parseFloat(bb[0]), n = parseFloat(bb[1]);
+  let w = parseFloat(bb[2]), e = parseFloat(bb[3]);
+  if (![s, n, w, e].every(v => isFinite(v))) return null;
+  const ref = isFinite(refLng) ? Number(refLng) : (w + e) / 2;
+  w = unwrapLng(w, ref); e = unwrapLng(e, ref);
+  if (e < w){ const t = w; w = e; e = t; }
+  try{ return L.latLngBounds([s, w], [n, e]); }catch(err){ return null; }
+}
+
+/* The same shift applied to the geometry itself, so the shape is drawn in one
+   piece instead of with Alaska stranded on the far edge of the map, and so
+   Leaflet's own getBounds() agrees with the framing. */
+function unwrapGeo(geo, refLng){
+  if (!geo || !isFinite(refLng)) return geo;
+  const shift = c => (Array.isArray(c) && typeof c[0] === 'number')
+    ? [unwrapLng(c[0], refLng), c[1]]
+    : (Array.isArray(c) ? c.map(shift) : c);
+  try{ return Object.assign({}, geo, {coordinates: shift(geo.coordinates)}); }
+  catch(err){ return geo; }
+}
+/* The same treatment for a real boundary polygon, which is where the good
+   framing comes from once OSM has answered. */
+/* The bounds of a boundary, ring by ring.
+
+   Framing every ring at once is not what anyone means by "show me the United
+   States": the Aleutians reach past the date line, so the smallest box
+   holding all of it spans a third of the planet and the country is a smear
+   across the middle. What people mean is the main landmass. So each ring is
+   measured separately and the biggest one frames the map, while the whole
+   shape — islands, exclaves and all — is still drawn.
+
+   Everything else frames identically either way, because most places are one
+   ring. */
+function ringBounds(ring, ref){
+  let s = 90, n = -90, w = 1e9, e = -1e9, any = false;
+  for (let i = 0; i < ring.length; i++){
+    const c = ring[i];
+    if (!Array.isArray(c) || typeof c[0] !== 'number') continue;
+    const lng = unwrapLng(c[0], ref), lat = Number(c[1]);
+    if (!isFinite(lng) || !isFinite(lat)) continue;
+    any = true;
+    if (lat < s) s = lat;
+    if (lat > n) n = lat;
+    if (lng < w) w = lng;
+    if (lng > e) e = lng;
+  }
+  return any ? {s, n, w, e, area: Math.abs(n - s) * Math.abs(e - w)} : null;
+}
+function outlineBounds(geo, refLng){
+  if (typeof L === 'undefined' || !geo) return null;
+  const ref = isFinite(refLng) ? Number(refLng) : 0;
+  const rings = [];
+  const collect = (c, depth) => {
+    if (!Array.isArray(c) || !c.length) return;
+    if (typeof c[0] === 'number') return;
+    if (typeof c[0][0] === 'number'){ rings.push(c); return; }
+    c.forEach(x => collect(x, depth + 1));
+  };
+  collect(geo.coordinates, 0);
+  if (!rings.length) return null;
+
+  let best = null;
+  rings.forEach(r => {
+    const b = ringBounds(r, ref);
+    if (b && (!best || b.area > best.area)) best = b;
+  });
+  if (!best) return null;
+  try{ return L.latLngBounds([best.s, best.w], [best.n, best.e]); }
+  catch(err){ return null; }
+}
+
+/* ==========================================================================
+   RESOLVING WHAT WAS TYPED, AT THE LEVEL IT WAS TYPED AT
+   ==========================================================================
+   Three things the old single-shot lookup could not do:
+
+     · recognise that the whole query IS a country, and ask for the country
+       rather than for whatever sits at its centre;
+     · read "us, kansas" — people write the country first as often as last,
+       and Nominatim wants it last;
+     · choose between candidates. Asking for one result means taking the
+       first, and the first is ranked by importance, not by whether it is the
+       kind of place that was described.
+   ========================================================================== */
+async function nominatimSearch(q, opts){
+  const o = opts || {};
+  let url = 'https://nominatim.openstreetmap.org/search?format=json&addressdetails=1' +
+            '&accept-language=en&limit=' + (o.limit || 8) +
+            '&q=' + encodeURIComponent(q);
+  if (o.featureType) url += '&featuretype=' + encodeURIComponent(o.featureType);
+  const res = await fetch(url, {headers:{Accept:'application/json'}});
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const data = await res.json();
+  return Array.isArray(data) ? data : [];
+}
+
+const norm = s => String(s || '').trim().toLowerCase()
+  .replace(/[.]/g, '').replace(/\s+/g, ' ');
+
+async function geoResolvePlace(q){
+  const raw = String(q || '').trim();
+  if (!raw) return null;
+
+  /* ---- is the whole thing a country? ------------------------------- */
+  const alias = geoCountryAlias(raw);
+  const asCountry = alias || raw;
+  const looksLikeCountry = !/\d/.test(raw) && raw.split(',').length === 1;
+  if (alias || looksLikeCountry){
+    try{
+      const hits = await nominatimSearch(asCountry, {featureType:'country', limit:3});
+      const exact = hits.find(h => geoLevelOf(h) === 1 &&
+        (norm(h.name) === norm(asCountry) || norm(h.display_name) === norm(asCountry)));
+      const anyCountry = exact || hits.find(h => geoLevelOf(h) === 1);
+      /* An alias was an explicit statement that a country was meant, so it is
+         taken at its word. A bare word that merely might be one has to match
+         by name before it is treated as a country. */
+      if (anyCountry && (alias || exact)) return anyCountry;
+    }catch(err){ /* fall through to the ordinary search */ }
+  }
+
+  /* ---- country written first ---------------------------------------- */
+  let query = raw;
+  const parts = raw.split(',').map(s => s.trim()).filter(Boolean);
+  if (parts.length > 1){
+    const leadCountry = geoCountryAlias(parts[0]);
+    const tailCountry = geoCountryAlias(parts[parts.length - 1]);
+    if (leadCountry && !tailCountry){
+      /* "us, kansas" means the same as "kansas, us" and only one of them is
+         a query Nominatim understands. */
+      query = parts.slice(1).concat(leadCountry).join(', ');
+    } else if (tailCountry){
+      query = parts.slice(0, -1).concat(tailCountry).join(', ');
+    }
+  }
+
+  /* ---- choose among candidates -------------------------------------- */
+  const hits = await nominatimSearch(query, {limit:8});
+  if (!hits.length) return null;
+  if (hits.length === 1) return hits[0];
+
+  const headTyped = norm(parts[0] === geoCountryAlias(parts[0]) && parts.length > 1
+    ? parts[1] : parts[0]);
+  const hasNumber = /\d/.test(raw);
+
+  const scored = hits.map(h => {
+    const lvl = geoLevelOf(h);
+    let score = Number(h.importance || 0) * 10;
+    /* Naming the place exactly is the strongest signal there is. */
+    if (norm(h.name) === headTyped) score += 60;
+    else if (norm(h.name).indexOf(headTyped) === 0) score += 22;
+    /* A query with no house number is asking for an area, not a doorway. */
+    if (!hasNumber && lvl <= 5) score += 14;
+    if (!hasNumber && lvl >= 7) score -= 20;
+    if (hasNumber && lvl >= 6) score += 22;
+    /* Administrative boundaries beat businesses that share the name. */
+    if (String(h.class || '').toLowerCase() === 'boundary') score += 10;
+    return {h, score};
+  }).sort((a, b) => b.score - a.score);
+
+  return scored[0].h;
+}
+
 /* The DataForSEO Labs API — which is what the keyword finder talks to — only
    supports COUNTRIES. "Country is the only supported location_type for this
    API", per their locations_and_languages reference, because the Labs keyword
@@ -5675,11 +5972,12 @@ function roundRadius(m){
    a province behave like a province: it is the real extent of the thing
    that was found, so a map told to fit it shows the whole of Alberta
    rather than a tight crop around a centroid in the middle of a field. */
-function bboxBounds(bb){
-  if (typeof L === 'undefined' || !Array.isArray(bb) || bb.length < 4) return null;
-  const s = parseFloat(bb[0]), n = parseFloat(bb[1]), w = parseFloat(bb[2]), e = parseFloat(bb[3]);
-  if (![s, n, w, e].every(v => isFinite(v))) return null;
-  try{ return L.latLngBounds([s, w], [n, e]); }catch(err){ return null; }
+function bboxBounds(bb, refLng){
+  /* Delegates to the antimeridian-safe builder defined below, so a country
+     whose territory crosses the date line frames as itself rather than as the
+     whole planet. Defined here because it is called from higher up the file;
+     the implementation lives with the rest of the level machinery. */
+  return bboxBoundsSafe(bb, refLng);
 }
 /* Bounds as a plain array, which is what survives a trip through
    localStorage — a live L.latLngBounds does not. */
@@ -5961,11 +6259,7 @@ function geoCanonicalName(hit, zoom){
 /* The canonical name for a place at whatever level it already is — used
    when a Find resolves straight to a province or a country. */
 function geoCanonicalForHit(hit){
-  const t = String((hit && (hit.addresstype || hit.type)) || '').toLowerCase();
-  const z = t === 'country' ? 3
-          : (t === 'state' || t === 'province' || t === 'region') ? 5
-          : (t === 'county' || t === 'state_district') ? 8 : 10;
-  return geoCanonicalName(hit, z);
+  return geoCanonicalName(hit, geoLevelInfo(geoLevelOf(hit)).zoom);
 }
 
 /* The province, state or region a point sits in — the unit a radius gets
@@ -6081,6 +6375,10 @@ function geoIsBroad(hit){
 /* The two halves of the broad-area chip: the place itself, and the wider
    thing it sits inside. A province shows its country beside it; a country
    has nothing broader to show, so that half is simply left off. */
+/* The level, said in one word, for the places that show it inline. */
+function geoLevelWord(hit){
+  return geoLevelInfo(geoLevelOf(hit)).word;
+}
 function geoScopeParts(hit){
   const L = geoAddrLadder(hit);
   const country = L.country;
@@ -6128,8 +6426,17 @@ function renderGeoOut(out, g){
   const glyph = document.createElement('i');
   tag.appendChild(glyph);
   if (isArea){
-    tag.appendChild(document.createTextNode('Whole area'));
-    tag.title = 'The region itself is the search area — its own boundary, not a circle around a point in the middle of it.';
+    /* Naming the level is what makes the ladder legible. "Whole area" was
+       true of a country and of a suburb and told you which you had got
+       neither time — and getting the wrong one is exactly the failure this
+       is here to make visible. */
+    const L = geoLevelInfo(g.level != null ? g.level : geoLevelOf(g.hit));
+    const WORD = {country:'Whole country', state:'Whole state', county:'Whole county',
+                  city:'Whole city', suburb:'Whole district'};
+    tag.appendChild(document.createTextNode(WORD[L.key] || 'Whole area'));
+    tag.title = 'Searched as the entire ' + L.word + ' — its own boundary, not a ' +
+      'circle around a point in the middle of it. Type something more specific ' +
+      '(a state, a county, a city, a street) to narrow it.';
   } else if (mode === 'radius'){
     /* Its own element, because the radius menu changes this number without
        redrawing the readout — and a tag still reading "Within 10 km" beside
@@ -6604,8 +6911,9 @@ function wireGeoFinder(cfg){
        and what the uule is given, so Google is shown the same ground. An
        exact point gets the tightest radius Google will honour, because it
        is a point. */
-    const bounds = o.bounds || bboxBounds(hit && hit.boundingbox);
+    const bounds = o.bounds || bboxBounds(hit && hit.boundingbox, lng);
     const area = !!o.area;
+    const level = o.level != null ? o.level : geoLevelOf(hit);
     const radius = area ? (Number(o.radius) || fit || 93000) : GEO_EXACT_RADIUS;
 
     if (cfg.lat && $(cfg.lat)) $(cfg.lat).value = lat;
@@ -6648,9 +6956,11 @@ function wireGeoFinder(cfg){
     /* The readout already names the place, so the status line underneath it
        would just say the same thing twice. */
     setStatus(cfg.status, '', '');
+    input.dataset.geoLevel = String(level);
     renderGeoOut(cfg.out, {
       lat, lng, country, label, hit, market: cfg.market,
       mode: m, area, bounds, radius, autoRadius: fit, scope: o.scope || null,
+      level: level,
       onMap(){ openMap(); }
     });
     if (typeof cfg.after === 'function'){
@@ -6725,7 +7035,10 @@ function wireGeoFinder(cfg){
     btn.disabled = true;
     setStatus(cfg.status, 'Looking up ' + q + '…', 'busy');
     try{
-      const hit = await nominatim(q);
+      /* Level-aware: a country name resolves to the country, "us, kansas"
+         resolves to Kansas, and an address resolves to the doorway — rather
+         than all three collapsing to whatever Nominatim ranked first. */
+      const hit = await geoResolvePlace(q);
       if (!hit){
         setStatus(cfg.status, 'No match. Add the city, province or country and try again.', 'err');
         geoOutClear(cfg.out); return;
@@ -6736,8 +7049,8 @@ function wireGeoFinder(cfg){
          frames all of it and nothing gets pinned to the middle of nowhere.
          In radius mode the same result is a centre, because a circle is
          what was asked for. */
-      const broad = mode === 'place' && geoIsBroad(hit);
-      applyPlace(hit, {area: broad, mode: mode});
+      const broad = mode === 'place' && geoIsArea(hit);
+      applyPlace(hit, {area: broad, mode: mode, level: geoLevelOf(hit)});
     }catch(err){
       setStatus(cfg.status, 'Lookup failed: ' + ((err && err.message) || err), 'err');
       geoOutClear(cfg.out);
@@ -6777,6 +7090,7 @@ function restoreGeoField(input, centre, finder){
   if (centre.area) input.dataset.geoArea = '1'; else delete input.dataset.geoArea;
   if (centre.bounds) input.dataset.geoBounds = JSON.stringify(centre.bounds); else delete input.dataset.geoBounds;
   if (centre.osm) input.dataset.geoOsm = JSON.stringify(centre.osm); else delete input.dataset.geoOsm;
+  if (centre.level) input.dataset.geoLevel = String(centre.level); else delete input.dataset.geoLevel;
   if (setMode) setMode(centre.mode || 'place', {keep:true});
 }
 
@@ -6834,7 +7148,7 @@ let memoryStore = null;
 function blankGbp(name){
   return {
     id:uid(), name:name || 'Main location', bizName:'', gbpLink:'', phone:'', website:'', cid:null, placeId:null,
-    center:{lat:null,lng:null,label:'',mode:'place',area:false,radius:null,bounds:null,osm:null}, regionIdx:0, gridSize:7, spacingKm:1.5, surface:'local', zoom:14,
+    center:{lat:null,lng:null,label:'',mode:'place',area:false,radius:null,bounds:null,osm:null,level:null}, regionIdx:0, gridSize:7, spacingKm:1.5, surface:'local', zoom:14,
     keywords:[], activeKeywordId:null
   };
 }
@@ -7785,6 +8099,7 @@ function persistGbp(){
   g.center.radius = Number(tEl.dataset.geoRadius) || null;
   try{ g.center.bounds = JSON.parse(tEl.dataset.geoBounds || 'null'); }catch(e){ g.center.bounds = null; }
   try{ g.center.osm = JSON.parse(tEl.dataset.geoOsm || 'null'); }catch(e){ g.center.osm = null; }
+  g.center.level = Number(tEl.dataset.geoLevel) || null;
   g.gridSize = parseInt($('gridSize').value, 10) || 7;
   g.spacingKm = parseFloat($('spacing').value) || 1.5;
   g.surface = $('surface').value;
@@ -7857,7 +8172,11 @@ function renderGridInfo(){
      a whole province is almost certainly not what was meant: the grid would
      sit in the middle of Alberta rather than over the town being reported
      on. Said plainly here rather than discovered in the results. */
-  const areaWarn = (g.center && g.center.area)
+  /* A grid centred on a city is the ordinary case and needs no warning — a
+     9 km square over a town is exactly what this tool is for. It is only a
+     county, a state or a country that a grid this size cannot stand for. */
+  const tooBig = g.center && g.center.area && (g.center.level == null || g.center.level <= 3);
+  const areaWarn = tooBig
     ? '<br><b style="color:var(--brand-deep)">This grid is centred on ' +
       esc(g.center.label || 'a whole area') + '.</b> The ' + span + ' km grid will land in the ' +
       'middle of it. To report on a town, set the centre to that town with ' +
@@ -8566,8 +8885,11 @@ async function drawPinArea(hit, bounds){
   if (b){ try{ pinPickerMap.fitBounds(b, {padding:[30,30]}); }catch(e){} }
 
   const token = ++pinPickerLookup;
-  const geo = await geoAreaOutline(hit);
+  const raw = await geoAreaOutline(hit);
   if (token !== pinPickerLookup || pinPickerMode !== 'place') return;
+  const refLng = parseFloat((hit && hit.lon) != null ? hit.lon
+    : (pinPickerLatLng ? pinPickerLatLng.lng : NaN));
+  const geo = unwrapGeo(raw, refLng);
   if (geo){
     pinLayers.areaShape = L.geoJSON(geo, {
       className:'geo-area-shape',
@@ -8575,7 +8897,8 @@ async function drawPinArea(hit, bounds){
               fillColor:'#e87722', fillOpacity:.10 },
       interactive:false
     }).addTo(pinPickerMap);
-    try{ pinPickerMap.fitBounds(pinLayers.areaShape.getBounds(), {padding:[30,30]}); }catch(e){}
+    const ob = outlineBounds(geo, refLng) || pinLayers.areaShape.getBounds();
+    try{ pinPickerMap.fitBounds(ob, {padding:[30,30]}); }catch(e){}
   } else if (b){
     /* No boundary came back — the box still says "all of this", which is
        the part that actually matters. */
@@ -8829,7 +9152,8 @@ function drawClipOverlay(t){
     /* The real boundary replaces the box as soon as OSM answers. */
     if (t.osm){
       const token = pinPickerLookup;
-      geoAreaOutline(t.osm).then(geo => {
+      geoAreaOutline(t.osm).then(raw0 => {
+        const geo = unwrapGeo(raw0, Number(t.lng));
         if (token !== pinPickerLookup || !geo || pinPickerMode !== 'radius') return;
         if (pinLayers.clipArea){ try{ pinPickerMap.removeLayer(pinLayers.clipArea); }catch(e){} }
         pinLayers.clipArea = L.geoJSON(geo, {
@@ -9157,17 +9481,25 @@ function showSearchArea(m, ref, centre){
 
   const b = arrToBounds(centre.bounds);
   if (b){ try{ m.fitBounds(b, {padding:[26,26]}); }catch(e){} }
+  /* A country whose bounding box wraps the date line has no usable box, so
+     there is nothing to frame with until the boundary arrives. Saying so
+     stops the caller dropping to a street-level view of the centroid in the
+     meantime — which, for the United States, is a field in Kansas. */
+  const willFrame = !!b || !!(centre.osm && centre.osm.osm_id);
 
   /* The real boundary, fetched once and cached. It arrives after the frame
      does, which is the right way round: the framing is the fix and the
      outline is the confirmation. */
   const token = ref.token;
+  const refLng = Number(centre.lng);
   if (centre.osm && centre.osm.osm_id){
-    geoAreaOutline(centre.osm).then(geo => {
+    geoAreaOutline(centre.osm).then(raw => {
       if (token !== ref.token) return;
+      const geo = unwrapGeo(raw, refLng);
       if (geo){
         ref.layer = L.geoJSON(geo, {className:'geo-area-shape', style:AREA_STYLE, interactive:false}).addTo(m);
-        try{ m.fitBounds(ref.layer.getBounds(), {padding:[26,26]}); }catch(e){}
+        const ob = outlineBounds(geo, refLng) || ref.layer.getBounds();
+        try{ m.fitBounds(ob, {padding:[26,26]}); }catch(e){}
       } else if (b){
         ref.layer = L.rectangle(b, Object.assign({interactive:false}, AREA_STYLE)).addTo(m);
       }
@@ -9175,7 +9507,7 @@ function showSearchArea(m, ref, centre){
   } else if (b){
     ref.layer = L.rectangle(b, Object.assign({interactive:false}, AREA_STYLE)).addTo(m);
   }
-  return !!b;
+  return willFrame;
 }
 
 function recenterMap(){
@@ -13191,8 +13523,9 @@ async function seoResolveLocation(client, loc){
     /* A province or a country resolved here is an area, same as everywhere
        else, so anything that later draws this location on a map frames the
        whole of it instead of zooming to its centre of mass. */
-    if (geoIsBroad(hit)){
+    if (geoIsArea(hit)){
       g.area = true;
+      g.level = geoLevelOf(hit);
       g.canonical = geoCanonicalForHit(hit);
       g.bounds = boundsToArr(bboxBounds(hit.boundingbox));
       if (hit.osm_id) g.osm = {osm_id:hit.osm_id, osm_type:hit.osm_type,
@@ -14649,9 +14982,9 @@ function seoLocGroupRow(c, k, loc){
     findBtn.disabled = true;
     setStatus(statusEl, 'Looking up ' + q + '\u2026', 'busy');
     try{
-      const hit = await nominatim(q);
+      const hit = await geoResolvePlace(q);
       if (!hit){ setStatus(statusEl, 'No match. Add the city or province and try again.', 'err'); return; }
-      seoWriteLoc(hit, {area: geoIsBroad(hit), mode:'place', label:q});
+      seoWriteLoc(hit, {area: geoIsArea(hit), mode:'place', label:q});
     }catch(err){
       setStatus(statusEl, 'Lookup failed: ' + ((err && err.message) || err), 'err');
     }finally{

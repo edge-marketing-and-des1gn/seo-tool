@@ -554,6 +554,54 @@ input::placeholder,textarea::placeholder{color:#a9b4bd;}
 .sig.on{background:rgba(232,119,34,.15);color:#f7b378;border-color:rgba(232,119,34,.4);}
 .sig.on.best{background:rgba(52,211,155,.14);color:#5fdcae;border-color:rgba(52,211,155,.36);}
 .meter-note{font-size:11px;color:#8695a3;margin-top:10px;line-height:1.55;}
+/* listing lookup — what the scan will actually look for */
+.lk{border:1.5px solid var(--line);border-radius:var(--r-lg);background:var(--card-2);padding:13px 14px;margin:2px 0 15px;}
+.lk-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;}
+.lk-state{font-family:var(--mono);font-size:10px;padding:3px 8px;border-radius:20px;background:var(--line-2);color:var(--ink-2);border:1px solid var(--line);white-space:nowrap;}
+.lk-state.ok{background:var(--good-wash);color:var(--good);border-color:#c7e6da;}
+.lk-state.warn,.lk-state.busy{background:var(--brand-wash);color:var(--brand-deep);border-color:#f3d9c1;}
+.lk-card{display:flex;gap:12px;align-items:flex-start;background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);padding:11px;}
+.lk-photo{width:54px;height:54px;border-radius:9px;object-fit:cover;flex:none;background:var(--line-2);}
+.lk-main{min-width:0;}
+.lk-title{font-family:var(--display);font-weight:600;font-size:14px;color:var(--ink);line-height:1.3;letter-spacing:-.01em;word-break:break-word;}
+.lk-cat{font-size:11.5px;color:var(--ink-2);margin-top:2px;}
+.lk-rate{font-size:11.5px;color:var(--ink-2);margin-top:3px;}
+.lk-rate b,.lk-cand b{color:var(--brand-deep);}
+.lk-tag{display:inline-block;font-family:var(--mono);font-size:9.5px;padding:1px 6px;border-radius:20px;background:var(--line-2);color:var(--ink-2);border:1px solid var(--line);vertical-align:1px;font-weight:500;}
+.lk-tag.ok{background:var(--good-wash);color:var(--good);border-color:#c7e6da;}
+.lk-facts,.lk-sum{display:grid;grid-template-columns:auto minmax(0,1fr);gap:5px 12px;font-size:12px;}
+.lk-facts{margin:11px 2px 0;}
+.lk-facts dt,.lk-sum dt{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-weight:700;padding-top:2px;}
+.lk-facts dd,.lk-sum dd{margin:0;color:var(--ink);word-break:break-word;min-width:0;}
+.lk-facts dd.mono{font-family:var(--mono);font-size:11px;}
+.lk-hours{margin:0;padding:0;list-style:none;font-size:11.5px;color:var(--ink-2);line-height:1.55;}
+.lk-match{margin-top:11px;padding:10px 11px;border-radius:var(--r-md);background:var(--card);border:1px dashed #d5dde3;}
+.lk-match ul{margin:6px 0 0;padding-left:17px;font-size:11.5px;color:var(--ink-2);line-height:1.65;}
+.lk-mnote{font-size:10.5px;color:var(--ink-3);line-height:1.5;margin-top:6px;}
+.lk-warn{margin-top:9px;font-size:11.5px;line-height:1.55;color:var(--brand-deep);background:var(--brand-wash);border:1px solid #f3d9c1;border-radius:var(--r-sm);padding:7px 9px;}
+.lk-foot{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:10px;font-size:11px;color:var(--ink-3);}
+.lk-foot a{color:var(--brand-deep);font-weight:600;text-decoration:none;margin-left:auto;}
+.lk-foot a:hover{text-decoration:underline;}
+.lk-acts{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px;}
+.lk-sub{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-2);font-weight:700;margin:13px 0 7px;}
+.lk-cands{display:grid;gap:7px;}
+.lk-cand{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);padding:9px 10px;}
+.lk-cand.best{border-color:#f0c49b;box-shadow:0 0 0 3px var(--brand-wash);}
+.lk-cand .t{font-weight:600;font-size:12.5px;color:var(--ink);word-break:break-word;}
+.lk-cand .s{font-size:11px;color:var(--ink-2);margin-top:2px;line-height:1.45;word-break:break-word;}
+.lk-cand .w{font-family:var(--mono);font-size:10px;color:var(--good);margin-top:4px;}
+.lk-cand-acts{display:flex;flex-direction:column;gap:6px;}
+.lk-cand-acts .btn{text-align:center;text-decoration:none;}
+.lk-empty{font-size:12px;color:var(--ink-2);line-height:1.6;margin-bottom:6px;}
+.lk-loading{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--brand-deep);padding:6px 2px;}
+.lk-loading i{width:13px;height:13px;border-radius:50%;border:2px solid #f3d9c1;border-top-color:var(--brand);animation:lkspin .8s linear infinite;flex:none;}
+@keyframes lkspin{to{transform:rotate(360deg);}}
+.lk-modal{max-height:calc(100vh - 40px);overflow:auto;}
+.lk-sum{margin:14px 0 12px;padding:11px 12px;border-radius:var(--r-md);background:var(--card-2);border:1px solid var(--line);}
+.lk-pin svg{width:26px;height:34px;display:block;filter:drop-shadow(0 3px 4px rgba(20,28,36,.35));}
+.lk-pin path{fill:var(--good);stroke:#fff;stroke-width:1.6;}
+.lk-pin circle{fill:#fff;}
+@media (max-width:560px){ .lk-cand{grid-template-columns:1fr;} .lk-cand-acts{flex-direction:row;} }
 
 /* coordinate readout */
 .coord{
@@ -4071,6 +4119,15 @@ table td{font-size:12.5px;}
                       <input id="bizSite" type="text" placeholder="edgemarketing.ca" autocomplete="off"/>
                     </div>
                   </div>
+                  <div class="lk" id="listingBox">
+                    <div class="lk-head">
+                      <span class="eyebrow">What the scan will look for</span>
+                      <span class="lk-state" id="listingState">Not looked up</span>
+                    </div>
+                    <div id="listingBody"></div>
+                    <div class="status" id="listingStatus"></div>
+                    <button class="btn btn-full" id="listingLookupBtn" type="button" style="margin-top:10px">Look up this listing on Google</button>
+                  </div>
                   <button class="btn btn-dark btn-full" data-next="2">Next: area &amp; grid</button>
                 </div>
               </section>
@@ -4242,6 +4299,8 @@ table td{font-size:12.5px;}
                   </div>
                   <label class="sw"><input type="checkbox" id="includeAds"/><i></i><span>Read the sponsored slots too</span></label>
                   <div class="hint">Sponsored appearances are recorded and shown beside the rank. They are never turned <em>into</em> a rank: a paid slot alongside 28 organic results used to be reported as position 29, which is a number that appears nowhere on Google and that nobody could count to. A point that only appears in the ads is a miss with an ad noted on it.</div>
+                  <label class="sw" style="margin-top:14px"><input type="checkbox" id="confirmListing" checked/><i></i><span>Show the listing before every scan</span></label>
+                  <div class="hint">Before any points are read, the Google listing the scan is looking for is shown with its CID, Place ID, phone, website and pin, so you can confirm it is yours. A profile with no confirmed listing always gets the check.</div>
                 </div>
               </section>
             </div>
@@ -5355,6 +5414,20 @@ custom home builder | Red Deer, AB; Calgary, AB"></textarea>
     <div class="acts">
       <button class="btn" id="modalCancel">Cancel</button>
       <button class="btn btn-go" id="modalOk">Add</button>
+    </div>
+  </div>
+</div>
+
+<div class="backdrop" id="scanCheck">
+  <div class="modal modal-wide lk-modal">
+    <h3>Check the listing before the scan</h3>
+    <p id="scanCheckLead"></p>
+    <div id="scanCheckBody"></div>
+    <label class="sw"><input type="checkbox" id="scanCheckAlways" checked/><i></i><span>Show this before every scan</span></label>
+    <div class="acts">
+      <button class="btn" id="scanCheckCancel" type="button">Cancel</button>
+      <button class="btn" id="scanCheckLookup" type="button">Look up again</button>
+      <button class="btn btn-go" id="scanCheckGo" type="button">Start the scan</button>
     </div>
   </div>
 </div>
@@ -8433,7 +8506,8 @@ const STORE_KEY = 'meridian-console-v2';
 const LEGACY_KEY = 'meridian-grid-tracker-v1';
 const DEFAULTS = {
   provider:'dataforseo', relay:'allorigins', serperKey:'', dfsLogin:'', dfsPassword:'',
-  proxyPrefix:'', strictMatch:'loose', includeAds:true, depth:100, deepVerify:true, concurrency:6
+  proxyPrefix:'', strictMatch:'loose', includeAds:true, depth:100, deepVerify:true, concurrency:6,
+  confirmListing:true
 };
 let state = { clients:[], activeClientId:null, activeGbpId:null, view:'focus', settings:{...DEFAULTS} };
 let memoryStore = null;
@@ -9384,6 +9458,7 @@ function loadGbpIntoForm(){
   const kw = activeKeyword();
   drawScan(kw && kw.scans.length ? kw.scans[kw.scans.length - 1] : null);
   recenterMap();
+  renderListingPanel(); drawListingPin();
 }
 function persistGbp(){
   const g = activeGbp();
@@ -9418,7 +9493,25 @@ function persistGbp(){
   const cid = g.gbpLink.match(/[?&](?:cid|ludocid)=(\d+)/);
   if (cid) g.cid = cid[1];
   const pid = g.gbpLink.match(/(?:place_id[=:]|!1s)([A-Za-z0-9_\-:]{10,})/);
-  if (pid) g.placeId = pid[1];
+  if (pid && !/^0x/i.test(pid[1])) g.placeId = pid[1];
+  /* A full maps URL rarely says cid=, but it always carries the listing's
+     feature id, "0x…:0x…", and the second half of that IS the CID in hex.
+     That "0x…" value is not a Place ID either, so it no longer poses as one. */
+  const lp = parseGbpLink(g.gbpLink);
+  if (!cid && lp.cid) g.cid = lp.cid;
+  if (g.placeId && /^0x/i.test(g.placeId)) g.placeId = lp.placeId || null;
+  /* A confirmed listing belongs to the link it was confirmed from. Paste a
+     different profile's link and the old CID must stop steering the match. */
+  if (g.listing && !g.listing.stale && g.gbpLink && g.gbpLink !== (g.listing.linkAtConfirm || '')){
+    const same = (lp.cid && g.listing.cid && String(lp.cid) === String(g.listing.cid)) ||
+                 (lp.placeId && g.listing.placeId && lp.placeId === g.listing.placeId);
+    if (same) g.listing.linkAtConfirm = g.gbpLink;
+    else if (!lp.short || lp.cid || lp.placeId){
+      g.listing.stale = true;
+      if (!lp.cid && g.cid && String(g.cid) === String(g.listing.cid)) g.cid = null;
+      if (!lp.placeId && g.placeId && g.placeId === g.listing.placeId) g.placeId = null;
+    } else g.listing.stale = true;
+  }
 
   save(); renderMeter(); renderGridInfo(); refreshStepState(); renderTree(); renderCrumbs();
 }
@@ -9469,6 +9562,664 @@ function renderMeter(){
   $('meterVerdict').textContent = verdict;
   $('meterNote').textContent = note;
 }
+/* ==========================================================================
+   LISTING LOOKUP — WHAT THE SCAN WILL ACTUALLY LOOK FOR
+   ==========================================================================
+   The identity form above is what you TYPED. This is what Google HAS: the
+   profile itself, read from the provider before a single grid point is
+   spent. Once a listing is confirmed, its CID and Place ID become the match
+   signals, its exact title replaces a hand-typed name, and its phone and
+   website are the ones Google actually shows — so the scan is looking for
+   the listing, not for something that resembles it.
+
+   How the listing is found, most certain first:
+     1. A CID or Place ID in the profile link. Full maps URLs carry the CID
+        inside the "0x…:0x…" feature id even when there is no cid= in them.
+        Looked up directly, and confirmed automatically — it is exact.
+     2. A short share link (share.google, maps.app.goo.gl) is opened through
+        the public relay to find the full URL behind it, then as above.
+     3. Otherwise a Maps search for the name near the pin in the link (or the
+        grid centre), with every candidate shown so you pick yours.
+   ========================================================================== */
+const LK_SHORT = /(share\.google|maps\.app\.goo\.gl|goo\.gl\/maps|g\.co\/kgs|g\.page\/)/i;
+const LK_DAYS = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+let lkState = {gbpId:null, busy:false, cands:[], error:null, soft:false, note:null, hint:null};
+let lkAutoTimer = null, lkLastAutoKey = null, listingPin = null;
+
+function lkCidFromFtid(ftid){
+  const m = String(ftid || '').match(/0x[0-9a-f]+:(0x[0-9a-f]+)/i);
+  if (!m) return null;
+  try{ const v = BigInt(m[1]); return v > 0n ? v.toString() : null; }catch(e){ return null; }
+}
+function parseGbpLink(raw){
+  const v = String(raw || '').trim();
+  let dec = v;
+  try{ dec = decodeURIComponent(v); }catch(e){}
+  const out = {raw:v, cid:null, placeId:null, ftid:null, pinLat:null, pinLng:null,
+               viewLat:null, viewLng:null, name:null, kgmid:null, short:LK_SHORT.test(v)};
+  if (!v) return out;
+  let m = dec.match(/[?&](?:cid|ludocid)=(\d{5,})/i);
+  if (m) out.cid = m[1];
+  m = dec.match(/(0x[0-9a-f]{6,}:0x[0-9a-f]{6,})/i);
+  if (m){ out.ftid = m[1]; if (!out.cid) out.cid = lkCidFromFtid(m[1]); }
+  m = dec.match(/(?:place_id[=:]|query_place_id=|!19s)((?:ChIJ|GhIJ|EiI|Ei)[A-Za-z0-9_\-]{10,})/);
+  if (m) out.placeId = m[1];
+  m = dec.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
+  if (m){ out.pinLat = parseFloat(m[1]); out.pinLng = parseFloat(m[2]); }
+  m = dec.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+  if (m){ out.viewLat = parseFloat(m[1]); out.viewLng = parseFloat(m[2]); }
+  m = v.match(/\/maps\/place\/([^\/@?]+)/);
+  if (m){ try{ out.name = decodeURIComponent(m[1]).replace(/\+/g, ' ').trim(); }catch(e){} }
+  if (!out.name){
+    m = v.match(/[?&]q=([^&#]+)/);
+    if (m){ try{ out.name = decodeURIComponent(m[1].replace(/\+/g, ' ')).trim(); }catch(e){} }
+  }
+  if (out.name && /^(place_id|cid)[:=]/i.test(out.name)) out.name = null;
+  m = dec.match(/[?&]kgmid=([^&#]+)/);
+  if (m) out.kgmid = m[1];
+  return out;
+}
+
+/* ---------- normalising what the providers return ---------- */
+function lkTime(t){
+  if (!t) return '';
+  const h = Number(t.hour) || 0, mi = Number(t.minute) || 0;
+  return h + ':' + String(mi).padStart(2, '0');
+}
+function lkHoursDfs(x){
+  const wh = x && (x.work_hours || x);
+  const tt = wh && wh.timetable;
+  if (!tt || typeof tt !== 'object') return null;
+  const out = [];
+  LK_DAYS.forEach(d => {
+    if (!(d in tt)) return;
+    const label = d.charAt(0).toUpperCase() + d.slice(1, 3);
+    const slots = tt[d];
+    if (!slots || !slots.length) out.push(label + ': Closed');
+    else out.push(label + ': ' + slots.map(s => lkTime(s.open) + '–' + lkTime(s.close)).join(', '));
+  });
+  return out.length ? out : null;
+}
+function lkHoursSerper(h){
+  if (!h) return null;
+  if (Array.isArray(h)) return h.map(x => typeof x === 'string' ? x : JSON.stringify(x)).slice(0, 7);
+  if (typeof h === 'object') return Object.keys(h).map(k => k.slice(0, 3) + ': ' + h[k]).slice(0, 7);
+  return null;
+}
+function lkNorm(o, source){
+  const s = v => (v == null || v === '') ? null : String(v);
+  const n = v => (v == null || v === '' || isNaN(Number(v))) ? null : Number(v);
+  const ftid = s(o.ftid);
+  let cid = s(o.cid);
+  if (!cid && ftid) cid = lkCidFromFtid(ftid);
+  let placeId = s(o.placeId);
+  if (placeId && /^0x/i.test(placeId)) placeId = null;
+  const url = s(o.url);
+  return {
+    title: s(o.title) || '', cid, placeId, ftid,
+    address: s(o.address), phone: s(o.phone), url,
+    domain: s(o.domain) || (url ? (cleanDomain(url) || null) : null),
+    category: s(o.category),
+    extraCats: Array.isArray(o.extraCats) ? o.extraCats.filter(Boolean).map(String).slice(0, 8) : [],
+    rating: n(o.rating), reviews: n(o.reviews),
+    lat: n(o.lat), lng: n(o.lng),
+    claimed: o.claimed == null ? null : !!o.claimed,
+    hours: Array.isArray(o.hours) && o.hours.length ? o.hours.map(String) : null,
+    photo: s(o.photo), source: source || null, fetchedAt: Date.now()
+  };
+}
+function lkFromDfs(it, source){
+  return lkNorm({
+    title: it.title, cid: it.cid, placeId: it.place_id, ftid: it.feature_id,
+    address: it.address, phone: it.phone, url: it.url, domain: it.domain,
+    category: it.category, extraCats: it.additional_categories,
+    rating: it.rating && it.rating.value, reviews: it.rating && it.rating.votes_count,
+    lat: it.latitude, lng: it.longitude, claimed: it.is_claimed,
+    hours: lkHoursDfs(it.work_hours || it.work_time), photo: it.main_image
+  }, source);
+}
+function lkFromSerper(x, source){
+  const types = Array.isArray(x.types) ? x.types : [];
+  return lkNorm({
+    title: x.title || x.name, cid: x.cid, placeId: x.placeId, ftid: x.fid,
+    address: x.address, phone: x.phoneNumber || x.phone, url: x.website,
+    category: x.type || x.category || types[0], extraCats: types.filter(t => t !== (x.type || x.category)),
+    rating: x.rating, reviews: x.ratingCount != null ? x.ratingCount : x.reviews,
+    lat: x.latitude, lng: x.longitude,
+    hours: lkHoursSerper(x.openingHours), photo: x.thumbnailUrl
+  }, source);
+}
+
+/* ---------- where and how to ask ---------- */
+function lkRegion(g){ return REGIONS[g.regionIdx] || REGIONS[0]; }
+function lkCountryCode(region){
+  let iso = String(region.gl || 'US').toUpperCase();
+  if (iso === 'UK') iso = 'GB';
+  return labsLocationCode(iso) || 2840;
+}
+function lkHint(g){
+  const p = parseGbpLink(g.gbpLink);
+  const hint = {
+    cid: p.cid || (g.cid ? String(g.cid) : null),
+    placeId: p.placeId || (g.placeId && !/^0x/i.test(g.placeId) ? g.placeId : null),
+    name: (g.bizName || '').trim() || p.name || null,
+    lat: null, lng: null, pin: false, short: p.short && !p.cid && !p.placeId, resolved: null
+  };
+  if (p.pinLat != null){ hint.lat = p.pinLat; hint.lng = p.pinLng; hint.pin = true; }
+  else if (p.viewLat != null){ hint.lat = p.viewLat; hint.lng = p.viewLng; }
+  else if (g.center && g.center.lat != null){ hint.lat = g.center.lat; hint.lng = g.center.lng; }
+  return hint;
+}
+function lkKey(g){
+  return [g.id, g.gbpLink || '', g.bizName || '', g.phone || '', g.website || '', state.settings.provider].join('|');
+}
+async function lkFetch(url, init, ms){
+  const ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const t = ctl ? setTimeout(() => ctl.abort(), ms || 25000) : null;
+  try{ return await fetch(url, Object.assign({}, init || {}, ctl ? {signal:ctl.signal} : {})); }
+  finally{ if (t) clearTimeout(t); }
+}
+/* A short share link hides the CID behind a redirect the browser is not
+   allowed to follow across origins. The public relay can, and reports the
+   address it landed on. Best effort: if the relay is down, the name search
+   below still runs. */
+async function lkResolveShort(link){
+  try{
+    const res = await lkFetch('https://api.allorigins.win/get?url=' + encodeURIComponent(link), {}, 15000);
+    if (!res.ok) return null;
+    const j = await res.json();
+    const finalUrl = String((j && j.status && j.status.url) || '');
+    const body = String((j && j.contents) || '').slice(0, 600000);
+    const a = parseGbpLink(finalUrl);
+    const mapsInBody = body.match(/https?:\/\/(?:www\.)?google\.[a-z.]+\/maps[^"'\s<>\\]*/i);
+    const b = parseGbpLink(mapsInBody ? mapsInBody[0].replace(/&amp;/g, '&') : '');
+    const ludo = body.match(/ludocid(?:=|\\u003d|%3D)(\d{5,})/i);
+    const ftid = body.match(/(0x[0-9a-f]{6,}:0x[0-9a-f]{6,})/i);
+    return {
+      finalUrl,
+      cid: a.cid || (ludo ? ludo[1] : null) || b.cid || (ftid ? lkCidFromFtid(ftid[1]) : null),
+      placeId: a.placeId || b.placeId,
+      name: a.name || b.name,
+      lat: a.pinLat != null ? a.pinLat : (b.pinLat != null ? b.pinLat : (a.viewLat != null ? a.viewLat : null)),
+      lng: a.pinLng != null ? a.pinLng : (b.pinLng != null ? b.pinLng : (a.viewLng != null ? a.viewLng : null)),
+      pin: a.pinLat != null || b.pinLat != null
+    };
+  }catch(e){ return null; }
+}
+async function lkDfsPost(endpoint, task){
+  const login = (state.settings.dfsLogin || '').trim();
+  const pass = (state.settings.dfsPassword || '').trim();
+  const url = (state.settings.proxyPrefix || '').trim() + 'https://api.dataforseo.com/v3/' + endpoint;
+  let res;
+  try{
+    res = await lkFetch(url, {
+      method:'POST',
+      headers:{'Authorization':'Basic ' + btoa(login + ':' + pass), 'Content-Type':'application/json'},
+      body: JSON.stringify([task])
+    });
+  }catch(e){ throw new Error('The request was blocked by the browser. Add a CORS proxy prefix on step four.'); }
+  if (res.status === 401 || res.status === 403) throw new Error('DataForSEO rejected those credentials. Check the login and API password on step four.');
+  if (!res.ok) throw new Error('DataForSEO answered HTTP ' + res.status + '.');
+  const data = await res.json();
+  if (data.status_code && data.status_code !== 20000) throw new Error('DataForSEO said: ' + (data.status_message || data.status_code));
+  const t = (data.tasks || [])[0];
+  if (!t) throw new Error('DataForSEO returned an empty response.');
+  if (t.status_code && t.status_code !== 20000){
+    const e = new Error('DataForSEO: ' + (t.status_message || t.status_code));
+    e.code = t.status_code; e.empty = /no search result/i.test(String(t.status_message || ''));
+    throw e;
+  }
+  const r = (t.result || [])[0] || {};
+  return r.items || [];
+}
+async function lkLookupDfs(g, hint){
+  const region = lkRegion(g);
+  const lang = labsLanguageCode(region.hl);
+  const cands = [];
+  let note = null;
+  const id = hint.cid ? 'cid:' + hint.cid : (hint.placeId ? 'place_id:' + hint.placeId : null);
+  if (id){
+    try{
+      const items = await lkDfsPost('business_data/google/my_business_info/live',
+        {keyword:id, location_code:lkCountryCode(region), language_code:lang});
+      items.forEach(it => { if (it && it.title) cands.push(lkFromDfs(it, 'DataForSEO · business profile')); });
+    }catch(e){ note = 'The direct profile lookup did not answer (' + e.message + '), so the listing was searched for by name instead.'; }
+  }
+  if (!cands.length && hint.name){
+    const task = {keyword:hint.name, language_code:lang, depth:20};
+    if (hint.lat != null) task.location_coordinate = hint.lat.toFixed(7) + ',' + hint.lng.toFixed(7) + ',14z';
+    else task.location_code = lkCountryCode(region);
+    let items = [];
+    try{ items = await lkDfsPost('serp/google/maps/live/advanced', task); }
+    catch(e){ if (!e.empty) throw e; }
+    items.filter(it => it && it.title && !it.is_paid && it.type !== 'maps_paid')
+         .forEach(it => cands.push(lkFromDfs(it, 'DataForSEO · Maps search')));
+  }
+  return {cands, note};
+}
+async function lkLookupSerper(g, hint){
+  const region = lkRegion(g);
+  const key = (state.settings.serperKey || '').trim();
+  const url = (state.settings.proxyPrefix || '').trim() + 'https://google.serper.dev/maps';
+  const body = {q: hint.name || '', gl: (region.gl || 'us').toLowerCase(), hl: region.hl || 'en'};
+  if (hint.lat != null) body.ll = '@' + hint.lat.toFixed(7) + ',' + hint.lng.toFixed(7) + ',14z';
+  if (hint.cid) body.cid = hint.cid;
+  if (hint.placeId) body.placeId = hint.placeId;
+  if (!body.q && !body.cid && !body.placeId) throw new Error('Enter the business name or paste the profile link first.');
+  const send = async b => {
+    try{ return await lkFetch(url, {method:'POST', headers:{'X-API-KEY':key, 'Content-Type':'application/json'}, body:JSON.stringify(b)}); }
+    catch(e){ throw new Error('The request was blocked by the browser. Add a CORS proxy prefix on step four.'); }
+  };
+  let res = await send(body);
+  /* If the identifier is not accepted, ask again by name alone; the CID is
+     still used below to pick the right result out of the list. */
+  if (!res.ok && res.status === 400 && (body.cid || body.placeId) && body.q){
+    const b2 = Object.assign({}, body); delete b2.cid; delete b2.placeId;
+    res = await send(b2);
+  }
+  if (res.status === 401 || res.status === 403) throw new Error('Serper rejected that key.');
+  if (res.status === 429) throw new Error('Serper is rate-limited or out of credits.');
+  if (!res.ok) throw new Error('Serper answered HTTP ' + res.status + '.');
+  const data = await res.json();
+  const list = Array.isArray(data.places) ? data.places
+    : (data.place ? [data.place] : (data.title ? [data] : []));
+  return {cands: list.filter(x => x && (x.title || x.name)).map(x => lkFromSerper(x, 'Serper · Maps')), note:null};
+}
+
+/* ---------- which candidate is yours ---------- */
+function lkRank(cands, g, hint){
+  const seen = new Set(), out = [];
+  const name = g.bizName || hint.name || '';
+  const tn = normName(name);
+  cands.forEach(c => {
+    if (!c || !c.title) return;
+    const k = c.cid || c.placeId || (normName(c.title) + '|' + (c.address || ''));
+    if (seen.has(k)) return;
+    seen.add(k);
+    let score = 0, how = null;
+    const why = [];
+    if (hint.cid && c.cid && String(c.cid) === String(hint.cid)){ score += 100; how = 'cid'; why.push('CID matches the link'); }
+    if (hint.placeId && c.placeId && c.placeId === hint.placeId){ score += 100; how = how || 'place'; why.push('Place ID matches'); }
+    if (g.phone && c.phone && phoneMatches(g.phone, c.phone)){ score += 40; why.push('phone matches'); }
+    if (g.website && c.domain && domainMatches(g.website, c.domain)){ score += 30; why.push('website matches'); }
+    if (tn && normName(c.title) === tn){ score += 25; why.push('exact name'); }
+    else if (tn && nameMatches(c.title, name)){ score += 12; why.push('similar name'); }
+    let km = null;
+    if (hint.lat != null && c.lat != null){
+      km = cmpDistanceKm(hint.lat, hint.lng, c.lat, c.lng);
+      if (hint.pin && km < 0.15){ score += 30; why.push('sits on the pin in the link'); }
+      else if (km < 2) score += 5;
+    }
+    out.push(Object.assign({}, c, {_score:score, _how:how, _why:why, _km:km}));
+  });
+  out.sort((a, b) => b._score - a._score);
+  return out.slice(0, 6);
+}
+function lkClean(c){
+  const r = Object.assign({}, c);
+  delete r._score; delete r._how; delete r._why; delete r._km;
+  return r;
+}
+
+/* ---------- confirming a listing ---------- */
+function lkSetCentre(g, rec){
+  if (!g || !rec || rec.lat == null) return;
+  const isActive = activeGbp() && activeGbp().id === g.id;
+  if (isActive){
+    $('tLoc').value = rec.address || rec.title || '';
+    $('tLat').value = rec.lat;
+    $('tLng').value = rec.lng;
+    restoreGeoField($('tLoc'), {lat:rec.lat, lng:rec.lng, mode:'place'}, tLocFinder);
+    geoOutClear('tGeoOut');
+    persistGbp(); recenterMap();
+  } else {
+    g.center = Object.assign({}, g.center, {lat:rec.lat, lng:rec.lng, label:rec.address || rec.title || '',
+      mode:'place', area:false, radius:null, bounds:null, osm:null, level:null});
+    save();
+  }
+}
+function applyListing(g, cand, how){
+  if (!g || !cand) return;
+  const rec = lkClean(cand);
+  const changed = [];
+  if (rec.title && rec.title !== g.bizName){ changed.push('name'); g.bizName = rec.title; }
+  if (rec.phone && !phoneMatches(rec.phone, g.phone)){ changed.push('phone'); g.phone = rec.phone; }
+  if (rec.domain && !domainMatches(rec.domain, g.website)){ changed.push('website'); g.website = cleanDomain(rec.domain); }
+  if (rec.cid && String(rec.cid) !== String(g.cid || '')){ changed.push('CID'); g.cid = String(rec.cid); }
+  if (rec.placeId && rec.placeId !== g.placeId){ changed.push('Place ID'); g.placeId = rec.placeId; }
+  rec.confirmedAt = Date.now();
+  rec.confirmedBy = how || 'you';
+  rec.linkAtConfirm = g.gbpLink || '';
+  rec.stale = false;
+  g.listing = rec;
+
+  const isActive = activeGbp() && activeGbp().id === g.id;
+  if (isActive){
+    $('bizName').value = g.bizName;
+    $('bizPhone').value = g.phone;
+    $('bizSite').value = g.website;
+    persistGbp();
+  } else save();
+  if (g.center.lat == null && rec.lat != null) lkSetCentre(g, rec);
+  lkLastAutoKey = lkKey(g);
+  drawListingPin();
+  toast(changed.length
+    ? 'Listing confirmed — ' + changed.join(', ') + ' taken from Google'
+    : 'Listing confirmed — your details already matched Google', 'ok');
+}
+
+/* ---------- the lookup itself ---------- */
+async function lookupListing(g, opts){
+  const o = opts || {};
+  if (!g) return null;
+  const prov = state.settings.provider || 'dataforseo';
+  lkState = {gbpId:g.id, busy:true, cands:[], error:null, soft:false, note:null, hint:null};
+  renderListingPanel(); if (o.onChange) o.onChange();
+  try{
+    const hint = lkHint(g);
+    if (hint.short){
+      setStatus('listingStatus', 'Opening the short link to find the full listing address…', 'busy');
+      const r = await lkResolveShort(g.gbpLink);
+      if (r){
+        hint.resolved = r.finalUrl || null;
+        if (r.cid) hint.cid = r.cid;
+        if (r.placeId) hint.placeId = r.placeId;
+        if (!hint.name && r.name) hint.name = r.name;
+        if (r.lat != null && (r.pin || hint.lat == null)){ hint.lat = r.lat; hint.lng = r.lng; hint.pin = !!r.pin; }
+      }
+    }
+    lkState.hint = hint;
+    if (prov === 'direct'){
+      const e = new Error('Reading the listing needs DataForSEO or Serper (step four) — relay mode can only read names off a results page. The scan will match on the details you typed.');
+      e.soft = true; throw e;
+    }
+    if (!providerReady()){
+      const e = new Error('Add your ' + (prov === 'serper' ? 'Serper key' : 'DataForSEO login and API password') + ' on step four so the listing can be read from Google.');
+      e.soft = true; throw e;
+    }
+    if (!hint.cid && !hint.placeId && !hint.name) throw new Error('Enter the business name or paste the profile link first.');
+    const r = prov === 'serper' ? await lkLookupSerper(g, hint) : await lkLookupDfs(g, hint);
+    const cands = lkRank(r.cands, g, hint);
+    lkState.cands = cands;
+    lkState.note = r.note || null;
+    if (!cands.length){
+      lkState.error = 'Google returned no listing for ' + (hint.name ? '“' + hint.name + '”' : 'that link') +
+        (hint.lat != null ? ' near that location' : '') + '. Check the name is spelled exactly as on Google, or paste the full maps link.';
+    } else if (cands[0]._how === 'cid' || cands[0]._how === 'place'){
+      /* An identifier match is the listing, not a guess — confirm it. */
+      applyListing(g, cands[0], cands[0]._how === 'cid' ? 'the CID in the profile link' : 'the Place ID in the profile link');
+      lkState.cands = [];
+    }
+  }catch(e){
+    lkState.error = e.message || String(e);
+    lkState.soft = !!e.soft;
+  }
+  lkState.busy = false;
+  renderListingPanel(); if (o.onChange) o.onChange();
+  return g.listing || null;
+}
+function lkAutoSoon(){
+  clearTimeout(lkAutoTimer);
+  lkAutoTimer = setTimeout(() => {
+    const g = activeGbp();
+    if (!g) return;
+    renderListingPanel();
+    if (g.listing && !g.listing.stale) return;
+    if (!g.gbpLink && !g.bizName) return;
+    if ((state.settings.provider || 'dataforseo') === 'direct' || !providerReady()) return;
+    const k = lkKey(g);
+    if (k === lkLastAutoKey || (lkState.busy && lkState.gbpId === g.id)) return;
+    lkLastAutoKey = k;
+    lookupListing(g);
+  }, 1300);
+}
+
+/* ---------- drawing it ---------- */
+function lkMapsUrl(rec){
+  if (rec.cid) return 'https://www.google.com/maps?cid=' + encodeURIComponent(rec.cid);
+  if (rec.placeId) return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(rec.title || 'place') + '&query_place_id=' + encodeURIComponent(rec.placeId);
+  return 'https://www.google.com/maps/search/' + encodeURIComponent((rec.title || '') + ' ' + (rec.address || ''));
+}
+function lkStars(rec){
+  if (rec.rating == null) return '<span>No rating shown</span>';
+  return '<b>★ ' + esc(Number(rec.rating).toFixed(1)) + '</b>' +
+    (rec.reviews != null ? ' <span>(' + esc(Number(rec.reviews).toLocaleString()) + ' reviews)</span>' : '');
+}
+function lkMatchRulesHtml(g){
+  const strict = state.settings.strictMatch === 'strict';
+  const rows = [];
+  if (g.cid) rows.push('its <b>CID</b> is <code>' + esc(g.cid) + '</code> — exact, checked first');
+  if (g.placeId) rows.push('its <b>Place ID</b> is <code>' + esc(g.placeId) + '</code>');
+  if (normPhone(g.phone).length >= 7) rows.push('its <b>phone</b> is <code>' + esc(g.phone) + '</code>');
+  if (cleanDomain(g.website)) rows.push('its <b>website</b> is on <code>' + esc(cleanDomain(g.website)) + '</code>');
+  if (g.bizName) rows.push('its <b>name</b> is “' + esc(g.bizName) + '”' + (strict ? ' exactly' : ' or a close variant of it'));
+  if (!rows.length) return '';
+  return '<div class="lk-match"><span class="eyebrow">A result counts as this listing when</span><ul><li>' +
+    rows.join('</li><li>') + '</li></ul>' +
+    '<div class="lk-mnote">Any one is enough, tried in that order. DataForSEO and Serper return the CID with every result, so a confirmed listing is matched exactly; relay and paste mode only see names.</div></div>';
+}
+function listingCardHtml(rec, g, opts){
+  const o = opts || {};
+  const cats = [rec.category].concat(rec.extraCats || []).filter(Boolean);
+  let h = '<div class="lk-card">' +
+    (rec.photo ? '<img class="lk-photo" src="' + esc(rec.photo) + '" alt="" referrerpolicy="no-referrer" loading="lazy" onerror="this.remove()"/>' : '') +
+    '<div class="lk-main"><div class="lk-title">' + esc(rec.title || 'Untitled listing') + '</div>' +
+    (cats.length ? '<div class="lk-cat">' + esc(cats.slice(0, 4).join(' · ')) + '</div>' : '') +
+    '<div class="lk-rate">' + lkStars(rec) + (rec.claimed === true ? ' <span class="lk-tag ok">Claimed</span>' : (rec.claimed === false ? ' <span class="lk-tag">Unclaimed</span>' : '')) + '</div>' +
+    '</div></div>';
+  h += '<dl class="lk-facts">';
+  const row = (k, v, mono) => { if (v != null && v !== '') h += '<dt>' + k + '</dt><dd' + (mono ? ' class="mono"' : '') + '>' + v + '</dd>'; };
+  row('Address', rec.address ? esc(rec.address) : null);
+  row('Phone', rec.phone ? esc(rec.phone) : null);
+  row('Website', rec.domain ? esc(rec.domain) : (rec.url ? esc(rec.url) : null));
+  row('CID', rec.cid ? esc(rec.cid) : null, true);
+  row('Place ID', rec.placeId ? esc(rec.placeId) : null, true);
+  row('Pin', rec.lat != null ? esc(rec.lat.toFixed(6) + ', ' + rec.lng.toFixed(6)) : null, true);
+  if (rec.hours && rec.hours.length) row('Hours', '<ul class="lk-hours"><li>' + rec.hours.map(esc).join('</li><li>') + '</li></ul>');
+  h += '</dl>';
+
+  const warns = [];
+  if (g){
+    if (rec.stale) warns.push('The profile link has changed since this listing was confirmed. Look it up again so the scan follows the new one.');
+    const lp = parseGbpLink(g.gbpLink);
+    if (lp.cid && rec.cid && String(lp.cid) !== String(rec.cid) && !rec.stale)
+      warns.push('The CID in your profile link (' + esc(lp.cid) + ') is not this listing’s. The link wins when the scan runs — fix whichever is wrong.');
+    if (g.bizName && rec.title && normName(g.bizName) !== normName(rec.title))
+      warns.push('The business name field says “' + esc(g.bizName) + '” but Google shows “' + esc(rec.title) + '”. Name matching uses the field.');
+    if (rec.lat != null && g.center && g.center.lat != null && !g.center.area){
+      const km = cmpDistanceKm(g.center.lat, g.center.lng, rec.lat, rec.lng);
+      if (km > 0.25) warns.push('The grid centre is ' + (km < 10 ? km.toFixed(1) : Math.round(km)) + ' km from the listing’s pin.' + (o.actions ? ' Use <b>Centre the grid here</b> if the grid should sit on the business.' : ''));
+    }
+  }
+  warns.forEach(w => { h += '<div class="lk-warn">' + w + '</div>'; });
+  if (o.rules !== false && g) h += lkMatchRulesHtml(g);
+  h += '<div class="lk-foot">' +
+    (rec.confirmedAt ? '<span>Confirmed ' + esc(new Date(rec.confirmedAt).toLocaleString()) + (rec.confirmedBy ? ' by ' + esc(rec.confirmedBy) : '') + '</span>' : '') +
+    (rec.source ? '<span>· ' + esc(rec.source) + '</span>' : '') +
+    '<a href="' + esc(lkMapsUrl(rec)) + '" target="_blank" rel="noopener">Open on Google Maps ↗</a></div>';
+  if (o.actions){
+    h += '<div class="lk-acts">' +
+      (rec.lat != null ? '<button class="btn btn-sm" type="button" data-lk-centre>Centre the grid here</button>' : '') +
+      '<button class="btn btn-sm" type="button" data-lk-clear>Not my listing</button></div>';
+  }
+  return h;
+}
+function lkCandidatesHtml(cands, heading){
+  if (!cands || !cands.length) return '';
+  let h = '<div class="lk-sub">' + esc(heading) + '</div><div class="lk-cands">';
+  cands.forEach((c, i) => {
+    const bits = [c.category, c.address].filter(Boolean).map(esc).join(' · ');
+    const more = [c.phone, c.domain].filter(Boolean).map(esc).join(' · ');
+    const best = i === 0 && c._score >= 25;
+    h += '<div class="lk-cand' + (best ? ' best' : '') + '"><div>' +
+      '<div class="t">' + esc(c.title) + (best ? ' <span class="lk-tag ok">Best match</span>' : '') + '</div>' +
+      (bits ? '<div class="s">' + bits + '</div>' : '') +
+      (more ? '<div class="s">' + more + '</div>' : '') +
+      '<div class="s">' + lkStars(c) + (c._km != null ? ' · ' + (c._km < 1 ? Math.round(c._km * 1000) + ' m' : c._km.toFixed(1) + ' km') + ' away' : '') + '</div>' +
+      (c._why && c._why.length ? '<div class="w">✓ ' + esc(c._why.join(' · ')) + '</div>' : '') +
+      '</div><div class="lk-cand-acts">' +
+      '<a class="btn btn-sm" href="' + esc(lkMapsUrl(c)) + '" target="_blank" rel="noopener">View</a>' +
+      '<button class="btn btn-sm btn-go" type="button" data-lk-pick="' + i + '">This is mine</button>' +
+      '</div></div>';
+  });
+  return h + '</div>';
+}
+function lkLinkSummaryHtml(g){
+  const p = parseGbpLink(g.gbpLink);
+  const bits = [];
+  if (p.cid) bits.push('CID <code>' + esc(p.cid) + '</code>');
+  if (p.placeId) bits.push('Place ID <code>' + esc(p.placeId) + '</code>');
+  if (p.pinLat != null) bits.push('pin <code>' + esc(p.pinLat.toFixed(5) + ', ' + p.pinLng.toFixed(5)) + '</code>');
+  if (p.short && !p.cid) bits.push('a short share link (it will be opened to find the listing behind it)');
+  return bits.length ? '<div class="lk-empty">From the link so far: ' + bits.join(' · ') + '.</div>' : '';
+}
+function lkPanelInner(g, forModal){
+  const mine = lkState.gbpId === g.id;
+  const busy = mine && lkState.busy;
+  let h = '';
+  if (busy) return '<div class="lk-loading"><i></i>Reading the listing from Google…</div>';
+  if (g.listing) h += listingCardHtml(g.listing, g, {actions:!forModal});
+  if (mine && lkState.cands.length) h += lkCandidatesHtml(lkState.cands, g.listing ? 'Other listings Google returned' : 'Google returned these — which one is yours?');
+  if (!g.listing && !(mine && lkState.cands.length)){
+    h += '<div class="lk-empty">Nothing confirmed yet. Look the listing up and GBP Reporter will load the profile Google actually has — its exact name, CID, Place ID, phone, website and pin — and scan for <b>that</b>.</div>';
+    h += lkLinkSummaryHtml(g);
+    if (forModal) h += lkMatchRulesHtml(g);
+  }
+  return h;
+}
+function lkStateBadge(g){
+  if (lkState.gbpId === g.id && lkState.busy) return ['Looking up…', 'busy'];
+  if (g.listing && g.listing.stale) return ['Details changed', 'warn'];
+  if (g.listing) return ['Confirmed', 'ok'];
+  if (lkState.gbpId === g.id && lkState.cands.length) return ['Pick yours', 'warn'];
+  return ['Not looked up', ''];
+}
+function renderListingPanel(){
+  const body = $('listingBody');
+  if (!body) return;
+  const g = activeGbp();
+  if (!g){ body.innerHTML = ''; setStatus('listingStatus', ''); return; }
+  body.innerHTML = lkPanelInner(g, false);
+  const b = lkStateBadge(g);
+  const st = $('listingState');
+  st.textContent = b[0];
+  st.className = 'lk-state' + (b[1] ? ' ' + b[1] : '');
+  const mine = lkState.gbpId === g.id;
+  if (mine && !lkState.busy && lkState.error) setStatus('listingStatus', lkState.error, lkState.soft ? '' : 'err');
+  else if (mine && !lkState.busy && lkState.note) setStatus('listingStatus', lkState.note, '');
+  else if (!(mine && lkState.busy)) setStatus('listingStatus', '');
+  const btn = $('listingLookupBtn');
+  btn.disabled = mine && lkState.busy;
+  btn.textContent = g.listing ? 'Look up again' : 'Look up this listing on Google';
+  if ($('scanCheck') && $('scanCheck').classList.contains('on')) renderScanCheck();
+}
+function drawListingPin(){
+  try{
+    if (listingPin){ listingPin.remove(); listingPin = null; }
+    const g = activeGbp();
+    if (!g || !g.listing || g.listing.lat == null || g.listing.lng == null) return;
+    listingPin = L.marker([g.listing.lat, g.listing.lng], {
+      icon: L.divIcon({className:'', iconSize:[26,34], iconAnchor:[13,33],
+        html:'<div class="lk-pin"><svg viewBox="0 0 26 34"><path d="M13 1C6.4 1 1 6.3 1 12.9 1 22 13 33 13 33s12-11 12-20.1C25 6.3 19.6 1 13 1z"/><circle cx="13" cy="13" r="4.6"/></svg></div>'}),
+      zIndexOffset:900, keyboard:false
+    }).addTo(map).bindTooltip('Tracked listing: ' + esc(g.listing.title || ''), {direction:'top', offset:[0,-30]});
+  }catch(e){ /* map not ready yet */ }
+}
+function lkHandleAction(e){
+  const g = activeGbp();
+  if (!g) return;
+  const pick = e.target.closest('[data-lk-pick]');
+  if (pick){
+    const c = lkState.cands[parseInt(pick.dataset.lkPick, 10)];
+    if (c){ applyListing(g, c, 'you'); lkState.cands = []; lkState.error = null; renderListingPanel(); }
+    return;
+  }
+  if (e.target.closest('[data-lk-centre]')){ lkSetCentre(g, g.listing); renderListingPanel(); toast('Grid centred on the listing', 'ok'); return; }
+  if (e.target.closest('[data-lk-clear]')){
+    if (!confirm('Forget this listing? Its CID and Place ID stop being used for matching; the name, phone and website fields stay as they are.')) return;
+    if (g.listing){
+      if (g.cid && String(g.cid) === String(g.listing.cid) && !parseGbpLink(g.gbpLink).cid) g.cid = null;
+      if (g.placeId && g.placeId === g.listing.placeId) g.placeId = null;
+    }
+    g.listing = null;
+    lkState = {gbpId:g.id, busy:false, cands:[], error:null, soft:false, note:null, hint:null};
+    save(); renderMeter(); renderListingPanel(); drawListingPin();
+  }
+}
+$('listingBody').addEventListener('click', lkHandleAction);
+$('listingLookupBtn').addEventListener('click', () => { const g = activeGbp(); if (g){ lkLastAutoKey = lkKey(g); lookupListing(g); } });
+$('gbpLink').addEventListener('input', lkAutoSoon);
+['bizName','bizPhone','bizSite'].forEach(id => $(id).addEventListener('change', lkAutoSoon));
+
+/* ---------- the check that runs before a scan ---------- */
+let scanCheckResolve = null, scanCheckMode = 'auto';
+function renderScanCheck(){
+  const g = activeGbp(), kw = activeKeyword();
+  if (!g) return;
+  const busy = lkState.gbpId === g.id && lkState.busy;
+  const region = lkRegion(g);
+  const n = g.gridSize, zoom = gridZoom(g);
+  const provNames = {dataforseo:'DataForSEO', serper:'Serper.dev', direct:'Public relay'};
+  let h = lkPanelInner(g, true);
+  if (!busy && lkState.gbpId === g.id && lkState.error)
+    h += '<div class="lk-warn">' + esc(lkState.error) + '</div>';
+  h += '<dl class="lk-sum">' +
+    '<dt>Keyword</dt><dd>' + esc(kw ? kw.text : '—') + '</dd>' +
+    '<dt>Grid</dt><dd>' + n + ' × ' + n + ' = ' + (n * n) + ' points, ' + esc(g.spacingKm) + ' km apart, map view ' + esc(zoom) + 'z</dd>' +
+    '<dt>Centre</dt><dd>' + esc(g.center.label || (g.center.lat != null ? g.center.lat.toFixed(5) + ', ' + g.center.lng.toFixed(5) : '—')) + '</dd>' +
+    '<dt>Surface</dt><dd>' + (g.surface === 'web' ? 'Web results' : 'Map pack') + ' · ' + esc(region.label) + '</dd>' +
+    '<dt>Source</dt><dd>' + esc(scanCheckMode === 'paste' ? 'Paste mode (you read each point)' : (provNames[state.settings.provider] || state.settings.provider)) + ' · top ' + esc(state.settings.depth || 100) + '</dd>' +
+    '</dl>';
+  $('scanCheckBody').innerHTML = h;
+  const has = !!(g.listing && !g.listing.stale);
+  $('scanCheckLead').textContent = busy
+    ? 'Loading the Google listing this scan will look for…'
+    : (has ? 'This is the listing every grid point will be searched for. Check it is yours before the credits are spent.'
+           : 'No listing is confirmed for this profile yet, so the scan can only match on the details typed on step one.');
+  $('scanCheckGo').disabled = busy;
+  $('scanCheckGo').textContent = scanCheckMode === 'paste'
+    ? (has ? 'Build the grid' : 'Build the grid anyway')
+    : (has ? 'Start the scan' : 'Scan anyway');
+  $('scanCheckLookup').disabled = busy;
+  $('scanCheckLookup').textContent = g.listing ? 'Look up again' : 'Look up the listing';
+  $('scanCheckAlways').checked = state.settings.confirmListing !== false;
+}
+function closeScanCheck(v){
+  $('scanCheck').classList.remove('on');
+  if (scanCheckResolve){ const r = scanCheckResolve; scanCheckResolve = null; r(v); }
+}
+function scanListingCheck(mode){
+  const g = activeGbp(), kw = activeKeyword();
+  /* Anything createScan() would refuse, let it refuse with its own words. */
+  if (!g || !g.bizName || g.center.lat == null || g.center.lng == null || !kw) return Promise.resolve(true);
+  const needLookup = !g.listing || g.listing.stale;
+  if (!needLookup && state.settings.confirmListing === false) return Promise.resolve(true);
+  scanCheckMode = mode || 'auto';
+  $('scanCheck').classList.add('on');
+  renderScanCheck();
+  const canLook = (state.settings.provider || 'dataforseo') !== 'direct' && providerReady();
+  if (needLookup && canLook && !(lkState.gbpId === g.id && (lkState.busy || lkState.cands.length))){
+    lkLastAutoKey = lkKey(g);
+    lookupListing(g, {onChange: renderScanCheck});
+  }
+  return new Promise(res => { scanCheckResolve = res; });
+}
+$('scanCheckBody').addEventListener('click', lkHandleAction);
+$('scanCheckCancel').addEventListener('click', () => closeScanCheck(false));
+$('scanCheckGo').addEventListener('click', () => closeScanCheck(true));
+$('scanCheckLookup').addEventListener('click', () => {
+  const g = activeGbp();
+  if (!g) return;
+  lkLastAutoKey = lkKey(g);
+  lookupListing(g, {onChange: renderScanCheck});
+});
+$('scanCheckAlways').addEventListener('change', () => {
+  state.settings.confirmListing = $('scanCheckAlways').checked;
+  if ($('confirmListing')) $('confirmListing').checked = state.settings.confirmListing;
+  save();
+});
+$('scanCheck').addEventListener('click', e => { if (e.target === $('scanCheck')) closeScanCheck(false); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('scanCheck').classList.contains('on')) closeScanCheck(false); });
 function renderGridInfo(){
   const g = activeGbp();
   if (!g){ $('gridInfo').textContent = ''; return; }
@@ -9620,6 +10371,7 @@ function hydrateSettings(){
   $('includeAds').checked = s.includeAds !== false;
   $('deepVerify').checked = s.deepVerify !== false;
   $('speedSel').value = String(s.concurrency || 6);
+  $('confirmListing').checked = s.confirmListing !== false;
   toggleProviderFields();
 }
 function toggleProviderFields(){
@@ -9648,6 +10400,7 @@ bindSetting('depthSel','depth', el => parseInt(el.value,10) || 100);
 bindSetting('includeAds','includeAds', el => el.checked);
 bindSetting('deepVerify','deepVerify', el => el.checked);
 bindSetting('speedSel','concurrency', el => parseInt(el.value,10) || 6);
+bindSetting('confirmListing','confirmListing', el => el.checked);
 $('speedSel').addEventListener('change', renderGridInfo);
 $('provider').addEventListener('change', renderGridInfo);
 
@@ -11653,7 +12406,12 @@ function createScan(){
     grid:{rows:g.gridSize, spacingKm:g.spacingKm},
     surface:g.surface, region:region.label,
     center:{lat:g.center.lat, lng:g.center.lng, label:g.center.label},
-    business:{name:g.bizName, phone:g.phone, website:g.website, cid:g.cid}
+    business:{name:g.bizName, phone:g.phone, website:g.website, cid:g.cid,
+      placeId:g.placeId || null,
+      listing: (g.listing && !g.listing.stale) ? {title:g.listing.title || null, address:g.listing.address || null,
+        category:g.listing.category || null, cid:g.listing.cid || null, placeId:g.listing.placeId || null,
+        lat:g.listing.lat != null ? g.listing.lat : null, lng:g.listing.lng != null ? g.listing.lng : null,
+        confirmedAt:g.listing.confirmedAt || null} : null}
   };
   scan.points = pts;
   kw.scans.push(scan);
@@ -11669,7 +12427,8 @@ function setProgress(done, total, wrapId, barId){
   b.style.width = Math.round(done / total * 100) + '%';
 }
 
-$('buildBtn').addEventListener('click', () => {
+$('buildBtn').addEventListener('click', async () => {
+  if (!(await scanListingCheck('paste'))) return;
   const scan = createScan();
   if (!scan) return;
   setStatus('scanStatus', 'Grid ready — ' + scan.points.length + ' points. Walk them with the paste loop below the map.', 'ok');
@@ -11686,6 +12445,8 @@ $('autoScanBtn').addEventListener('click', async () => {
   if (s.provider === 'dataforseo' && (!(s.dfsLogin || '').trim() || !(s.dfsPassword || '').trim())){
     setStatus('scanStatus', 'DataForSEO needs both the login email and the API password. Add them on step four.', 'err'); openStep(4); return;
   }
+  /* Show the listing the grid is about to look for, before any credits go. */
+  if (!(await scanListingCheck('auto'))){ setStatus('scanStatus', 'Scan cancelled — nothing was read.', ''); return; }
   const scan = createScan();
   if (!scan) return;
   await runScan(scan);

@@ -445,6 +445,14 @@ input::placeholder,textarea::placeholder{color:#a9b4bd;}
   color:var(--brand-deep); background:var(--brand-wash); border:1px solid #f3d9c1;
   padding:3px 9px; border-radius:20px; white-space:nowrap; flex:none;
 }
+/* The centre of a whole area is a reference Google is handed, not the thing
+   that was chosen, so it is printed quietly. Given the same weight as a real
+   pin it reads as the answer, which is how "Alberta" came to look like a
+   coordinate in a field north of Whitecourt. */
+.geo-out .geo-coord.is-ref{
+  color:var(--ink-3); background:var(--card); border-color:var(--line);
+  font-size:10.5px; font-weight:500;
+}
 .geo-out .geo-name{
   flex:1; min-width:120px; font-size:12px; color:var(--ink-2);
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
@@ -3012,13 +3020,6 @@ a:focus-visible{border-radius:5px;}
 }
 .geo-out .geo-rad-sel:focus{box-shadow:var(--ring);}
 
-/* ---- the Drop pin button beside every Find -------------------------- */
-.g-inline.has-pin{grid-template-columns:1fr auto auto;}
-.geo-pin-btn{flex:none; gap:6px; padding:10px 13px;}
-.geo-pin-btn .peg-fig{width:14px; height:14px; color:var(--brand-deep);}
-.geo-pin-btn:hover{border-color:var(--brand); color:var(--brand-deep); background:var(--brand-wash);}
-@media (max-width:620px){ .geo-pin-btn span{display:none;} .geo-pin-btn{padding:10px 12px;} }
-
 /* ---- the picker ------------------------------------------------------ */
 body.pin-locked{overflow:hidden;}
 .pin-backdrop{
@@ -3161,45 +3162,152 @@ body.pin-locked{overflow:hidden;}
   box-shadow:none; cursor:pointer;
 }
 
-/* ---- the three ways in ---------------------------------------------- */
-.geo-methods{
-  display:flex; align-items:center; gap:7px; flex-wrap:wrap;
-  margin:0 0 9px; padding:7px 10px;
-  border:1px solid var(--line-2); border-radius:var(--r-md);
+/* ---- THE THREE WAYS TO SET A LOCATION -------------------------------
+   These were three unrelated widgets — a Find button, a Drop-pin button,
+   and a radius menu that only appeared after one of them had been used —
+   and because all three were live at once, a field could be carrying a
+   radius it had never been asked for. A Find on "Alberta" quietly attached
+   a 500 km circle to a centroid nobody chose.
+
+   They are now one control with three mutually exclusive settings, because
+   they are three different questions and only ever one of them is being
+   asked:
+
+     1  Find a place   — the place itself. A province or a country is the
+                         whole area; an address is the point it stands on.
+     2  Radius         — a point, and how far around it to look. The only
+                         mode with a circle in it.
+     3  Drop pin       — one exact spot, placed by hand. No circle.
+
+   Picking one puts the other two away, so what the field is set to is
+   always readable off the control itself. */
+.geo-modes{
+  display:flex; gap:3px; margin:0 0 9px; padding:3px;
+  border:1px solid var(--line-2); border-radius:13px;
   background:linear-gradient(180deg,var(--card-2) 0%,var(--card) 100%);
 }
-.geo-methods-cap{
-  font-size:9px; font-weight:700; letter-spacing:.11em; text-transform:uppercase;
-  color:var(--ink-3); margin-right:2px;
-}
-.geo-method{
-  display:inline-flex; align-items:center; gap:6px;
-  padding:3px 9px 3px 4px; border-radius:20px;
+.geo-mode{
+  flex:1 1 0; min-width:0;
+  display:flex; align-items:center; justify-content:center; gap:7px;
+  padding:7px 9px; border-radius:10px; cursor:pointer;
   border:1px solid transparent; background:transparent;
-  font-size:10.5px; color:var(--ink-3); white-space:nowrap;
-  transition:background .2s var(--ease), border-color .2s var(--ease), color .2s var(--ease);
+  font-family:var(--ui); font-size:11.5px; font-weight:650; color:var(--ink-3);
+  white-space:nowrap; text-align:center;
+  transition:background .18s var(--ease), border-color .18s var(--ease),
+             color .18s var(--ease), box-shadow .18s var(--ease);
 }
-.geo-method i{
-  flex:none; width:16px; height:16px; border-radius:50%; font-style:normal;
+.geo-mode i{
+  flex:none; width:17px; height:17px; border-radius:50%; font-style:normal;
   display:grid; place-items:center;
   font-family:var(--mono); font-size:9.5px; font-weight:700;
   background:var(--line-2); color:var(--ink-3);
-  transition:background .2s var(--ease), color .2s var(--ease);
+  transition:background .18s var(--ease), color .18s var(--ease);
 }
-.geo-method b{font-weight:650; color:var(--ink-2);}
-.geo-method.on{background:var(--brand-wash); border-color:#f3d9c1; color:var(--brand-deep);}
-.geo-method.on i{background:var(--brand); color:#fff;}
-.geo-method.on b{color:var(--brand-deep);}
-.geo-method-or,.geo-method-then{
-  font-size:9.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-3);
+.geo-mode:hover{color:var(--ink-2); background:var(--card);}
+.geo-mode[aria-pressed="true"]{
+  background:var(--card); border-color:var(--line); color:var(--ink);
+  box-shadow:var(--sh-1);
 }
-@media (max-width:640px){
-  .geo-methods{gap:5px; padding:6px 8px;}
-  .geo-methods-cap,.geo-method-or,.geo-method-then{display:none;}
-  .geo-method{font-size:10px;}
+.geo-mode[aria-pressed="true"] i{background:var(--brand); color:#fff;}
+@media (max-width:620px){
+  .geo-mode span{display:none;}
+  .geo-mode{padding:8px 6px;}
+}
+
+/* What the chosen mode actually means, in one line under the switch. The
+   modes differ in what they target, not just in how you point at it, and
+   that difference is the whole reason they are separate. */
+.geo-mode-note{
+  margin:-4px 0 9px; padding:0 3px;
+  font-size:11px; line-height:1.55; color:var(--ink-3);
+}
+.geo-mode-note b{color:var(--ink-2); font-weight:650;}
+
+/* ---- a whole region, named as one -----------------------------------
+   The answer to "Alberta" is not a coordinate, and printing one was the
+   bug. This chip says the area is the target and carries no lat/lng at
+   all, so nothing suggests a point was chosen. */
+.geo-out .geo-area{
+  flex:none; display:inline-flex; align-items:center; gap:7px;
+  font-family:var(--ui); font-size:10.5px; font-weight:700; letter-spacing:.05em;
+  text-transform:uppercase; white-space:nowrap;
+  color:var(--brand-deep); background:var(--brand-wash);
+  border:1px solid #f3d9c1; padding:3px 10px; border-radius:20px;
+}
+.geo-out .geo-area i{
+  flex:none; width:11px; height:11px; border-radius:3px;
+  border:1.5px dashed var(--brand-deep); opacity:.85;
+}
+/* The same chip, for the answers that ARE a point. A filled dot instead of
+   a dashed box: one says "all of this", the other says "here". */
+.geo-out .geo-area.is-point{
+  color:var(--ink); background:var(--card);
+  border-color:var(--line);
+}
+.geo-out .geo-area.is-point i{
+  width:8px; height:8px; border-radius:50%;
+  border:none; background:var(--brand-deep); opacity:1;
+  box-shadow:0 0 0 3px rgba(184,87,15,.16);
 }
 .geo-act-zone{font-weight:700;}
 .geo-act-zone:hover{border-color:var(--brand); color:var(--brand-deep); background:var(--brand-wash);}
+
+/* ---- the region, drawn ----------------------------------------------
+   Its real boundary, from OSM, at the zoom the whole thing fits in. A
+   dashed edge rather than a solid one because an administrative border is
+   a claim about jurisdiction, not a fence you could walk into. */
+.geo-area-shape{animation:zoneDash 34s linear infinite;}
+
+/* ---- the radius, as something you pull ------------------------------
+   A number in a menu is a value you have to translate; an edge you can
+   take hold of is the distance itself. The handle sits due east of the
+   centre and reports what it is reading while it moves. */
+.rad-handle{
+  width:22px; height:22px; border-radius:50%; cursor:ew-resize;
+  border:2.5px solid #fff; background:var(--brand-deep);
+  box-shadow:0 2px 6px rgba(16,24,33,.42), 0 0 0 1px rgba(184,87,15,.5);
+  display:grid; place-items:center;
+  transition:transform .15s var(--ease);
+}
+/* Two upright strokes: a grip. A single horizontal bar inside a circle
+   reads as a minus button, which is the wrong invitation entirely. */
+.rad-handle::after{
+  content:""; width:7px; height:9px; opacity:.95;
+  background:
+    linear-gradient(#fff,#fff) left  center / 2px 9px no-repeat,
+    linear-gradient(#fff,#fff) right center / 2px 9px no-repeat;
+}
+.rad-handle:hover,.rad-handle.pulling{transform:scale(1.18);}
+.rad-handle-wrap{cursor:ew-resize;}
+
+/* The centre of a radius is a mark, not a person standing somewhere —
+   the figure is reserved for the one mode that means an exact spot. */
+.rad-centre{
+  width:18px; height:18px; border-radius:50%; cursor:move;
+  border:2.5px solid var(--brand-deep); background:rgba(255,255,255,.96);
+  box-shadow:0 1px 4px rgba(16,24,33,.3);
+  display:grid; place-items:center;
+}
+.rad-centre::after{
+  content:""; width:5px; height:5px; border-radius:50%; background:var(--brand-deep);
+}
+
+/* The live reading while the edge is being pulled. */
+.rad-tip{
+  background:var(--console); color:#fff; border:none;
+  font-family:var(--mono); font-size:11px; font-weight:700; letter-spacing:.02em;
+  padding:3px 8px; border-radius:20px; box-shadow:var(--sh-2); white-space:nowrap;
+}
+.rad-tip::before{display:none;}
+
+/* A dotted spoke from centre to handle, so the thing being measured is
+   visible as a measurement rather than as a circle that happens to move. */
+.rad-spoke{stroke-dasharray:3 5; opacity:.8;}
+
+@media (prefers-reduced-motion:reduce){
+  .geo-area-shape{animation:none !important;}
+  .rad-handle{transition:none;}
+}
 
 @media (prefers-reduced-motion:reduce){
   .peg-ghost,.peg-body,.peg-ring,.pin-zone-edge{animation:none !important;}
@@ -5087,6 +5195,119 @@ function radiusLabel(m){
   return n >= 1000 ? (Math.round(n / 100) / 10).toString().replace(/\.0$/, '') + ' km' : n + ' m';
 }
 
+/* An exact point is not a small circle. Google's uule carries a radius
+   whatever you do, and it ignores anything under 500 m, so 500 is the
+   tightest honest way to say "here, precisely" — the old 2 km default was
+   a neighbourhood being passed off as a pin. The two exact modes, Find a
+   place that resolved to an address and a hand-dropped pin, both use it. */
+const GEO_EXACT_RADIUS = 500;
+
+/* Round a dragged radius onto something a person would say out loud.
+   Dragging an edge produces 23,847 m; nobody means that. Under 10 km it
+   rounds to the nearest 100 m, above it to the nearest kilometre. */
+function roundRadius(m){
+  const n = Math.max(500, Math.min(3000000, Math.round(Number(m) || 0)));
+  if (n < 10000) return Math.round(n / 100) * 100;
+  if (n < 200000) return Math.round(n / 1000) * 1000;
+  return Math.round(n / 5000) * 5000;
+}
+
+/* Nominatim's boundingbox as Leaflet bounds. This is the number that makes
+   a province behave like a province: it is the real extent of the thing
+   that was found, so a map told to fit it shows the whole of Alberta
+   rather than a tight crop around a centroid in the middle of a field. */
+function bboxBounds(bb){
+  if (typeof L === 'undefined' || !Array.isArray(bb) || bb.length < 4) return null;
+  const s = parseFloat(bb[0]), n = parseFloat(bb[1]), w = parseFloat(bb[2]), e = parseFloat(bb[3]);
+  if (![s, n, w, e].every(v => isFinite(v))) return null;
+  try{ return L.latLngBounds([s, w], [n, e]); }catch(err){ return null; }
+}
+/* Bounds as a plain array, which is what survives a trip through
+   localStorage — a live L.latLngBounds does not. */
+function boundsToArr(b){
+  if (!b) return null;
+  try{ return [[b.getSouth(), b.getWest()], [b.getNorth(), b.getEast()]]; }
+  catch(err){ return null; }
+}
+function arrToBounds(a){
+  if (typeof L === 'undefined' || !Array.isArray(a) || a.length < 2) return null;
+  try{ return L.latLngBounds(a[0], a[1]); }catch(err){ return null; }
+}
+
+/* ==========================================================================
+   THE SHAPE OF A REGION, NOT A DOT IN THE MIDDLE OF IT
+   ==========================================================================
+   Asking for Alberta and being handed 53.9333, -116.5765 is technically an
+   answer and practically a wrong one: that coordinate is open bush north of
+   Whitecourt, it is not where anybody searches from, and a map centred on it
+   at street zoom shows nothing at all. Alberta is an area. The honest way to
+   show it is its own boundary, at the zoom the whole thing fits in.
+
+   OSM has the real boundary. /lookup returns it as GeoJSON for an osm_id,
+   and polygon_threshold simplifies it on the server — without that, Canada
+   comes back as several megabytes of coastline nobody needs at this zoom.
+   Cached because the same province gets asked for over and over, and
+   Nominatim's usage policy is one request a second.
+
+   If it fails, the bounding box still frames the region correctly. The
+   outline is confirmation; the framing is the fix.
+   ========================================================================== */
+const geoOutlineCache = new Map();
+const OSM_PREFIX = {node:'N', way:'W', relation:'R'};
+
+async function geoAreaOutline(hit){
+  if (!hit || !hit.osm_id || !hit.osm_type) return null;
+  const pre = OSM_PREFIX[String(hit.osm_type).toLowerCase()];
+  if (!pre) return null;
+  const key = pre + hit.osm_id;
+  if (geoOutlineCache.has(key)) return geoOutlineCache.get(key);
+
+  /* A coarser simplification for the very large areas. A country's outline
+     at 0.01° is tens of thousands of points and none of them are legible at
+     the zoom a country is viewed at. */
+  const t = (String(hit.addresstype || hit.type || '').toLowerCase() === 'country') ? 0.05 : 0.012;
+  const url = 'https://nominatim.openstreetmap.org/lookup?format=json&polygon_geojson=1' +
+              '&polygon_threshold=' + t + '&accept-language=en&osm_ids=' + encodeURIComponent(key);
+  try{
+    const res = await fetch(url, {headers:{Accept:'application/json'}});
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const geo = (data && data[0] && data[0].geojson) || null;
+    /* Only areas are worth drawing. A boundary that comes back as a
+       LineString or a Point is not an outline of anything. */
+    const ok = geo && (geo.type === 'Polygon' || geo.type === 'MultiPolygon') ? geo : null;
+    geoOutlineCache.set(key, ok);
+    return ok;
+  }catch(err){
+    /* Remembered as "no outline" so a dead network is not re-asked on every
+       keystroke. The bounding box carries the framing regardless. */
+    geoOutlineCache.set(key, null);
+    return null;
+  }
+}
+
+/* One place that knows how the radius menus are built, because there are
+   three of them and they kept drifting apart. Whatever value is in force is
+   always present as an option even when it is not one of the steps — a
+   radius pulled to 23 km on the map has to survive being shown in a menu. */
+function fillRadiusSelect(sel, value, autoValue){
+  if (!sel) return;
+  const v = Number(value) || GEO_EXACT_RADIUS;
+  sel.innerHTML = '';
+  const opts = GEO_RADIUS_STEPS.slice();
+  if (opts.indexOf(v) === -1) opts.push(v);
+  if (autoValue && opts.indexOf(Number(autoValue)) === -1) opts.push(Number(autoValue));
+  opts.sort((a, b) => a - b).forEach(n => {
+    const o = document.createElement('option');
+    o.value = String(n);
+    o.textContent = radiusLabel(n) +
+      (autoValue && n === Number(autoValue) ? ' · fits the area' : '') +
+      (n === v && GEO_RADIUS_STEPS.indexOf(n) === -1 ? ' · set on the map' : '');
+    sel.appendChild(o);
+  });
+  sel.value = String(v);
+}
+
 /* Is this a broad area — a province, a state, a country — or somewhere you
    could stand? Administrative boundaries are the awkward case: a city and a
    province are both class=boundary/type=administrative, so the address parts
@@ -5120,29 +5341,70 @@ function geoScopeParts(hit){
 
 function geoOutClear(out){ const e = typeof out === 'string' ? $(out) : out; if (e){ e.classList.remove('on'); e.innerHTML = ''; } }
 
-/* The readout every Find button shares: the coordinates that were resolved,
-   the place they belong to, and a way to copy or eyeball them. Seeing the pin
-   before running anything is the whole point — a silent lat/lng in a box is
-   impossible to sanity-check. */
+/* ==========================================================================
+   THE READOUT: ONE MODE'S ANSWER, NOT ALL THREE AT ONCE
+   ==========================================================================
+   This used to print a coordinate, a name and a radius menu for every
+   result, which meant a province and a shop doorway were reported in the
+   same shape and a radius was attached to things that had not asked for
+   one. It now shows the answer the chosen mode actually gives:
+
+     a whole area   — the area, named, and the fact that the area is what
+                      gets searched. No radius menu: the region's own extent
+                      is the extent.
+     an exact point — the coordinate and what stands on it. No radius menu.
+     a radius       — the centre, the distance, and a way back to the map to
+                      pull the edge.
+   ========================================================================== */
 function renderGeoOut(out, g){
   const e = typeof out === 'string' ? $(out) : out;
   if (!e) return;
   e.innerHTML = '';
   e.classList.add('on');
 
+  const mode = g.mode || 'place';
+  const isArea = !!g.area;
+
+  /* ---- what kind of answer this is, said first ------------------------
+     The tag leads because it is the thing that was ambiguous: two results
+     with the same coordinate can mean completely different searches
+     depending on which mode produced them. */
+  const tag = document.createElement('span');
+  tag.className = 'geo-area' + (isArea ? '' : ' is-point');
+  const glyph = document.createElement('i');
+  tag.appendChild(glyph);
+  if (isArea){
+    tag.appendChild(document.createTextNode('Whole area'));
+    tag.title = 'The region itself is the search area — its own boundary, not a circle around a point in the middle of it.';
+  } else if (mode === 'radius'){
+    tag.appendChild(document.createTextNode('Within ' + radiusLabel(g.radius)));
+    tag.title = 'A circle of ' + radiusLabel(g.radius) + ' around this centre.';
+  } else if (mode === 'pin'){
+    tag.appendChild(document.createTextNode('Dropped pin'));
+    tag.title = 'One exact spot, placed by hand. No radius.';
+  } else {
+    tag.appendChild(document.createTextNode('Exact point'));
+    tag.title = 'This address, precisely. No radius.';
+  }
+
+  /* ---- the coordinate ------------------------------------------------
+     Present in every mode because a search still has to be pinned
+     somewhere, but for a whole area it is labelled as what it is — a
+     reference point Google is handed alongside the extent — so nobody
+     reads it as the place that was chosen. */
   const coord = document.createElement('span');
   coord.className = 'geo-coord';
-  coord.textContent = g.lat.toFixed(6) + ', ' + g.lng.toFixed(6);
+  if (isArea) coord.classList.add('is-ref');
+  coord.textContent = (isArea ? 'centre ~ ' : '') + g.lat.toFixed(6) + ', ' + g.lng.toFixed(6);
+  coord.title = isArea
+    ? 'The centre of the area, sent with it. It is not the target — the area is.'
+    : 'The exact coordinate this search is pinned to.';
 
-  /* A province and a street address are different kinds of answer and used
-     to be printed the same way: one long comma-separated line that buried
-     which part of it you actually asked for. A broad area now gets a chip
-     that names the place and the country containing it, and nothing else.
-     Anywhere you could stand keeps the full line, because for an address
-     every part of it is worth reading. */
-  const broad = geoIsBroad(g.hit);
+  /* A broad area gets the two-part scope chip: the place, and the wider
+     thing it sits inside. An address keeps its full line, because for an
+     address every part of it is worth reading. */
   let name;
-  if (broad){
+  if (isArea || geoIsBroad(g.hit)){
     const parts = geoScopeParts(g.hit);
     name = document.createElement('span');
     name.className = 'geo-scope';
@@ -5196,16 +5458,13 @@ function renderGeoOut(out, g){
   view.href = 'https://www.openstreetmap.org/?mlat=' + g.lat + '&mlon=' + g.lng + '#map=14/' + g.lat + '/' + g.lng;
   view.target = '_blank'; view.rel = 'noopener';
 
-  /* ---- how wide this pin reaches -------------------------------------
-     A coordinate on its own doesn't say how much ground the search should
-     cover, and the same pin means different things for a shop and for a
-     province. The default is measured from the place Nominatim actually
-     returned — its own bounding box — so finding Alberta proposes a radius
-     that covers Alberta, and finding a street proposes a few blocks. It is
-     a starting point, not a verdict: the menu overrides it, and whatever is
-     chosen is what the search URL is built with. */
+  /* ---- how wide, but only where width is the question -----------------
+     Radius mode is the only one that has a radius, so it is the only one
+     that gets the menu. A whole area already has an extent of its own and
+     an exact point deliberately has none — offering a radius in either
+     place is how a field ends up meaning something nobody chose. */
   let radiusWrap = null;
-  if (g.radius){
+  if (mode === 'radius' && g.radius){
     radiusWrap = document.createElement('label');
     radiusWrap.className = 'geo-rad';
     const cap = document.createElement('span');
@@ -5213,18 +5472,8 @@ function renderGeoOut(out, g){
     cap.textContent = 'Radius';
     const sel = document.createElement('select');
     sel.className = 'geo-rad-sel';
-    const opts = GEO_RADIUS_STEPS.slice();
-    if (opts.indexOf(Number(g.radius)) === -1) opts.push(Number(g.radius));
-    opts.sort((a, b) => a - b).forEach(v => {
-      const o = document.createElement('option');
-      o.value = String(v);
-      o.textContent = radiusLabel(v) + (v === Number(g.autoRadius) ? ' · fits the area' : '');
-      sel.appendChild(o);
-    });
-    sel.value = String(g.radius);
-    sel.title = g.autoRadius
-      ? ('Measured from the area itself (' + radiusLabel(g.autoRadius) + '). Change it to search a wider or tighter patch.')
-      : 'How much ground the pinned search covers.';
+    fillRadiusSelect(sel, g.radius, g.autoRadius);
+    sel.title = 'How far around the centre this search looks. Drag the edge on the map for anything in between.';
     sel.addEventListener('change', () => {
       const v = Number(sel.value) || Number(g.radius);
       g.radius = v;
@@ -5234,52 +5483,150 @@ function renderGeoOut(out, g){
     radiusWrap.appendChild(sel);
   }
 
-  /* Seeing the zone is a click away from the number that defines it. The
-     same map the pin was placed on reopens, centred here, with the circle
-     drawn — so "50 km" stops being a figure to imagine. */
-  let zone = null;
-  if (g.radius && typeof g.onZone === 'function'){
-    zone = document.createElement('button');
-    zone.type = 'button'; zone.className = 'geo-act geo-act-zone';
-    zone.textContent = 'Zone';
-    zone.title = 'Show this radius on the map';
-    zone.addEventListener('click', () => g.onZone());
+  /* One way back to the map, labelled for what it will do there. */
+  let openMap = null;
+  if (typeof g.onMap === 'function'){
+    openMap = document.createElement('button');
+    openMap.type = 'button'; openMap.className = 'geo-act geo-act-zone';
+    openMap.textContent = isArea ? 'Show area' : (mode === 'radius' ? 'Pull the edge' : 'Move pin');
+    openMap.title = isArea
+      ? 'See the whole region on the map'
+      : (mode === 'radius' ? 'Drag the circle’s edge to set the distance' : 'Pick the figure up and put it somewhere else');
+    openMap.addEventListener('click', () => g.onMap());
   }
 
-  e.appendChild(coord);
+  e.appendChild(tag);
   if (market) e.appendChild(market);
+  e.appendChild(coord);
   e.appendChild(name);
   if (radiusWrap) e.appendChild(radiusWrap);
-  if (zone) e.appendChild(zone);
+  if (openMap) e.appendChild(openMap);
   e.appendChild(copy); e.appendChild(view);
 }
 
-/* Wires one Find button to one location field. Every location input in the
-   app goes through this, so they all behave identically: Enter submits, the
-   coordinates land in whatever lat/lng boxes were named, and the readout
-   below shows what was actually found. */
+/* ==========================================================================
+   ONE LOCATION FIELD, THREE MUTUALLY EXCLUSIVE WAYS TO SET IT
+   ==========================================================================
+   Every location input in the app goes through this, so they all behave
+   identically. The three modes are a real choice, not three widgets sharing
+   a row: exactly one is in force, the other two are put away, and the field
+   carries which one it is so nothing downstream has to guess.
+
+     place   Find a place. What comes back decides the shape of the answer:
+             a province, a state or a country is a whole AREA — its own
+             boundary, framed so all of it is on screen, with no pin dropped
+             in the middle of it — while an address is the exact point it
+             stands on. This is the mode that fixes "Alberta" pinning a
+             field north of Whitecourt.
+
+     radius  A centre and a distance. The only mode with a circle in it, and
+             the circle is draggable: pull its edge on the map to set the
+             distance, drag its middle to move it.
+
+     pin     One exact spot, placed by hand, for the places a gazetteer has
+             never named — a job site, a corner of a subdivision. No radius.
+   ========================================================================== */
+const GEO_MODE_NOTES = {
+  place: '<b>The place itself.</b> A province, state or country is searched as the whole area and framed on the map — no pin in the middle of it. An address is searched as the exact point it stands on.',
+  radius:'<b>A circle.</b> Set its centre, then drag the edge on the map to say how far around it to look.',
+  pin:   '<b>One exact spot,</b> placed by hand. Drag the figure onto the map — no radius, the search is that coordinate.'
+};
+const GEO_MODE_BTN = { place:'Find', radius:'Find centre', pin:'Open map' };
+
 function wireGeoFinder(cfg){
   const btn = $(cfg.btn), input = $(cfg.input);
-  if (!btn || !input) return;
+  if (!btn || !input) return null;
 
-  /* One place where a resolved location lands, whichever way it was found —
-     typed into the box and looked up, or dropped by hand on the map. Both
-     routes end here, so both fill the same fields, cache the same way and
-     draw the same readout. */
+  let mode = 'place';
+  const btnLabel = btn.textContent;
+
+  /* ---- the switch ------------------------------------------------------
+     Built here rather than in the markup so all seven location fields get
+     the same three choices from one place. */
+  const modes = document.createElement('div');
+  modes.className = 'geo-modes';
+  modes.setAttribute('role', 'group');
+  modes.setAttribute('aria-label', 'How this location is set');
+  modes.innerHTML =
+    '<button type="button" class="geo-mode" data-m="place"  aria-pressed="true"><i>1</i><span>Find a place</span></button>' +
+    '<button type="button" class="geo-mode" data-m="radius" aria-pressed="false"><i>2</i><span>Radius</span></button>' +
+    '<button type="button" class="geo-mode" data-m="pin"    aria-pressed="false"><i>3</i><span>Drop pin</span></button>';
+  const note = document.createElement('p');
+  note.className = 'geo-mode-note';
+
+  const fieldWrap = btn.closest('.f') || (btn.parentNode ? btn.parentNode.parentNode : null);
+  if (fieldWrap){
+    const anchor = fieldWrap.querySelector('label, .lbl');
+    if (anchor && anchor.nextSibling){
+      fieldWrap.insertBefore(modes, anchor.nextSibling);
+      fieldWrap.insertBefore(note, modes.nextSibling);
+    } else {
+      fieldWrap.insertBefore(note, fieldWrap.firstChild);
+      fieldWrap.insertBefore(modes, fieldWrap.firstChild);
+    }
+  }
+
+  /* Changing mode clears the answer the old one gave. Two modes can mean
+     two different searches from the same coordinate, so carrying a result
+     across a mode change would silently misreport what is being asked. */
+  function setMode(m, opts){
+    const o = opts || {};
+    mode = m;
+    input.dataset.geoMode = m;
+    modes.querySelectorAll('.geo-mode').forEach(el => {
+      el.setAttribute('aria-pressed', el.dataset.m === m ? 'true' : 'false');
+    });
+    note.innerHTML = GEO_MODE_NOTES[m] || '';
+    btn.textContent = GEO_MODE_BTN[m] || btnLabel;
+    input.placeholder = m === 'pin'
+      ? 'Jump the map near here first — optional'
+      : (m === 'radius' ? 'The centre of the circle' : (input.dataset.geoPlaceholder || input.placeholder));
+    if (!o.keep) clearResolved();
+  }
+  input.dataset.geoPlaceholder = input.placeholder;
+  modes.querySelectorAll('.geo-mode').forEach(el => {
+    el.addEventListener('click', () => {
+      if (el.dataset.m === mode) return;
+      setMode(el.dataset.m);
+      /* Switching straight into a hand-placed mode opens the map, because
+         that is the whole of what the mode is. */
+      if (el.dataset.m === 'pin') openMap();
+    });
+  });
+
+  function clearResolved(){
+    delete input.dataset.geoCountry; delete input.dataset.geoIso;
+    delete input.dataset.geoLat; delete input.dataset.geoLng;
+    delete input.dataset.geoRadius; delete input.dataset.geoArea;
+    delete input.dataset.geoBounds; delete input.dataset.geoOsm;
+    input.dataset.geoMode = mode;
+    geoOutClear(cfg.out); setStatus(cfg.status, '', '');
+    if (typeof cfg.onClear === 'function') cfg.onClear();
+  }
+
+  /* ---- where every resolved location lands ---------------------------
+     Typed and looked up, dragged on a map, or dropped by hand — all three
+     routes end here, so all three fill the same fields, cache the same way
+     and draw the same readout. */
   function applyPlace(hit, opts){
     const o = opts || {};
     const lat = o.lat != null ? o.lat : parseFloat(parseFloat(hit.lat).toFixed(7));
     const lng = o.lng != null ? o.lng : parseFloat(parseFloat(hit.lon).toFixed(7));
     const country = dfsCountryName(hit);
     const iso = dfsCountryIso(hit);
-    /* Measured from the place itself. A hand-dropped pin has no extent of
-       its own — it is a point, not an area — so it starts at a couple of
-       blocks and is widened from the menu if that is not what was meant. */
-    const auto = o.exact ? 2000 : niceRadius(bboxRadius(hit && hit.boundingbox, lat));
-    /* A radius chosen on the picker's map beats anything derived here — it
-       was set against a drawn circle, which is a stronger statement of
-       intent than a bounding box. */
-    const radius = Number(o.radius) || auto || 93000;
+    const m = o.mode || mode;
+
+    /* An area's extent is its own bounding box; that is what the map frames
+       and what the uule is given, so Google is shown the same ground. An
+       exact point gets the tightest radius Google will honour, because it
+       is a point. A circle gets whatever the circle was set to. */
+    const bounds = o.bounds || bboxBounds(hit && hit.boundingbox);
+    const fit = niceRadius(bboxRadius(hit && hit.boundingbox, lat));
+    const area = !!o.area;
+    let radius;
+    if (m === 'radius') radius = Number(o.radius) || fit || 25000;
+    else if (area)      radius = Number(o.radius) || fit || 93000;
+    else                radius = GEO_EXACT_RADIUS;
 
     if (cfg.lat && $(cfg.lat)) $(cfg.lat).value = lat;
     if (cfg.lng && $(cfg.lng)) $(cfg.lng).value = lng;
@@ -5292,55 +5639,99 @@ function wireGeoFinder(cfg){
     input.dataset.geoIso = iso;
     input.dataset.geoLat = lat; input.dataset.geoLng = lng;
     input.dataset.geoRadius = String(radius);
+    input.dataset.geoMode = m;
+    if (area) input.dataset.geoArea = '1'; else delete input.dataset.geoArea;
+    const bArr = boundsToArr(bounds);
+    if (bArr) input.dataset.geoBounds = JSON.stringify(bArr); else delete input.dataset.geoBounds;
+    /* Two integers are all that is needed to ask OSM for this area's real
+       boundary again later, so the map can redraw Alberta on a reload
+       without keeping a whole geocoder response in storage. */
+    if (area && hit && hit.osm_id && hit.osm_type){
+      input.dataset.geoOsm = JSON.stringify({osm_id:hit.osm_id, osm_type:hit.osm_type,
+                                             addresstype:hit.addresstype || hit.type || ''});
+    } else delete input.dataset.geoOsm;
 
     const label = o.label || hit.display_name || '';
     /* The readout already names the place, so the status line underneath it
        would just say the same thing twice. */
     setStatus(cfg.status, '', '');
-    const fire = r => { if (typeof cfg.after === 'function') cfg.after({lat, lng, country, label, hit, radius: r, exact: !!o.exact}); };
-    if (typeof cfg._markMethod === 'function') cfg._markMethod(o.exact ? 'pin' : 'find');
+    const fire = r => {
+      if (typeof cfg.after === 'function'){
+        cfg.after({lat, lng, country, label, hit, radius: r, mode: m,
+                   area: area, bounds: bounds, exact: !area && m !== 'radius'});
+      }
+    };
     renderGeoOut(cfg.out, {
       lat, lng, country, label, hit, market: cfg.market,
-      radius, autoRadius: auto, exact: !!o.exact,
+      mode: m, area, bounds, radius, autoRadius: fit,
       /* Changing the radius has to reach the same places the original value
          did, or the menu would be decoration. */
       onRadius(v){ input.dataset.geoRadius = String(v); writeRadius(v); fire(v); },
-      onZone(){ openPin(); }
+      onMap(){ openMap(); }
     });
     fire(radius);
   }
 
-  /* Opening the map: from the Drop pin button, and from the Zone action on
-     the readout. Both want the same thing — this field's current pin and
-     radius, shown on a map — so they share one door. */
-  function openPin(){
+  /* ---- the map -------------------------------------------------------
+     One door, opened from the mode switch, from the primary button in the
+     modes that need it, and from the readout. It always opens showing what
+     the field currently holds. */
+  function openMap(){
     const sLat = parseFloat(input.dataset.geoLat || (cfg.lat && $(cfg.lat) ? $(cfg.lat).value : ''));
     const sLng = parseFloat(input.dataset.geoLng || (cfg.lng && $(cfg.lng) ? $(cfg.lng).value : ''));
+    let bounds = null, osm = null;
+    try{ bounds = arrToBounds(JSON.parse(input.dataset.geoBounds || 'null')); }catch(err){}
+    /* The two integers that let the picker ask OSM for this region's real
+       boundary again — without them it can only draw the bounding box. */
+    try{ osm = JSON.parse(input.dataset.geoOsm || 'null'); }catch(err){}
     openPinPicker({
+      mode: mode,
       lat: isFinite(sLat) ? sLat : null,
       lng: isFinite(sLng) ? sLng : null,
       radius: Number(input.dataset.geoRadius) || null,
-      onPick(hit, lat, lng, label, radius){
+      area: input.dataset.geoArea === '1',
+      bounds: bounds,
+      osm: osm,
+      label: input.value.trim(),
+      query: input.value.trim(),
+      onPick(res){
         /* The typed box is filled in too, so the field still reads as the
            place it now points at rather than as whatever was there before. */
-        input.value = label;
-        applyPlace(hit, {lat, lng, label, exact: true, radius: radius});
+        if (res.label) input.value = res.label;
+        if (res.mode && res.mode !== mode) setMode(res.mode, {keep:true});
+        applyPlace(res.hit, {
+          lat: res.lat, lng: res.lng, label: res.label, mode: res.mode || mode,
+          radius: res.radius, area: res.area, bounds: res.bounds
+        });
       }
     });
   }
 
+  /* ---- the primary button --------------------------------------------
+     Its job changes with the mode, because the modes ask different
+     questions. Place and Radius look a name up; Pin has nothing to look up
+     and opens the map instead, jumping to whatever was typed if anything
+     was. */
   const run = async () => {
     const q = input.value.trim();
+    if (mode === 'pin'){ openMap(); return; }
     if (!q){ setStatus(cfg.status, 'Type a place or address first.', 'err'); geoOutClear(cfg.out); return; }
     btn.disabled = true;
-    setStatus(cfg.status, 'Looking up ' + q + '\u2026', 'busy');
+    setStatus(cfg.status, 'Looking up ' + q + '…', 'busy');
     try{
       const hit = await nominatim(q);
       if (!hit){
         setStatus(cfg.status, 'No match. Add the city, province or country and try again.', 'err');
         geoOutClear(cfg.out); return;
       }
-      applyPlace(hit);
+      /* THE FIX: a province, a state or a country is an area, and an area's
+         answer is its extent — not a dot at its centre of mass. In place
+         mode a broad result is applied as the whole region, so the map
+         frames all of it and nothing gets pinned to the middle of nowhere.
+         In radius mode the same result is a centre, because a circle is
+         what was asked for. */
+      const broad = mode === 'place' && geoIsBroad(hit);
+      applyPlace(hit, {area: broad, mode: mode});
     }catch(err){
       setStatus(cfg.status, 'Lookup failed: ' + ((err && err.message) || err), 'err');
       geoOutClear(cfg.out);
@@ -5349,65 +5740,38 @@ function wireGeoFinder(cfg){
   btn.addEventListener('click', run);
   input.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); run(); } });
   /* Editing the place invalidates the pin that was found for the old one. */
-  input.addEventListener('input', () => {
-    delete input.dataset.geoCountry; delete input.dataset.geoIso;
-    delete input.dataset.geoLat; delete input.dataset.geoLng;
-    delete input.dataset.geoRadius;
-    geoOutClear(cfg.out); setStatus(cfg.status, '', '');
-    if (typeof cfg._markMethod === 'function') cfg._markMethod(null);
-  });
+  input.addEventListener('input', clearResolved);
 
-  /* ---- the hand-placed pin -------------------------------------------
-     Typing a name is the wrong tool when the spot you mean has no name: a
-     job site, a corner of a subdivision, the middle of a service area.
-     This button sits beside Find and opens a map to drop a figure on, and
-     wherever it lands is read back as a real address. Added here rather
-     than in the markup so all seven Find fields get it from one place. */
-  const pinBtn = document.createElement('button');
-  pinBtn.type = 'button';
-  pinBtn.className = 'btn geo-pin-btn';
-  pinBtn.title = 'Place the pin by hand on a map';
-  pinBtn.innerHTML = GEO_PEG_SVG + '<span>Drop pin</span>';
-  pinBtn.addEventListener('click', () => openPin());
-  /* ---- the three ways in, said out loud -------------------------------
-     There are exactly three controls here and they were arriving as three
-     unrelated widgets: a button, another button, and a dropdown that only
-     appeared after one of them had been used. Naming them as one numbered
-     set turns that into a structure you can read at a glance — type it,
-     place it, then say how wide — and each step lights up once it has
-     actually been done, so the strip doubles as the state of the field. */
-  const methods = document.createElement('div');
-  methods.className = 'geo-methods';
-  methods.innerHTML =
-    '<span class="geo-methods-cap">Set this location</span>' +
-    '<span class="geo-method" data-m="find"><i>1</i>Type a place<b>Find</b></span>' +
-    '<span class="geo-method-or">or</span>' +
-    '<span class="geo-method" data-m="pin"><i>2</i>Place it by hand<b>Drop pin</b></span>' +
-    '<span class="geo-method-then">then</span>' +
-    '<span class="geo-method" data-m="radius"><i>3</i>Choose how wide<b>Radius</b></span>';
-  const fieldWrap = btn.closest('.f') || (btn.parentNode ? btn.parentNode.parentNode : null);
-  if (fieldWrap){
-    const anchor = fieldWrap.querySelector('label, .lbl');
-    if (anchor && anchor.nextSibling) fieldWrap.insertBefore(methods, anchor.nextSibling);
-    else fieldWrap.insertBefore(methods, fieldWrap.firstChild);
-  }
-  /* Which of the three has been used. Called from applyPlace, so it tracks
-     what actually happened rather than what was clicked. */
-  function markMethod(which){
-    methods.querySelectorAll('.geo-method').forEach(el => {
-      el.classList.toggle('on', el.dataset.m === which || (which && el.dataset.m === 'radius'));
-    });
-  }
-  cfg._markMethod = markMethod;
+  /* keep:true on the first call. Clearing fires the field's onClear, and at
+     this point in the script the maps those handlers redraw have not been
+     created yet — wiring a field must not reach forward into them. */
+  setMode('place', {keep:true});
+  cfg._setMode = setMode;
+  cfg._openMap = openMap;
+  cfg._apply = applyPlace;
+  return cfg;
+}
 
-  if (btn.parentNode){
-    btn.parentNode.insertBefore(pinBtn, btn.nextSibling);
-    /* The row was a two-column grid sized for an input and one button;
-       a third child wrapped onto its own line and stretched full width.
-       Marking the row lets it take the extra column, and only rows that
-       actually gained a button are affected. */
-    btn.parentNode.classList.add('has-pin');
+/* Putting a saved location back on a field. Reloading used to restore the
+   coordinate and nothing else, so a centre saved as "the whole of Alberta"
+   came back as a bare point and the map zoomed to a field north of
+   Whitecourt all over again. The mode and the extent are part of the
+   answer, so they are part of what gets restored. */
+function restoreGeoField(input, centre, finder){
+  if (!input) return;
+  const setMode = finder && finder._setMode;
+  if (!centre || centre.lat == null){
+    if (setMode) setMode('place');
+    return;
   }
+  input.dataset.geoLat = centre.lat;
+  input.dataset.geoLng = centre.lng;
+  input.dataset.geoMode = centre.mode || 'place';
+  if (centre.radius) input.dataset.geoRadius = String(centre.radius); else delete input.dataset.geoRadius;
+  if (centre.area) input.dataset.geoArea = '1'; else delete input.dataset.geoArea;
+  if (centre.bounds) input.dataset.geoBounds = JSON.stringify(centre.bounds); else delete input.dataset.geoBounds;
+  if (centre.osm) input.dataset.geoOsm = JSON.stringify(centre.osm); else delete input.dataset.geoOsm;
+  if (setMode) setMode(centre.mode || 'place', {keep:true});
 }
 
 /* ==========================================================================
@@ -5425,7 +5789,7 @@ let memoryStore = null;
 function blankGbp(name){
   return {
     id:uid(), name:name || 'Main location', bizName:'', gbpLink:'', phone:'', website:'', cid:null, placeId:null,
-    center:{lat:null,lng:null,label:''}, regionIdx:0, gridSize:7, spacingKm:1.5, surface:'local', zoom:14,
+    center:{lat:null,lng:null,label:'',mode:'place',area:false,radius:null,bounds:null,osm:null}, regionIdx:0, gridSize:7, spacingKm:1.5, surface:'local', zoom:14,
     keywords:[], activeKeywordId:null
   };
 }
@@ -6327,6 +6691,10 @@ const IDENT_FIELDS = ['gbpLabel','bizName','gbpLink','bizPhone','bizSite'];
 const AREA_FIELDS = ['tLoc','tLat','tLng','spacing'];
 const AREA_SELECTS = ['gridSize','surface','tRegion','zoomSel'];
 
+/* The grid-centre field's own controls, kept so a profile loaded from
+   storage can be put back on it in the mode it was saved in. Declared here
+   because loadGbpIntoForm() below reaches for it. */
+let tLocFinder = null;
 function loadGbpIntoForm(){
   const g = activeGbp();
   $('gbpLabel').value = g ? (g.name || '') : '';
@@ -6337,6 +6705,9 @@ function loadGbpIntoForm(){
   $('tLoc').value = g ? g.center.label : '';
   $('tLat').value = g && g.center.lat != null ? g.center.lat : '';
   $('tLng').value = g && g.center.lng != null ? g.center.lng : '';
+  /* Put the saved answer back on the field, mode and all, so switching
+     between profiles does not quietly reset a province to a point. */
+  restoreGeoField($('tLoc'), g && g.center, tLocFinder);
   $('gridSize').value = g ? g.gridSize : 7;
   $('spacing').value = g ? g.spacingKm : 1.5;
   $('surface').value = g ? g.surface : 'local';
@@ -6359,6 +6730,16 @@ function persistGbp(){
   const la = parseFloat($('tLat').value), lo = parseFloat($('tLng').value);
   g.center.lat = isNaN(la) ? null : la;
   g.center.lng = isNaN(lo) ? null : lo;
+  /* A coordinate alone cannot say whether it stands for an address or for
+     the whole of Saskatchewan, and the map needs to know which — one is a
+     point to zoom to, the other is an extent to fit. So the mode and, for
+     an area, its extent travel with the centre. */
+  const tEl = $('tLoc');
+  g.center.mode = tEl.dataset.geoMode || g.center.mode || 'place';
+  g.center.area = tEl.dataset.geoArea === '1';
+  g.center.radius = Number(tEl.dataset.geoRadius) || null;
+  try{ g.center.bounds = JSON.parse(tEl.dataset.geoBounds || 'null'); }catch(e){ g.center.bounds = null; }
+  try{ g.center.osm = JSON.parse(tEl.dataset.geoOsm || 'null'); }catch(e){ g.center.osm = null; }
   g.gridSize = parseInt($('gridSize').value, 10) || 7;
   g.spacingKm = parseFloat($('spacing').value) || 1.5;
   g.surface = $('surface').value;
@@ -6427,20 +6808,41 @@ function renderGridInfo(){
   const lanes = state.settings.provider === 'direct' ? 1 : (state.settings.concurrency || 6);
   const secs = Math.max(4, Math.round((n * n) * 1.6 / lanes));
   const mins = secs >= 90 ? (Math.round(secs / 6) / 10) + ' min' : secs + ' sec';
+  /* A grid is a patch of ground a few kilometres across, so a centre set to
+     a whole province is almost certainly not what was meant: the grid would
+     sit in the middle of Alberta rather than over the town being reported
+     on. Said plainly here rather than discovered in the results. */
+  const areaWarn = (g.center && g.center.area)
+    ? '<br><b style="color:var(--brand-deep)">This grid is centred on ' +
+      esc(g.center.label || 'a whole area') + '.</b> The ' + span + ' km grid will land in the ' +
+      'middle of it. To report on a town, set the centre to that town with ' +
+      '<b>Find a place</b> or <b>Drop pin</b> \u2014 the whole area is the right ' +
+      'setting for a Live SERP pin, not for a grid.'
+    : '';
   $('gridInfo').innerHTML = '<strong>' + (n*n) + ' searches</strong> covering roughly ' + span + ' km × ' + span +
     ' km \u00b7 about <strong>' + mins + '</strong> at ' + lanes + ' point' + (lanes === 1 ? '' : 's') + ' at a time. ' +
-    'A point that finds the profile costs one call; a point that finds nothing costs up to five while GBP Reporter widens the search to be sure.';
+    'A point that finds the profile costs one call; a point that finds nothing costs up to five while GBP Reporter widens the search to be sure.' +
+    areaWarn;
 }
 
 /* ---------- geocoding buttons ---------- */
-wireGeoFinder({
+tLocFinder = wireGeoFinder({
   btn:'tGeocodeBtn', input:'tLoc', lat:'tLat', lng:'tLng',
   status:'tGeoStatus', out:'tGeoOut',
-  after(){ persistGbp(); recenterMap(); }
+  after(){ persistGbp(); recenterMap(); },
+  onClear(){ persistGbp(); recenterMap(); }
 });
 wireGeoFinder({
   btn:'cmpGeocodeBtn', input:'cmpLoc', lat:'cmpLat', lng:'cmpLng',
-  status:'cmpGeoStatus', out:'cmpGeoOut'
+  status:'cmpGeoStatus', out:'cmpGeoOut',
+  /* The comparison map gets the same treatment as the main one: a province
+     is framed whole, a point is centred on. */
+  after(res){
+    const framed = showSearchArea(cmpMap, cmpAreaRef,
+      {area: res.area, bounds: boundsToArr(res.bounds), osm: res.hit});
+    if (!framed && res.lat != null){ try{ cmpMap.setView([res.lat, res.lng], 12); }catch(e){} }
+  },
+  onClear(){ showSearchArea(cmpMap, cmpAreaRef, null); }
 });
 
 /* ---------- keywords ---------- */
@@ -6839,9 +7241,20 @@ let cmpCenterMarker = null, cmpLiveMarkers = [];
    own: drag the figure out of its dock, or simply click the map. Once it
    has landed it can be dragged again to nudge it.
    ========================================================================== */
-let pinPickerEl = null, pinPickerMap = null, pinPickerMarker = null,
-    pinPickerCfg = null, pinPickerLatLng = null, pinPickerLookup = 0,
-    pinPickerZone = null, pinPickerHalo = null, pinPickerRadius = 2000;
+let pinPickerEl = null, pinPickerMap = null, pinPickerCfg = null,
+    pinPickerMode = 'pin', pinPickerLatLng = null, pinPickerLookup = 0,
+    pinPickerRadius = GEO_EXACT_RADIUS, pinPickerHit = null,
+    pinPickerArea = false, pinPickerBounds = null, pinPickerLabel = '',
+    pinPickerOsm = null;
+/* Every layer the picker can put on the map. Kept in one object because
+   switching modes has to be able to take all of them off again — a circle
+   left behind after a switch to Drop pin is a radius nobody asked for,
+   which is the exact confusion the three modes exist to remove. */
+const pinLayers = {
+  peg:null, zoneFill:null, zoneEdge:null,
+  radHandle:null, radCentre:null, radSpoke:null,
+  areaShape:null, areaBox:null
+};
 
 /* The figure as it stands on the map: drawn at its feet, not its middle, so
    what it points at is what you dropped it on. */
@@ -6866,11 +7279,19 @@ function buildPinPicker(){
   wrap.className = 'pin-backdrop';
   wrap.id = 'pinPickerBackdrop';
   wrap.innerHTML =
-    '<div class="pin-modal" role="dialog" aria-modal="true" aria-label="Place a pin by hand">' +
+    '<div class="pin-modal" role="dialog" aria-modal="true" aria-label="Set this location on a map">' +
       '<div class="pin-head">' +
-        '<div>' +
-          '<h3>Drop the pin where you mean</h3>' +
-          '<p>Drag the figure onto the map, or just click the spot. Drag it again to nudge it.</p>' +
+        '<div style="min-width:0;flex:1">' +
+          '<h3 id="pinPickerTitle">Set this location</h3>' +
+          '<p id="pinPickerHint">Pick how you want to point at it.</p>' +
+          /* The same three choices as the field, on the map, because two of
+             them only really exist as gestures — you cannot pull a circle's
+             edge or stand a figure somewhere from a text box. */
+          '<div class="geo-modes" id="pinPickerModes" role="group" aria-label="How this location is set" style="margin-top:11px;margin-bottom:0">' +
+            '<button type="button" class="geo-mode" data-m="place"  aria-pressed="false"><i>1</i><span>Find a place</span></button>' +
+            '<button type="button" class="geo-mode" data-m="radius" aria-pressed="false"><i>2</i><span>Radius</span></button>' +
+            '<button type="button" class="geo-mode" data-m="pin"    aria-pressed="true"><i>3</i><span>Drop pin</span></button>' +
+          '</div>' +
         '</div>' +
         '<button type="button" class="pin-x" id="pinPickerClose" aria-label="Close">&times;</button>' +
       '</div>' +
@@ -6881,20 +7302,20 @@ function buildPinPicker(){
           '<span>Drag me</span>' +
         '</div>' +
         '<div class="pin-search">' +
-          '<input type="text" id="pinPickerSearch" placeholder="Jump to a place first…" autocomplete="off"/>' +
+          '<input type="text" id="pinPickerSearch" placeholder="Jump to a place…" autocomplete="off"/>' +
           '<button type="button" class="btn btn-sm" id="pinPickerGo">Go</button>' +
         '</div>' +
       '</div>' +
       '<div class="pin-foot">' +
         '<div class="pin-read" id="pinPickerRead">' +
           '<span class="pin-read-coord">—</span>' +
-          '<span class="pin-read-name">Nothing placed yet</span>' +
+          '<span class="pin-read-name">Nothing set yet</span>' +
         '</div>' +
         /* The radius lives here, beside the pin, because the two together
            are the whole answer: a point, and how far around it gets looked
            at. Changing it redraws the shaded zone immediately rather than
            asking anyone to picture what 25 km covers. */
-        '<label class="pin-rad">' +
+        '<label class="pin-rad" id="pinPickerRadWrap">' +
           '<span class="pin-rad-cap">Analyse within</span>' +
           '<select id="pinPickerRadius"></select>' +
         '</label>' +
@@ -6918,12 +7339,20 @@ function buildPinPicker(){
     pinPickerRadius = Number(e.target.value) || pinPickerRadius;
     drawPinZone();
     fitPinZone();
+    paintPinPicker(pinPickerLabel, false);
+  });
+  $('pinPickerModes').querySelectorAll('.geo-mode').forEach(el => {
+    el.addEventListener('click', () => setPickerMode(el.dataset.m));
   });
   /* Escape closes it, the way every other overlay in the app behaves. */
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && pinPickerEl && pinPickerEl.classList.contains('on')) closePinPicker();
   });
 
+  /* Searching inside the picker does the same thing the field's own Find
+     does, in whatever mode is showing: in Find-a-place it resolves the
+     target, in the other two it just moves the map to where you are
+     working. */
   const jump = async () => {
     const q = ($('pinPickerSearch').value || '').trim();
     if (!q || !pinPickerMap) return;
@@ -6931,7 +7360,16 @@ function buildPinPicker(){
     go.disabled = true; go.textContent = '…';
     try{
       const hit = await nominatim(q);
-      if (hit) pinPickerMap.setView([parseFloat(hit.lat), parseFloat(hit.lon)], 13);
+      if (hit){
+        if (pinPickerMode === 'place'){
+          applyPickerPlace(hit);
+        } else {
+          const lat = parseFloat(hit.lat), lng = parseFloat(hit.lon);
+          const b = bboxBounds(hit.boundingbox);
+          if (b) pinPickerMap.fitBounds(b, {padding:[36,36], maxZoom:15});
+          else pinPickerMap.setView([lat, lng], 13);
+        }
+      }
     }catch(err){ /* the map is still usable without the jump */ }
     finally{ go.disabled = false; go.textContent = 'Go'; }
   };
@@ -6965,6 +7403,10 @@ function buildPinPicker(){
                    ev.clientY >= r.top  && ev.clientY <= r.bottom;
     if (!inside) return;
     const pt = L.point(ev.clientX - r.left, ev.clientY - r.top);
+    /* Dragging the figure out IS choosing the pin mode — the gesture and
+       the mode are the same statement, so acting on one without the other
+       would leave the two disagreeing. */
+    if (pinPickerMode !== 'pin') setPickerMode('pin', {keepPoint:true});
     setPinPickerAt(pinPickerMap.containerPointToLatLng(pt));
   };
   dock.addEventListener('pointerdown', ev => {
@@ -6982,39 +7424,249 @@ function buildPinPicker(){
   return wrap;
 }
 
+/* ==========================================================================
+   MODES, ON THE MAP
+   ========================================================================== */
+const PIN_MODE_COPY = {
+  place: { t:'Which place?',
+           h:'Search for it. A province, state or country is taken as the whole area and framed here — nothing gets pinned to its middle. An address is taken as the exact point.' },
+  radius:{ t:'How far around this centre?',
+           h:'Drag the ringed handle on the edge to set the distance, drag the middle to move the circle, or click anywhere to put the centre there.' },
+  pin:   { t:'Drop the pin where you mean',
+           h:'Drag the figure onto the map, or just click the spot. Drag it again to nudge it. No radius — this is one exact coordinate.' }
+};
+
+function clearPinLayers(which){
+  const keys = which || Object.keys(pinLayers);
+  keys.forEach(k => {
+    if (pinLayers[k]){
+      try{ pinPickerMap.removeLayer(pinLayers[k]); }catch(e){}
+      pinLayers[k] = null;
+    }
+  });
+}
+
+function setPickerMode(m, opts){
+  const o = opts || {};
+  pinPickerMode = m;
+  const modes = $('pinPickerModes');
+  if (modes){
+    modes.querySelectorAll('.geo-mode').forEach(el => {
+      el.setAttribute('aria-pressed', el.dataset.m === m ? 'true' : 'false');
+    });
+  }
+  const copy = PIN_MODE_COPY[m] || PIN_MODE_COPY.pin;
+  if ($('pinPickerTitle')) $('pinPickerTitle').textContent = copy.t;
+  if ($('pinPickerHint'))  $('pinPickerHint').textContent  = copy.h;
+
+  /* The dock only exists for the mode it belongs to, and the radius menu
+     only for the mode that has a radius. */
+  const dock = $('pinPickerDock');
+  if (dock) dock.style.display = (m === 'pin') ? '' : 'none';
+  const radWrap = $('pinPickerRadWrap');
+  if (radWrap) radWrap.style.display = (m === 'radius') ? '' : 'none';
+  const search = document.querySelector('.pin-search');
+  if (search) search.style.display = '';
+  if ($('pinPickerSearch')){
+    $('pinPickerSearch').placeholder = (m === 'place') ? 'Name the place…' : 'Jump to a place…';
+  }
+
+  /* Leaving a mode takes its own furniture with it. */
+  if (m !== 'radius') clearPinLayers(['zoneFill','zoneEdge','radHandle','radCentre','radSpoke']);
+  if (m !== 'pin')    clearPinLayers(['peg']);
+  if (m !== 'place')  { clearPinLayers(['areaShape','areaBox']); pinPickerArea = false; }
+
+  if (!o.keepPoint && !o.silent){
+    /* A point carried from one mode to another still means something — the
+       same spot, asked about differently — so the coordinate survives and
+       only the shape around it is rebuilt. */
+  }
+  if (m === 'radius' && pinPickerLatLng){
+    if (!pinPickerRadius || pinPickerRadius <= GEO_EXACT_RADIUS) pinPickerRadius = 10000;
+    syncRadiusSelect();
+    drawPinZone();
+    if (!o.noFit) fitPinZone();
+  }
+  if (m === 'pin' && pinPickerLatLng) setPinPickerAt(pinPickerLatLng, {land:false});
+  paintPinPicker(pinPickerLabel, false);
+}
+
+function syncRadiusSelect(){
+  fillRadiusSelect($('pinPickerRadius'), pinPickerRadius, null);
+}
+
+/* ---- a whole region, drawn and framed --------------------------------
+   The answer to "Alberta" is a shape, so the picker draws the shape. Its
+   real boundary if OSM will give us one, the bounding box if it will not,
+   and in both cases the map is fitted to the whole of it. No marker: a
+   marker here would sit in empty bush and read as the thing that had been
+   chosen, which is precisely the bug. */
+async function drawPinArea(hit, bounds){
+  clearPinLayers(['areaShape','areaBox','peg','zoneFill','zoneEdge','radHandle','radCentre','radSpoke']);
+  const b = bounds || bboxBounds(hit && hit.boundingbox);
+  if (b){ try{ pinPickerMap.fitBounds(b, {padding:[30,30]}); }catch(e){} }
+
+  const token = ++pinPickerLookup;
+  const geo = await geoAreaOutline(hit);
+  if (token !== pinPickerLookup || pinPickerMode !== 'place') return;
+  if (geo){
+    pinLayers.areaShape = L.geoJSON(geo, {
+      className:'geo-area-shape',
+      style:{ color:'#b8570f', weight:2.5, dashArray:'7 6',
+              fillColor:'#e87722', fillOpacity:.10 },
+      interactive:false
+    }).addTo(pinPickerMap);
+    try{ pinPickerMap.fitBounds(pinLayers.areaShape.getBounds(), {padding:[30,30]}); }catch(e){}
+  } else if (b){
+    /* No boundary came back — the box still says "all of this", which is
+       the part that actually matters. */
+    pinLayers.areaBox = L.rectangle(b, {
+      color:'#b8570f', weight:2, dashArray:'7 6',
+      fillColor:'#e87722', fillOpacity:.08, interactive:false
+    }).addTo(pinPickerMap);
+  }
+}
+
+/* Find-a-place, resolved inside the picker. */
+function applyPickerPlace(hit){
+  const lat = parseFloat(parseFloat(hit.lat).toFixed(7));
+  const lng = parseFloat(parseFloat(hit.lon).toFixed(7));
+  pinPickerHit = hit;
+  pinPickerLatLng = L.latLng(lat, lng);
+  pinPickerLabel = hit.display_name || '';
+  pinPickerBounds = bboxBounds(hit.boundingbox);
+  pinPickerArea = geoIsBroad(hit);
+  if (pinPickerArea){
+    pinPickerRadius = niceRadius(bboxRadius(hit.boundingbox, lat)) || 93000;
+    drawPinArea(hit, pinPickerBounds);
+  } else {
+    /* Somewhere you could stand: show it as a point, not as a box. */
+    clearPinLayers(['areaShape','areaBox']);
+    pinPickerRadius = GEO_EXACT_RADIUS;
+    setPinPickerAt(pinPickerLatLng, {lookup:false});
+    try{ pinPickerMap.setView([lat, lng], 16); }catch(e){}
+  }
+  paintPinPicker(pinPickerLabel, false);
+  $('pinPickerUse').disabled = false;
+}
+
 /* ---- the zone -------------------------------------------------------
    A radius written as "25 km" is a number you have to translate; the same
-   radius drawn on the map is the answer itself. Two shapes: a filled circle
-   for the ground that gets analysed, and a brighter ring on its edge so the
-   boundary stays visible where the fill sits over dark tiles.
+   radius drawn on the map is the answer itself. Four shapes now: a filled
+   circle for the ground that gets analysed, a brighter ring on its edge so
+   the boundary stays visible over dark tiles, a spoke from the middle to
+   the edge so it reads as a measurement, and the handle that makes the
+   whole thing something you pull rather than something you pick from a
+   list.
 
    It is deliberately the brand orange rather than a neutral, because on a
    map every other colour already means something geographic. */
+function radiusEastPoint(centre, metres){
+  /* Due east of the centre at the given distance. cos(lat) is floored so
+     the handle does not shoot off to infinity near the poles. */
+  const cos = Math.max(0.12, Math.cos(centre.lat * Math.PI / 180));
+  return L.latLng(centre.lat, centre.lng + (metres / (111320 * cos)));
+}
+
 function drawPinZone(){
-  if (!pinPickerMap || !pinPickerLatLng) return;
-  const r = Number(pinPickerRadius) || 2000;
-  if (!pinPickerZone){
-    pinPickerZone = L.circle(pinPickerLatLng, {
+  if (!pinPickerMap || !pinPickerLatLng || pinPickerMode !== 'radius') return;
+  const r = Number(pinPickerRadius) || 10000;
+  const edge = radiusEastPoint(pinPickerLatLng, r);
+
+  if (!pinLayers.zoneFill){
+    pinLayers.zoneFill = L.circle(pinPickerLatLng, {
       radius: r, className: 'pin-zone',
       color: '#e87722', weight: 0, fillColor: '#e87722', fillOpacity: .13,
       interactive: false
     }).addTo(pinPickerMap);
-    pinPickerHalo = L.circle(pinPickerLatLng, {
+    pinLayers.zoneEdge = L.circle(pinPickerLatLng, {
       radius: r, className: 'pin-zone-edge',
       color: '#c9620f', weight: 2, dashArray: '6 5', fill: false,
       interactive: false
     }).addTo(pinPickerMap);
+    pinLayers.radSpoke = L.polyline([pinPickerLatLng, edge], {
+      className:'rad-spoke', color:'#b8570f', weight:1.5, interactive:false
+    }).addTo(pinPickerMap);
+
+    /* ---- the centre, movable ---------------------------------------- */
+    pinLayers.radCentre = L.marker(pinPickerLatLng, {
+      draggable:true, zIndexOffset:400,
+      icon: L.divIcon({className:'', html:'<div class="rad-centre" title="Drag to move the circle"></div>',
+                       iconSize:[18,18], iconAnchor:[9,9]})
+    }).addTo(pinPickerMap);
+    pinLayers.radCentre.on('drag', e => {
+      pinPickerLatLng = e.target.getLatLng();
+      updateZoneShapes();
+      paintPinPicker(null, true);
+    });
+    pinLayers.radCentre.on('dragend', () => { lookupPinPicker(); });
+
+    /* ---- the edge, pullable ------------------------------------------
+       This is the interaction the radius was missing. Dragging it reads the
+       distance straight off the map — the circle follows the pointer in
+       real time and the tooltip says what it currently means, so choosing
+       "how far" stops being an act of imagination. */
+    pinLayers.radHandle = L.marker(edge, {
+      draggable:true, zIndexOffset:500,
+      icon: L.divIcon({className:'rad-handle-wrap', html:'<div class="rad-handle"></div>',
+                       iconSize:[22,22], iconAnchor:[11,11]})
+    }).addTo(pinPickerMap);
+    pinLayers.radHandle.bindTooltip(radiusLabel(r), {
+      permanent:true, direction:'right', offset:[12,0], className:'rad-tip'
+    });
+    pinLayers.radHandle.on('dragstart', e => {
+      const el = e.target.getElement();
+      const h = el && el.querySelector('.rad-handle');
+      if (h) h.classList.add('pulling');
+    });
+    pinLayers.radHandle.on('drag', e => {
+      const d = pinPickerMap.distance(pinPickerLatLng, e.target.getLatLng());
+      pinPickerRadius = Math.max(500, Math.min(3000000, Math.round(d)));
+      /* The shapes follow the pointer, but the handle itself is left where
+         the finger is until the drag ends — snapping it back to due east
+         mid-drag fights whoever is holding it. */
+      updateZoneShapes({skipHandle:true});
+      e.target.setTooltipContent(radiusLabel(pinPickerRadius));
+      /* The menu is the same number as the handle, so it has to move with
+         it — a box reading 10 km beside a circle plainly bigger than that
+         is the readout contradicting the map. */
+      syncRadiusSelect();
+      paintPinPicker(pinPickerLabel, false);
+    });
+    pinLayers.radHandle.on('dragend', e => {
+      const el = e.target.getElement();
+      const h = el && el.querySelector('.rad-handle');
+      if (h) h.classList.remove('pulling');
+      pinPickerRadius = roundRadius(pinPickerRadius);
+      syncRadiusSelect();
+      updateZoneShapes();
+      paintPinPicker(pinPickerLabel, false);
+    });
   } else {
-    pinPickerZone.setLatLng(pinPickerLatLng); pinPickerZone.setRadius(r);
-    pinPickerHalo.setLatLng(pinPickerLatLng); pinPickerHalo.setRadius(r);
+    updateZoneShapes();
   }
 }
+
+function updateZoneShapes(opts){
+  const o = opts || {};
+  const r = Number(pinPickerRadius) || 10000;
+  const edge = radiusEastPoint(pinPickerLatLng, r);
+  if (pinLayers.zoneFill){ pinLayers.zoneFill.setLatLng(pinPickerLatLng); pinLayers.zoneFill.setRadius(r); }
+  if (pinLayers.zoneEdge){ pinLayers.zoneEdge.setLatLng(pinPickerLatLng); pinLayers.zoneEdge.setRadius(r); }
+  if (pinLayers.radSpoke){ pinLayers.radSpoke.setLatLngs([pinPickerLatLng, edge]); }
+  if (pinLayers.radCentre && !o.skipCentre) pinLayers.radCentre.setLatLng(pinPickerLatLng);
+  if (pinLayers.radHandle && !o.skipHandle){
+    pinLayers.radHandle.setLatLng(edge);
+    pinLayers.radHandle.setTooltipContent(radiusLabel(r));
+  }
+}
+
 /* Frame the whole zone, not just its centre — a 1000 km radius set while the
    map sits at street level is invisible otherwise, which is exactly when
    seeing it matters most. */
 function fitPinZone(){
-  if (!pinPickerMap || !pinPickerZone) return;
-  try{ pinPickerMap.fitBounds(pinPickerZone.getBounds(), {padding:[42,42], maxZoom:16}); }catch(e){}
+  if (!pinPickerMap || !pinLayers.zoneFill) return;
+  try{ pinPickerMap.fitBounds(pinLayers.zoneFill.getBounds(), {padding:[42,42], maxZoom:16}); }catch(e){}
 }
 
 /* Put the figure somewhere and start reading back what is there. */
@@ -7022,35 +7674,44 @@ function setPinPickerAt(latlng, opts){
   if (!pinPickerMap) return;
   const o = opts || {};
   pinPickerLatLng = latlng;
-  if (!pinPickerMarker){
-    pinPickerMarker = L.marker(latlng, {icon: pegIcon(), draggable: true, autoPan: true}).addTo(pinPickerMap);
-    pinPickerMarker.on('dragstart', () => {
-      const el = pinPickerMarker.getElement();
+  pinPickerArea = false;
+  clearPinLayers(['areaShape','areaBox']);
+
+  if (pinPickerMode === 'radius'){
+    drawPinZone();
+    updateZoneShapes();
+    paintPinPicker(null, true);
+    if (o.lookup !== false) lookupPinPicker();
+    return;
+  }
+
+  if (!pinLayers.peg){
+    pinLayers.peg = L.marker(latlng, {icon: pegIcon(), draggable: true, autoPan: true}).addTo(pinPickerMap);
+    pinLayers.peg.on('dragstart', () => {
+      const el = pinLayers.peg.getElement();
       if (el){ const f = el.querySelector('.peg-marker'); if (f) f.classList.add('carrying'); }
     });
-    pinPickerMarker.on('drag', e => {
+    pinLayers.peg.on('drag', e => {
       pinPickerLatLng = e.target.getLatLng();
-      drawPinZone();
       paintPinPicker(null, true);
     });
-    pinPickerMarker.on('dragend', () => {
-      const el = pinPickerMarker.getElement();
+    pinLayers.peg.on('dragend', () => {
+      const el = pinLayers.peg.getElement();
       if (el){ const f = el.querySelector('.peg-marker'); if (f){ f.classList.remove('carrying'); pegLand(f); } }
       lookupPinPicker();
     });
   } else {
-    pinPickerMarker.setLatLng(latlng);
+    pinLayers.peg.setLatLng(latlng);
   }
   /* The landing plays on a fresh drop, not on every nudge of the map. */
   if (o.land !== false){
-    const el = pinPickerMarker.getElement();
+    const el = pinLayers.peg.getElement();
     if (el){ const f = el.querySelector('.peg-marker'); if (f) pegLand(f); }
   }
   const dock = $('pinPickerDock');
   if (dock) dock.classList.add('placed');
-  drawPinZone();
   paintPinPicker(null, true);
-  lookupPinPicker();
+  if (o.lookup !== false) lookupPinPicker();
 }
 
 /* Restart the landing animation. Removing the class and forcing a reflow
@@ -7078,11 +7739,27 @@ function pegLand(el){
 
 function paintPinPicker(label, pending){
   const read = $('pinPickerRead');
-  if (!read || !pinPickerLatLng) return;
-  read.querySelector('.pin-read-coord').textContent =
-    pinPickerLatLng.lat.toFixed(6) + ', ' + pinPickerLatLng.lng.toFixed(6);
+  if (!read) return;
+  if (label != null) pinPickerLabel = label;
+  const coordEl = read.querySelector('.pin-read-coord');
   const nameEl = read.querySelector('.pin-read-name');
-  nameEl.textContent = label || (pending ? 'Reading this spot…' : '');
+  if (!pinPickerLatLng){
+    coordEl.textContent = '—';
+    nameEl.textContent = 'Nothing set yet';
+    nameEl.classList.remove('pending');
+    return;
+  }
+  /* A whole area reports itself as an area. Printing its centroid here is
+     how the old picker made Alberta look like a coordinate in a field. */
+  if (pinPickerArea && pinPickerMode === 'place'){
+    coordEl.textContent = 'Whole area';
+  } else if (pinPickerMode === 'radius'){
+    coordEl.textContent = radiusLabel(pinPickerRadius) + ' around ' +
+      pinPickerLatLng.lat.toFixed(4) + ', ' + pinPickerLatLng.lng.toFixed(4);
+  } else {
+    coordEl.textContent = pinPickerLatLng.lat.toFixed(6) + ', ' + pinPickerLatLng.lng.toFixed(6);
+  }
+  nameEl.textContent = (label != null ? label : pinPickerLabel) || (pending ? 'Reading this spot…' : '');
   nameEl.classList.toggle('pending', !!pending && !label);
   $('pinPickerUse').disabled = false;
 }
@@ -7096,12 +7773,12 @@ function lookupPinPicker(){
   nominatimReverse(lat.toFixed(7), lng.toFixed(7))
     .then(hit => {
       if (token !== pinPickerLookup) return;
-      pinPickerCfg._hit = hit;
+      pinPickerHit = hit;
       paintPinPicker(hit ? (hit.display_name || '') : 'No address here — the coordinate still works', false);
     })
     .catch(() => {
       if (token !== pinPickerLookup) return;
-      pinPickerCfg._hit = null;
+      pinPickerHit = null;
       paintPinPicker('Could not read this spot — the coordinate still works', false);
     });
 }
@@ -7109,14 +7786,14 @@ function lookupPinPicker(){
 function openPinPicker(cfg){
   if (typeof L === 'undefined'){ toast('The map library has not loaded yet', 'err'); return; }
   pinPickerCfg = cfg || {};
-  pinPickerLatLng = null;
   buildPinPicker();
   pinPickerEl.classList.add('on');
   document.body.classList.add('pin-locked');
 
-  const startLat = (cfg && cfg.lat != null) ? cfg.lat : 52.2690628;
-  const startLng = (cfg && cfg.lng != null) ? cfg.lng : -113.8141464;
-  const startZoom = (cfg && cfg.lat != null) ? 14 : 11;
+  const hasPoint = cfg && cfg.lat != null && cfg.lng != null;
+  const startLat = hasPoint ? cfg.lat : 52.2690628;
+  const startLng = hasPoint ? cfg.lng : -113.8141464;
+  const startZoom = hasPoint ? 14 : 11;
 
   if (!pinPickerMap){
     pinPickerMap = L.map('pinPickerMap', {zoomControl:true}).setView([startLat, startLng], startZoom);
@@ -7124,49 +7801,68 @@ function openPinPicker(cfg){
     /* Clicking is the other half of the same gesture — the dock says drag,
        but everyone tries a click first, and being right both times is the
        difference between a control that works and one that has to be
-       explained. */
-    pinPickerMap.on('click', e => setPinPickerAt(e.latlng));
+       explained. In radius mode the click moves the centre instead, which
+       is the same idea applied to the shape that mode owns. */
+    pinPickerMap.on('click', e => {
+      if (pinPickerMode === 'place') return;   // a place is searched for, not clicked
+      setPinPickerAt(e.latlng);
+    });
   } else {
     pinPickerMap.setView([startLat, startLng], startZoom);
   }
 
-  if (pinPickerMarker){ pinPickerMap.removeLayer(pinPickerMarker); pinPickerMarker = null; }
-  if (pinPickerZone){ pinPickerMap.removeLayer(pinPickerZone); pinPickerZone = null; }
-  if (pinPickerHalo){ pinPickerMap.removeLayer(pinPickerHalo); pinPickerHalo = null; }
+  clearPinLayers();
+  pinPickerLookup++;
+  pinPickerLatLng = hasPoint ? L.latLng(cfg.lat, cfg.lng) : null;
+  pinPickerHit = (cfg && cfg.hit) || null;
+  pinPickerLabel = '';
+  pinPickerArea = !!(cfg && cfg.area);
+  pinPickerBounds = (cfg && cfg.bounds) || null;
+  pinPickerRadius = Number(cfg && cfg.radius) || GEO_EXACT_RADIUS;
+  pinPickerOsm = (cfg && cfg.osm) || null;
+  if (cfg && cfg.label) pinPickerLabel = cfg.label;
+
   const dock = $('pinPickerDock');
   if (dock) dock.classList.remove('placed');
   $('pinPickerUse').disabled = true;
-  $('pinPickerSearch').value = '';
+  $('pinPickerSearch').value = (cfg && cfg.query) || '';
   const read = $('pinPickerRead');
   read.querySelector('.pin-read-coord').textContent = '—';
-  read.querySelector('.pin-read-name').textContent = 'Nothing placed yet';
+  read.querySelector('.pin-read-name').textContent = 'Nothing set yet';
 
-  /* Carry in whatever radius the field already holds, so reopening the
-     picker shows the zone that is actually in force rather than resetting
-     it to a default nobody chose. */
-  pinPickerRadius = Number(cfg && cfg.radius) || 2000;
-  const rsel = $('pinPickerRadius');
-  if (rsel){
-    rsel.innerHTML = '';
-    const opts = GEO_RADIUS_STEPS.slice();
-    if (opts.indexOf(pinPickerRadius) === -1) opts.push(pinPickerRadius);
-    opts.sort((a, b) => a - b).forEach(v => {
-      const o = document.createElement('option');
-      o.value = String(v); o.textContent = radiusLabel(v);
-      rsel.appendChild(o);
-    });
-    rsel.value = String(pinPickerRadius);
-  }
+  syncRadiusSelect();
+  setPickerMode((cfg && cfg.mode) || 'pin', {silent:true, noFit:true, keepPoint:true});
 
   /* The map was laid out while the modal was still hidden, so it has to be
      told its own size before it will draw tiles in the right place. */
-  setTimeout(() => { try{ pinPickerMap.invalidateSize(); }catch(e){} }, 60);
+  setTimeout(() => {
+    try{ pinPickerMap.invalidateSize(); }catch(e){}
 
-  /* If the field already had a coordinate, start from it rather than from
-     an empty map — nudging an existing pin is the common case. */
-  if (cfg && cfg.lat != null && cfg.lng != null){
-    setTimeout(() => { setPinPickerAt(L.latLng(cfg.lat, cfg.lng)); fitPinZone(); }, 80);
-  }
+    /* If the field already had something, start from it rather than from an
+       empty map — adjusting what is there is the common case. */
+    if (pinPickerArea && pinPickerBounds){
+      try{ pinPickerMap.fitBounds(pinPickerBounds, {padding:[30,30]}); }catch(e){}
+      /* The OSM identity is enough to fetch the real outline; without it
+         drawPinArea falls back to the bounding box, which still says "all
+         of this". Either way the region is drawn as a region. */
+      drawPinArea(pinPickerOsm || pinPickerHit, pinPickerBounds);
+      $('pinPickerUse').disabled = false;
+      paintPinPicker(pinPickerLabel, false);
+    } else if (hasPoint){
+      if (pinPickerMode === 'radius'){
+        drawPinZone(); updateZoneShapes(); fitPinZone();
+        paintPinPicker(null, true); lookupPinPicker();
+      } else if (pinPickerMode === 'pin'){
+        setPinPickerAt(L.latLng(cfg.lat, cfg.lng));
+      } else {
+        setPinPickerAt(L.latLng(cfg.lat, cfg.lng), {land:false});
+      }
+    } else if (pinPickerMode === 'place' && $('pinPickerSearch').value.trim()){
+      /* Opened from a field that already has text typed in it: resolve it
+         straight away so the region is on screen before anyone asks. */
+      $('pinPickerGo').click();
+    }
+  }, 60);
 }
 
 function closePinPicker(){
@@ -7179,20 +7875,44 @@ function usePinPicker(){
   if (!pinPickerLatLng || !pinPickerCfg) return;
   const lat = parseFloat(pinPickerLatLng.lat.toFixed(7));
   const lng = parseFloat(pinPickerLatLng.lng.toFixed(7));
-  const hit = pinPickerCfg._hit || null;
+  const hit = pinPickerHit || null;
+  const area = pinPickerMode === 'place' && pinPickerArea;
   /* A dropped pin is a coordinate first and an address second. If the read
      came back, its address parts are kept so the country still reaches the
      APIs that need one; if it did not, the coordinate alone is enough to
      scan with, and the label says plainly that it is a dropped pin rather
      than inventing a street for it. */
-  const label = hit && hit.display_name
-    ? hit.display_name
-    : ('Dropped pin · ' + lat.toFixed(5) + ', ' + lng.toFixed(5));
+  const label = area && pinPickerLabel
+    ? pinPickerLabel
+    : (hit && hit.display_name
+        ? hit.display_name
+        : (pinPickerMode === 'radius'
+            ? (radiusLabel(pinPickerRadius) + ' around ' + lat.toFixed(5) + ', ' + lng.toFixed(5))
+            : ('Dropped pin · ' + lat.toFixed(5) + ', ' + lng.toFixed(5))));
+  /* An area handed back has to stay an area: its extent and its OSM identity
+     travel with it, or the field it lands in would see a bare coordinate and
+     go straight back to pinning the middle of the province. */
+  const bb = pinPickerBounds
+    ? [String(pinPickerBounds.getSouth()), String(pinPickerBounds.getNorth()),
+       String(pinPickerBounds.getWest()),  String(pinPickerBounds.getEast())]
+    : null;
   const synthetic = hit || {lat: String(lat), lon: String(lng), address: {}, display_name: label,
-                            addresstype: 'pin', class: 'place', type: 'pin', boundingbox: null};
-  const radius = Number(pinPickerRadius) || 2000;
+                            addresstype: area ? 'state' : 'pin', class: 'place',
+                            type: area ? 'administrative' : 'pin',
+                            boundingbox: area ? bb : null};
+  if (area && pinPickerOsm && !synthetic.osm_id){
+    synthetic.osm_id = pinPickerOsm.osm_id;
+    synthetic.osm_type = pinPickerOsm.osm_type;
+  }
+  const radius = pinPickerMode === 'radius'
+    ? (Number(pinPickerRadius) || 10000)
+    : (area ? (Number(pinPickerRadius) || 93000) : GEO_EXACT_RADIUS);
+  const bounds = area ? (pinPickerBounds || bboxBounds(hit && hit.boundingbox)) : null;
   closePinPicker();
-  if (typeof pinPickerCfg.onPick === 'function') pinPickerCfg.onPick(synthetic, lat, lng, label, radius);
+  if (typeof pinPickerCfg.onPick === 'function'){
+    pinPickerCfg.onPick({hit: synthetic, lat, lng, label, radius,
+                         mode: pinPickerMode, area: area, bounds: bounds});
+  }
 }
 
 function fitToPoints(m, pts){
@@ -7200,15 +7920,70 @@ function fitToPoints(m, pts){
   const b = L.latLngBounds(pts.map(p => [p.lat, p.lng]));
   m.fitBounds(b, {padding:[36,36]});
 }
+/* ==========================================================================
+   SHOWING THE SEARCH AREA ON THE MAIN MAPS
+   ==========================================================================
+   When the area is a province, a state or a country, this is the whole
+   question the user asked: show all of it. Zooming to its centroid was
+   producing a street-level view of empty bush north of Whitecourt and a
+   marker standing in it — a coordinate that is arithmetically the middle of
+   Alberta and geographically the middle of nowhere.
+
+   So an area is framed, not centred: fit its real extent, draw its boundary
+   so the framing is legible as a choice rather than an accident, and put no
+   marker in the middle of it. A point is still centred and still marked,
+   because for a point that is the correct answer.
+   ========================================================================== */
+const mapAreaRef = {layer:null, token:0};
+const cmpAreaRef = {layer:null, token:0};
+const AREA_STYLE = {color:'#b8570f', weight:2.5, dashArray:'7 6',
+                    fillColor:'#e87722', fillOpacity:.09};
+
+function showSearchArea(m, ref, centre){
+  ref.token++;
+  if (ref.layer){ try{ m.removeLayer(ref.layer); }catch(e){} ref.layer = null; }
+  if (!m || !centre || !centre.area) return false;
+
+  const b = arrToBounds(centre.bounds);
+  if (b){ try{ m.fitBounds(b, {padding:[26,26]}); }catch(e){} }
+
+  /* The real boundary, fetched once and cached. It arrives after the frame
+     does, which is the right way round: the framing is the fix and the
+     outline is the confirmation. */
+  const token = ref.token;
+  if (centre.osm && centre.osm.osm_id){
+    geoAreaOutline(centre.osm).then(geo => {
+      if (token !== ref.token) return;
+      if (geo){
+        ref.layer = L.geoJSON(geo, {className:'geo-area-shape', style:AREA_STYLE, interactive:false}).addTo(m);
+        try{ m.fitBounds(ref.layer.getBounds(), {padding:[26,26]}); }catch(e){}
+      } else if (b){
+        ref.layer = L.rectangle(b, Object.assign({interactive:false}, AREA_STYLE)).addTo(m);
+      }
+    }).catch(() => {});
+  } else if (b){
+    ref.layer = L.rectangle(b, Object.assign({interactive:false}, AREA_STYLE)).addTo(m);
+  }
+  return !!b;
+}
+
 function recenterMap(){
   const g = activeGbp();
   const kw = activeKeyword();
   const scan = kw && kw.scans.length ? kw.scans[kw.scans.length-1] : null;
+  const centre = g && g.center;
+  const framedArea = showSearchArea(map, mapAreaRef, centre);
+
+  /* Scan results win: once there are points on the ground, they are what
+     the map is for. Otherwise an area frames itself and a point centres. */
   if (scan && scan.points.length){ fitToPoints(map, scan.points); }
-  else if (g && g.center.lat != null){ map.setView([g.center.lat, g.center.lng], 12); }
+  else if (!framedArea && centre && centre.lat != null){ map.setView([centre.lat, centre.lng], 12); }
+
   if (centerMarker){ centerMarker.remove(); centerMarker = null; }
-  if (g && g.center.lat != null){
-    centerMarker = L.circleMarker([g.center.lat, g.center.lng], {
+  /* No marker for an area. A dot at the centre of a province points at
+     somewhere nobody chose and reads as if they had. */
+  if (centre && centre.lat != null && !centre.area){
+    centerMarker = L.circleMarker([centre.lat, centre.lng], {
       radius:6, color:'#fff', weight:2, fillColor:'#1b222a', fillOpacity:1
     }).addTo(map).bindTooltip(g.bizName || g.name || 'Business', {direction:'top'});
   }
@@ -10076,7 +10851,9 @@ async function kwResolveMarket(typed){
     renderGeoOut('kwGeoOut', {
       lat: parseFloat(parseFloat(hit.lat).toFixed(7)),
       lng: parseFloat(parseFloat(hit.lon).toFixed(7)),
-      country: country || iso, label: hit.display_name, market: true
+      country: country || iso, label: hit.display_name, market: true,
+      hit: hit, mode: 'place', area: geoIsBroad(hit),
+      radius: niceRadius(bboxRadius(hit.boundingbox, parseFloat(hit.lat)))
     });
     return {code: labsLocationCode(iso), name: country, iso};
   }
@@ -11188,6 +11965,15 @@ async function seoResolveLocation(client, loc){
        an unattended scan covers the same ground as one pinned by hand. */
     const r = niceRadius(bboxRadius(hit.boundingbox, lat));
     if (r) g.radius = r;
+    /* A province or a country resolved here is an area, same as everywhere
+       else, so anything that later draws this location on a map frames the
+       whole of it instead of zooming to its centre of mass. */
+    if (geoIsBroad(hit)){
+      g.area = true;
+      g.bounds = boundsToArr(bboxBounds(hit.boundingbox));
+      if (hit.osm_id) g.osm = {osm_id:hit.osm_id, osm_type:hit.osm_type,
+                               addresstype:hit.addresstype || hit.type || ''};
+    }
     client.locationCache[key] = g;
     return g;
   }
@@ -12586,9 +13372,41 @@ function seoLocGroupRow(c, k, loc){
   lngInput.value = loc.lng != null ? loc.lng : '';
   lngInput.addEventListener('change', () => { const v = parseFloat(lngInput.value); loc.lng = isNaN(v) ? null : v; save(); });
 
+  /* This row's Find follows the same three rules as every other location
+     field in the app, so a province typed here means the province and not a
+     point in the middle of it. Writing the answer down: */
+  function seoWriteLoc(hit, o){
+    const opts = o || {};
+    const lat = opts.lat != null ? opts.lat : parseFloat(parseFloat(hit.lat).toFixed(7));
+    const lng = opts.lng != null ? opts.lng : parseFloat(parseFloat(hit.lon).toFixed(7));
+    const mode = opts.mode || 'place';
+    const area = !!opts.area;
+    const fit = niceRadius(bboxRadius(hit && hit.boundingbox, lat));
+    loc.label = opts.label || labelInput.value.trim() || loc.label;
+    loc.lat = lat; loc.lng = lng;
+    loc.mode = mode;
+    loc.area = area;
+    loc.radius = mode === 'radius' ? (Number(opts.radius) || fit || 25000)
+               : area ? (Number(opts.radius) || fit || 93000)
+               : GEO_EXACT_RADIUS;
+    loc.bounds = area ? (boundsToArr(opts.bounds || bboxBounds(hit && hit.boundingbox))) : null;
+    loc.osm = area && hit && hit.osm_id
+      ? {osm_id:hit.osm_id, osm_type:hit.osm_type, addresstype:hit.addresstype || hit.type || ''}
+      : null;
+    labelInput.value = loc.label;
+    latInput.value = loc.lat; lngInput.value = loc.lng;
+    const entry = {lat: loc.lat, lng: loc.lng, radius: loc.radius};
+    if (area){ entry.area = true; entry.bounds = loc.bounds; entry.osm = loc.osm; }
+    c.locationCache[(loc.label || '').toLowerCase()] = entry;
+    setStatus(statusEl,
+      (area ? 'Whole area \u00b7 ' : (mode === 'radius' ? radiusLabel(loc.radius) + ' around \u00b7 ' : 'Exact point \u00b7 ')) +
+      (opts.label || (hit && hit.display_name) || ''), 'ok');
+    save();
+  }
+
   const findBtn = document.createElement('button');
   findBtn.type = 'button'; findBtn.className = 'btn btn-sm'; findBtn.textContent = 'Find';
-  findBtn.title = 'Look up exact coordinates for this location, same as the GBP grid\u2019s Area-to-test step';
+  findBtn.title = 'Look the place up. A province, state or country is taken as the whole area; an address is taken as the exact point.';
   findBtn.addEventListener('click', async () => {
     const q = labelInput.value.trim();
     if (!q){ setStatus(statusEl, 'Type an address or place name first.', 'err'); return; }
@@ -12597,11 +13415,7 @@ function seoLocGroupRow(c, k, loc){
     try{
       const hit = await nominatim(q);
       if (!hit){ setStatus(statusEl, 'No match. Add the city or province and try again.', 'err'); return; }
-      loc.label = q; loc.lat = parseFloat(parseFloat(hit.lat).toFixed(7)); loc.lng = parseFloat(parseFloat(hit.lon).toFixed(7));
-      latInput.value = loc.lat; lngInput.value = loc.lng;
-      c.locationCache[q.toLowerCase()] = {lat: loc.lat, lng: loc.lng};
-      setStatus(statusEl, hit.display_name, 'ok');
-      save();
+      seoWriteLoc(hit, {area: geoIsBroad(hit), mode:'place', label:q});
     }catch(err){
       setStatus(statusEl, 'Lookup failed: ' + ((err && err.message) || err), 'err');
     }finally{
@@ -12609,7 +13423,28 @@ function seoLocGroupRow(c, k, loc){
     }
   });
 
-  [latInput, lngInput, findBtn].forEach(el => coordsRow.appendChild(el));
+  /* The other two ways in. The row is too small for a three-way switch, so
+     the map carries it — the picker opens with all three modes on it. */
+  const mapBtn = document.createElement('button');
+  mapBtn.type = 'button'; mapBtn.className = 'btn btn-sm'; mapBtn.textContent = 'On map';
+  mapBtn.title = 'Open the map to set a radius or place the pin by hand';
+  mapBtn.addEventListener('click', () => {
+    openPinPicker({
+      mode: loc.mode || 'place',
+      lat: loc.lat != null ? loc.lat : null,
+      lng: loc.lng != null ? loc.lng : null,
+      radius: loc.radius || null,
+      area: !!loc.area,
+      bounds: arrToBounds(loc.bounds),
+      query: labelInput.value.trim(),
+      onPick(res){
+        seoWriteLoc(res.hit, {lat:res.lat, lng:res.lng, label:res.label, mode:res.mode,
+                              radius:res.radius, area:res.area, bounds:res.bounds});
+      }
+    });
+  });
+
+  [latInput, lngInput, findBtn, mapBtn].forEach(el => coordsRow.appendChild(el));
 
   const manualRow = document.createElement('div');
   manualRow.className = 'seo-loc-adv-manual';
@@ -12857,6 +13692,15 @@ function seoCacheLocation(label, g){
      already saved changes meaning. */
   const entry = { lat: g.lat, lng: g.lng };
   if (g.radius) entry.radius = Number(g.radius);
+  if (g.mode) entry.mode = g.mode;
+  /* A whole area carries its extent, so the scan and anything that draws it
+     later both know this is a region rather than a point. */
+  if (g.area){
+    entry.area = true;
+    entry.bounds = boundsToArr(g.bounds);
+    if (g.hit && g.hit.osm_id) entry.osm = {osm_id:g.hit.osm_id, osm_type:g.hit.osm_type,
+                                            addresstype:g.hit.addresstype || g.hit.type || ''};
+  }
   c.locationCache[label.trim().toLowerCase()] = entry;
   save();
 }

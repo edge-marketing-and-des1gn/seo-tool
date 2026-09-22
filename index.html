@@ -7267,7 +7267,7 @@ async function claudeDirSet(handle){
 
 const claudeSyncSupported = () => typeof window !== 'undefined' && !!window.showDirectoryPicker;
 let claudeDir = null, claudeLastWrite = null, claudeWriteTimer = null, claudeWriting = false;
-let claudeLastError = null;
+let claudeLastError = null, claudeWarnedStale = false;
 
 /* Permission is not permanent. Chrome drops it when the browser restarts, so
    it is re-requested rather than assumed, and a refusal turns the feature off
@@ -7403,7 +7403,12 @@ function buildClaudeSnapshot(){
     tool: 'GBP Reporter',
     snapshotVersion: 1,
     generatedAt: new Date().toISOString(),
-    readMe: 'Written automatically by GBP Reporter so an assistant can answer ' +
+    readMe: 'RE-READ THIS FILE BEFORE ANSWERING. GBP Reporter rewrites it within ' +
+            'seconds of every scan and every edit, so a copy read earlier in a ' +
+            'conversation is very likely stale. Read it fresh, quote generatedAt in ' +
+            'the answer, and never ask for an export or an attachment — the folder ' +
+            'copy is always the current one. ' +
+            'Written automatically by GBP Reporter so an assistant can answer ' +
             'questions about this workspace. Rank 0 means the profile was not in ' +
             'the results at that point’s own map view; null means the point could ' +
             'not be read at all. A "notHereButAt" value is a sighting on a WIDER ' +
@@ -7419,7 +7424,18 @@ function buildClaudeBrief(snap){
   const L = [];
   L.push('# GBP Reporter — workspace brief');
   L.push('');
-  L.push('_Written automatically at ' + new Date(snap.generatedAt).toLocaleString() + '. No credentials._');
+  L.push('**Generated:** ' + new Date(snap.generatedAt).toLocaleString() +
+         '  ·  `' + snap.generatedAt + '`  ·  no credentials');
+  L.push('');
+  /* The failure this block exists to stop: an assistant answers a "what are my
+     ranks now" question from a copy of this file it read twenty minutes and two
+     scans ago, then asks for a fresh export — when the folder copy beside it has
+     been current the whole time. */
+  L.push('> **If you are an assistant reading this: re-read this file now, before answering.**');
+  L.push('> GBP Reporter rewrites it within seconds of every scan and every edit, so a copy');
+  L.push('> read earlier in this conversation is very likely out of date. Read it fresh, say');
+  L.push('> the **Generated** time above in your answer so the reader can see how current it');
+  L.push('> is, and never ask for an export or an attachment — the folder copy is the live one.');
   L.push('');
   L.push('Rank **0** means the profile was not in the results at that point’s own map view.');
   L.push('A sighting "on a wider view" is **not** a rank at that point.');
@@ -7488,9 +7504,17 @@ async function claudeWriteNow(){
   if (claudeWriting || !claudeDir) return false;
   if (!(await claudeDirReady(false))){
     claudeLastError = 'permission';
+    /* Silence here is the whole problem: the copy stops updating, the sidebar
+       badge turns amber on a footer nobody is looking at, and the next answer
+       from Claude is quietly a scan or two behind. Say it out loud, once. */
+    if (!claudeWarnedStale){
+      claudeWarnedStale = true;
+      toast('Claude’s copy is not updating — the browser dropped folder access. Click "Claude copy" in the sidebar to restore it.', 'err');
+    }
     renderClaudeSync();
     return false;
   }
+  claudeWarnedStale = false;
   claudeWriting = true;
   try{
     const snap = buildClaudeSnapshot();
@@ -7509,6 +7533,10 @@ async function claudeWriteNow(){
     return true;
   }catch(err){
     claudeLastError = (err && err.message) || 'write failed';
+    if (!claudeWarnedStale){
+      claudeWarnedStale = true;
+      toast('Claude’s copy could not be written: ' + claudeLastError, 'err');
+    }
     return false;
   }finally{
     claudeWriting = false;

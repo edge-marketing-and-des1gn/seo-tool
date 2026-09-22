@@ -3698,6 +3698,114 @@ table td{font-size:12.5px;}
   margin-top:6px; padding:0 2px;
   font-size:10px; line-height:1.5; color:#7d8b98; letter-spacing:.01em;
 }
+
+/* ---- what Claude did: the activity panel ------------------------------ */
+.claude-acts{
+  position:fixed; inset:0 0 0 auto; width:min(420px, 100vw);
+  background:var(--card); border-left:1px solid var(--line);
+  box-shadow:var(--sh-3); z-index:3900;
+  display:flex; flex-direction:column;
+  transform:translateX(100%); transition:transform .32s var(--ease);
+}
+.claude-acts.on{transform:none;}
+.claude-acts-head{
+  flex:0 0 auto; padding:18px 20px 14px; border-bottom:1px solid var(--line-2);
+  display:flex; align-items:flex-start; gap:12px;
+}
+.claude-acts-head h3{
+  margin:0; font-family:var(--display); font-size:15px; font-weight:600;
+  letter-spacing:-.01em; color:var(--ink);
+}
+.claude-acts-head p{margin:3px 0 0; font-size:11.5px; line-height:1.5; color:var(--ink-3);}
+.claude-acts-x{
+  margin-left:auto; flex:0 0 auto; width:28px; height:28px; border-radius:var(--r-sm);
+  border:1px solid var(--line); background:var(--card-2); color:var(--ink-2);
+  font-size:15px; line-height:1; cursor:pointer; transition:.15s var(--ease);
+}
+.claude-acts-x:hover{background:var(--paper); color:var(--ink);}
+.claude-acts-switch{
+  flex:0 0 auto; padding:12px 20px; border-bottom:1px solid var(--line-2);
+  display:flex; align-items:center; gap:10px; background:var(--card-2);
+}
+.claude-acts-switch b{font-size:12px; font-weight:600; color:var(--ink);}
+.claude-acts-switch small{display:block; font-size:10.5px; color:var(--ink-3); line-height:1.45;}
+.claude-acts-body{flex:1 1 auto; overflow:auto; padding:8px 12px 16px;}
+.claude-act{
+  position:relative; padding:11px 12px 11px 26px; border-radius:var(--r-md);
+  border:1px solid transparent; transition:.15s var(--ease);
+}
+.claude-act:hover{background:var(--card-2); border-color:var(--line-2);}
+.claude-act::before{
+  content:""; position:absolute; left:11px; top:16px;
+  width:6px; height:6px; border-radius:50%; background:var(--good);
+}
+.claude-act.bad::before{background:var(--alert);}
+.claude-act code{
+  font-family:var(--mono); font-size:10px; color:var(--ink-3);
+  letter-spacing:.01em; text-transform:none;
+}
+.claude-act p{margin:2px 0 0; font-size:12.5px; line-height:1.5; color:var(--ink);}
+.claude-act.bad p{color:var(--lost);}
+.claude-act-foot{
+  margin-top:6px; display:flex; align-items:center; gap:10px;
+  font-size:10.5px; color:var(--ink-3);
+}
+.claude-act-undo{
+  border:1px solid var(--line); background:var(--card); color:var(--ink-2);
+  border-radius:999px; padding:2px 10px; font-size:10.5px; font-weight:600;
+  cursor:pointer; transition:.15s var(--ease);
+}
+.claude-act-undo:hover{border-color:var(--brand); color:var(--brand-deep); background:var(--brand-wash);}
+.claude-acts-empty{padding:26px 14px; text-align:center; color:var(--ink-3); font-size:12px; line-height:1.6;}
+.claude-acts-foot{
+  flex:0 0 auto; padding:10px 20px; border-top:1px solid var(--line-2);
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+}
+.claude-acts-foot button{
+  border:none; background:none; color:var(--ink-3); font-size:10.5px;
+  cursor:pointer; padding:2px; font-family:inherit;
+}
+.claude-acts-foot button:hover{color:var(--lost); text-decoration:underline;}
+.claude-scrim{
+  position:fixed; inset:0; background:rgba(20,28,36,.30); z-index:3880;
+  opacity:0; pointer-events:none; transition:opacity .32s var(--ease);
+}
+.claude-scrim.on{opacity:1; pointer-events:auto;}
+.claude-acts-btn{position:relative;}
+.claude-acts-btn b{
+  position:absolute; top:-5px; right:-5px; min-width:15px; height:15px;
+  padding:0 4px; border-radius:999px; background:var(--brand); color:#fff;
+  font-size:9px; font-weight:700; line-height:15px; text-align:center;
+}
+
+/* ---- refresh ----------------------------------------------------------- */
+.rfsh{
+  flex:0 0 auto; display:inline-flex; align-items:center; gap:7px;
+  height:30px; padding:0 11px; border-radius:999px;
+  border:1px solid var(--line); background:var(--card); color:var(--ink-2);
+  font:600 11.5px/1 var(--ui); letter-spacing:.01em; cursor:pointer;
+  box-shadow:var(--sh-1); transition:.18s var(--ease); white-space:nowrap;
+}
+.rfsh:hover{border-color:#d3dbe2; color:var(--ink); box-shadow:var(--sh-2); transform:translateY(-1px);}
+.rfsh:active{transform:none; box-shadow:var(--sh-1);}
+.rfsh:disabled{opacity:.6; cursor:default; transform:none; box-shadow:var(--sh-1);}
+.rfsh svg{width:13px; height:13px; flex:0 0 auto; transition:transform .5s var(--ease);}
+.rfsh:hover svg{transform:rotate(-70deg);}
+.rfsh.spin svg{animation:rfsh-spin .75s linear infinite; transform:none;}
+.rfsh.spin:hover svg{transform:none;}
+@keyframes rfsh-spin{to{transform:rotate(360deg);}}
+.rfsh-icon{padding:0; width:30px; justify-content:center;}
+.rfsh-icon span{display:none;}
+@media (max-width:900px){ .rfsh span{display:none;} .rfsh{width:30px; padding:0; justify-content:center;} }
+.rfsh-inline svg{transition:transform .5s var(--ease);}
+.rfsh-inline:hover svg{transform:rotate(-70deg);}
+.rfsh-inline.spin svg{animation:rfsh-spin .75s linear infinite; transform:none;}
+.rfsh-inline.spin:hover svg{transform:none;}
+@media (prefers-reduced-motion:reduce){
+  .claude-acts, .claude-scrim{transition:none !important;}
+  .rfsh, .rfsh svg{transition:none !important;}
+  .rfsh.spin svg{animation-duration:2s;}
+}
 </style>
 </head>
 <body>
@@ -3873,6 +3981,9 @@ table td{font-size:12.5px;}
       <div class="mini-row" style="margin-top:6px">
         <button class="mini-btn claude-btn" data-claude-sync type="button">Keep a copy for Claude</button>
       </div>
+      <div class="mini-row" style="margin-top:6px">
+        <button class="mini-btn claude-acts-btn" data-claude-acts type="button">Claude activity</button>
+      </div>
       <div class="claude-status" id="claudeSyncStatus"></div>
       <div class="mini-row" style="margin-top:6px">
         <button class="mini-btn" id="signOutBtn">Sign out</button>
@@ -3888,6 +3999,7 @@ table td{font-size:12.5px;}
         <button class="gmode on" data-gview="focus" type="button">Rank grid</button>
         <button class="gmode" data-gview="overview" type="button">Compare profiles</button>
       </nav>
+      <button class="rfsh" type="button" title="Pull the newest copy from the cloud, run anything Claude left in the folder, and redraw (R)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg><span>Refresh</span></button>
       <div class="save-pill" id="savePill"><i></i><span>Autosave on</span></div>
     </header>
 
@@ -4419,6 +4531,7 @@ table td{font-size:12.5px;}
         <button class="serp-mode on" data-serpview="checker" type="button">Search preview</button>
         <button class="serp-mode" data-serpview="keywords" type="button">Keyword finder</button>
       </nav>
+      <button class="rfsh" type="button" title="Pull the newest copy from the cloud, run anything Claude left in the folder, and redraw (R)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg><span>Refresh</span></button>
       <div class="save-pill saved"><i></i><span>Live</span></div>
     </header>
 
@@ -4683,6 +4796,10 @@ table td{font-size:12.5px;}
       <div class="mini-row" style="margin-top:6px">
         <button class="mini-btn claude-btn" data-claude-sync type="button">Keep a copy for Claude</button>
       </div>
+      <div class="mini-row" style="margin-top:6px">
+        <button class="mini-btn claude-acts-btn" data-claude-acts type="button">Claude activity</button>
+      </div>
+      <div class="claude-status" id="seoClaudeSyncStatus"></div>
     </div>
   </aside>
 
@@ -4694,6 +4811,7 @@ table td{font-size:12.5px;}
         <button class="seo-mode on" data-seoview="dashboard">Dashboard</button>
         <button class="seo-mode" data-seoview="keywords">Keywords</button>
       </nav>
+      <button class="rfsh" type="button" title="Pull the newest copy from the cloud, run anything Claude left in the folder, and redraw (R)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg><span>Refresh</span></button>
       <div class="save-group">
         <button class="btn-save-now" id="seoSaveNowBtn" type="button" title="Write everything to this browser and the cloud right now (Ctrl+S)">
           <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>
@@ -4989,6 +5107,7 @@ table td{font-size:12.5px;}
               <button class="btn btn-quiet" id="seoBulkImportBtn" title="Paste a whole list of keywords at once"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 11l4 4 4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg><span>Bulk import</span></button>
               <button class="btn btn-quiet" id="seoShareReportBtn" title="Share or embed this client’s report"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg><span>Share</span></button>
               <button class="btn btn-quiet" id="seoExportClientBtn" title="Download this client’s keywords as an Excel file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 11l4 4 4-4"/><path d="M4 21h16"/></svg><span>Export .xlsx</span></button>
+              <button class="btn btn-quiet rfsh-inline" type="button" data-refresh title="Pull the newest copy and show any change Claude has made (R)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg><span>Refresh</span></button>
               <button class="btn btn-quiet" id="seoKwSaveBtn" type="button" title="Write this client’s keywords to the browser and the cloud right now (Ctrl+S)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg><span class="save-now-label">Save now</span></button>
             </div>
             <div class="seo-scan-progress" id="seoScanProgress" style="display:none">
@@ -5241,6 +5360,30 @@ custom home builder | Red Deer, AB; Calgary, AB"></textarea>
 </div>
 
 <div class="toast-wrap" id="toasts"></div>
+
+<!-- ==================== WHAT CLAUDE DID ==================== -->
+<div class="claude-scrim" id="claudeScrim"></div>
+<aside class="claude-acts" id="claudeActs" aria-hidden="true">
+  <div class="claude-acts-head">
+    <div>
+      <h3>Claude activity</h3>
+      <p>Every change made from the shared folder, newest first. Removals can be put back.</p>
+    </div>
+    <button class="claude-acts-x" id="claudeActsX" type="button" title="Close">&times;</button>
+  </div>
+  <div class="claude-acts-switch">
+    <label class="sw"><input type="checkbox" id="claudeCmdToggle"/><i></i><span>
+      <b>Let Claude make changes</b>
+      <small>When on, commands left in the folder are run within a few seconds. Reading the workspace is unaffected either way.</small>
+    </span></label>
+  </div>
+  <div class="claude-acts-body" id="claudeActsBody"></div>
+  <div class="claude-acts-foot">
+    <span id="claudeActsHint"></span>
+    <button id="claudeActsClear" type="button">Clear the log</button>
+  </div>
+</aside>
+
 
 <script>
 window.EDGE_LOGO = "data:image/png;base64,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";
@@ -7407,7 +7550,8 @@ function buildClaudeSnapshot(){
             'seconds of every scan and every edit, so a copy read earlier in a ' +
             'conversation is very likely stale. Read it fresh, quote generatedAt in ' +
             'the answer, and never ask for an export or an attachment — the folder ' +
-            'copy is always the current one. ' +
+            'copy is always the current one. This workspace can also be CHANGED from ' +
+            'this folder: see ' + CLAUDE_HOWTO + ' beside this file for the commands. ' +
             'Written automatically by GBP Reporter so an assistant can answer ' +
             'questions about this workspace. Rank 0 means the profile was not in ' +
             'the results at that point’s own map view; null means the point could ' +
@@ -7436,6 +7580,12 @@ function buildClaudeBrief(snap){
   L.push('> read earlier in this conversation is very likely out of date. Read it fresh, say');
   L.push('> the **Generated** time above in your answer so the reader can see how current it');
   L.push('> is, and never ask for an export or an attachment — the folder copy is the live one.');
+  L.push('>');
+  L.push('> **You can also change this workspace, not just read it.** Write a command file');
+  L.push('> into this same folder and GBP Reporter runs it within seconds — add or remove a');
+  L.push('> keyword, fix a wrong location, start a scan. The whole vocabulary is in');
+  L.push('> `' + CLAUDE_HOWTO + '` beside this file. Do not tell the person to make');
+  L.push('> the change by hand without checking there first.');
   L.push('');
   L.push('Rank **0** means the profile was not in the results at that point’s own map view.');
   L.push('A sighting "on a wider view" is **not** a rank at that point.');
@@ -7520,13 +7670,23 @@ async function claudeWriteNow(){
     const snap = buildClaudeSnapshot();
     const files = [
       [CLAUDE_SNAPSHOT, JSON.stringify(snap, null, 2)],
-      [CLAUDE_BRIEF, buildClaudeBrief(snap)]
+      [CLAUDE_BRIEF, buildClaudeBrief(snap)],
+      /* The way back in travels with the data: an assistant that can see the
+         workspace can also see, in the same folder, exactly how to change it. */
+      [CLAUDE_HOWTO, buildClaudeHowTo()]
     ];
     for (const [name, body] of files){
       const fh = await claudeDir.getFileHandle(name, {create: true});
       const w = await fh.createWritable();
       await w.write(body);
       await w.close();
+    }
+    /* An empty inbox is created alongside them the first time, so the file
+       Claude is meant to write already exists and is already named. */
+    try{
+      await claudeDir.getFileHandle(CLAUDE_INBOX);
+    }catch(err){
+      await claudeClearInbox();
     }
     claudeLastWrite = Date.now();
     claudeLastError = null;
@@ -7561,6 +7721,7 @@ async function claudeSyncChoose(){
     claudeDir = dir;
     await claudeDirSet(dir);
     const ok = await claudeWriteNow();
+    claudeCmdStart();
     toast(ok ? 'Keeping a copy for Claude in that folder' : 'Folder chosen, but the first write failed',
           ok ? 'ok' : 'err');
   }catch(err){
@@ -7585,7 +7746,8 @@ function claudeSyncStatusText(){
   if (claudeLastError) return 'Last write failed: ' + claudeLastError;
   if (!claudeLastWrite) return 'Keeping a copy — nothing written yet';
   const mins = Math.round((Date.now() - claudeLastWrite) / 60000);
-  return 'Copy written ' + (mins < 1 ? 'just now' : mins + ' min ago');
+  return 'Copy written ' + (mins < 1 ? 'just now' : mins + ' min ago') +
+         (claudeCmdOn() ? ' · Claude can make changes' : ' · read-only');
 }
 function renderClaudeSync(){
   document.querySelectorAll('[data-claude-sync]').forEach(btn => {
@@ -7599,8 +7761,11 @@ function renderClaudeSync(){
                  : '\nPick a folder and this workspace is written there on every save, so an ' +
                    'assistant with access to that folder can answer questions about it.');
   });
-  const s = $('claudeSyncStatus');
-  if (s) s.textContent = claudeSyncStatusText();
+  ['claudeSyncStatus', 'seoClaudeSyncStatus'].forEach(id => {
+    const s = $(id);
+    if (s) s.textContent = claudeSyncStatusText();
+  });
+  try{ renderClaudeLog(); }catch(err){}
 }
 function wireClaudeSync(){
   document.querySelectorAll('[data-claude-sync]').forEach(btn => {
@@ -7618,6 +7783,604 @@ function wireClaudeSync(){
        not, so it is checked rather than assumed and the button says which. */
     if (await claudeDirReady(false)) claudeWriteNow();
     else { claudeLastError = 'permission'; renderClaudeSync(); }
+    claudeCmdStart();
+  });
+  renderClaudeLog();
+}
+
+/* ==========================================================================
+   COMMANDS FROM CLAUDE
+   ==========================================================================
+   The folder copy above is one-way: the workspace is written out so an
+   assistant can read it. This is the way back in.
+
+   Claude drops a small JSON file into the same folder. The app is already
+   holding a readwrite handle on that folder, so it can poll for the file,
+   run what's in it, and write back what happened — no server, no extension,
+   no open browser tab on anyone else's machine. The whole channel is two
+   files sitting next to each other in a folder the person chose.
+
+     gbp-reporter-commands.json   Claude writes  ->  the app reads and clears
+     gbp-reporter-results.json    the app writes ->  Claude reads
+
+   Three things keep it honest:
+
+     every command carries an id, and an id is never run twice, even across
+     a reload — otherwise a reload would replay yesterday's deletions;
+
+     the inbox is emptied the moment it is read, so a command cannot be
+     executed by two open tabs;
+
+     everything that runs is written to a visible log with an undo for the
+     destructive ones, because "the assistant deleted something and I don't
+     know what" is the failure that would make this feature not worth having.
+   ========================================================================== */
+const CLAUDE_INBOX   = 'gbp-reporter-commands.json';
+const CLAUDE_OUTBOX  = 'gbp-reporter-results.json';
+const CLAUDE_HOWTO   = 'gbp-reporter-HOW-TO-COMMAND.md';
+const CLAUDE_DONE_KEY = 'gbp-reporter-claude-done';
+const CLAUDE_LOG_KEY  = 'gbp-reporter-claude-log';
+const CLAUDE_CMD_KEY  = 'gbp-reporter-claude-commands-on';
+const CLAUDE_POLL_MS  = 4000;
+
+let claudeCmdTimer = null, claudeCmdBusy = false, claudeLogOpen = false;
+let claudeUndo = {};          /* id -> a function that puts it back */
+
+function claudeCmdOn(){
+  /* On by default once a folder is chosen: the person asked for an assistant
+     that can act, and a switch defaulted to off is a feature that silently
+     does nothing. It is still a switch, and it is in plain sight. */
+  try{ return localStorage.getItem(CLAUDE_CMD_KEY) !== 'off'; }catch(err){ return true; }
+}
+function claudeCmdSet(on){
+  try{ localStorage.setItem(CLAUDE_CMD_KEY, on ? 'on' : 'off'); }catch(err){}
+  renderClaudeSync();
+  if (on) claudeCmdPoll();
+}
+function claudeDoneIds(){
+  try{ return JSON.parse(localStorage.getItem(CLAUDE_DONE_KEY) || '[]') || []; }
+  catch(err){ return []; }
+}
+function claudeMarkDone(id){
+  const list = claudeDoneIds();
+  if (list.indexOf(id) !== -1) return;
+  list.push(id);
+  /* A rolling window. Long enough that no realistic batch can wrap around
+     it, short enough that localStorage never becomes a landfill. */
+  while (list.length > 400) list.shift();
+  try{ localStorage.setItem(CLAUDE_DONE_KEY, JSON.stringify(list)); }catch(err){}
+}
+
+/* ---- the log ---------------------------------------------------------- */
+function claudeLogRead(){
+  try{ return JSON.parse(localStorage.getItem(CLAUDE_LOG_KEY) || '[]') || []; }
+  catch(err){ return []; }
+}
+function claudeLogAdd(entry){
+  const list = claudeLogRead();
+  list.unshift(entry);
+  while (list.length > 60) list.pop();
+  try{ localStorage.setItem(CLAUDE_LOG_KEY, JSON.stringify(list)); }catch(err){}
+  renderClaudeLog();
+}
+function claudeLogClear(){
+  try{ localStorage.setItem(CLAUDE_LOG_KEY, '[]'); }catch(err){}
+  claudeUndo = {};
+  renderClaudeLog();
+}
+
+/* ---- finding what a command is talking about -------------------------- */
+/* Claude types a name, not an id. The name may be shortened, may be cased
+   differently, and may be very slightly wrong. Matching walks from strictest
+   to loosest and refuses to guess between two equally good candidates,
+   because silently editing the wrong client is worse than an error. */
+function claudePick(list, wanted, nameOf, what){
+  const all = (list || []).filter(Boolean);
+  if (!all.length) throw new Error('There are no ' + what + 's yet.');
+  const q = String(wanted == null ? '' : wanted).trim().toLowerCase();
+  if (!q){
+    if (all.length === 1) return all[0];
+    throw new Error('Which ' + what + '? ' + all.map(nameOf).join(', '));
+  }
+  const norm = s => String(nameOf(s) || '').trim().toLowerCase();
+  let hits = all.filter(x => norm(x) === q);
+  if (!hits.length) hits = all.filter(x => norm(x).replace(/[^a-z0-9]+/g, '') === q.replace(/[^a-z0-9]+/g, ''));
+  if (!hits.length) hits = all.filter(x => norm(x).indexOf(q) === 0);
+  if (!hits.length) hits = all.filter(x => norm(x).indexOf(q) !== -1);
+  if (hits.length === 1) return hits[0];
+  if (hits.length > 1){
+    throw new Error('"' + wanted + '" matches ' + hits.length + ' ' + what + 's: ' +
+      hits.map(nameOf).join(', ') + '. Use the full name.');
+  }
+  throw new Error('No ' + what + ' called "' + wanted + '". There is: ' +
+    all.map(nameOf).join(', ') + '.');
+}
+function claudeMarketIdx(name, fallback){
+  if (name == null || name === '') return fallback || 0;
+  if (typeof name === 'number' && REGIONS[name]) return name;
+  const q = String(name).trim().toLowerCase();
+  let i = REGIONS.findIndex(r => (r.label || '').toLowerCase() === q);
+  if (i === -1) i = REGIONS.findIndex(r => (r.label || '').toLowerCase().indexOf(q) === 0);
+  if (i === -1) i = REGIONS.findIndex(r => (r.label || '').toLowerCase().indexOf(q) !== -1);
+  if (i === -1) throw new Error('No market called "' + name + '".');
+  return i;
+}
+
+/* ---- the command table ------------------------------------------------ */
+/* Block 2 (the SEO clients module) is an IIFE, so its functions cannot be
+   reached from here. It registers its own handlers into this table when it
+   loads, which is also how anything added later can join in. */
+const CLAUDE_COMMANDS = {};
+function claudeRegister(name, fn){ CLAUDE_COMMANDS[String(name).toLowerCase()] = fn; }
+
+claudeRegister('ping', async () => 'GBP Reporter is listening. Commands are running.');
+
+claudeRegister('refresh', async () => {
+  renderAll();
+  await claudeWriteNow();
+  return 'Re-read the workspace and rewrote the export.';
+});
+claudeRegister('export', CLAUDE_COMMANDS['refresh']);
+
+/* -- the GBP grid tracker ----------------------------------------------- */
+function claudeGbpTarget(cmd){
+  const c = claudePick(state.clients, cmd.client, x => x.name, 'client');
+  const g = claudePick(c.gbps, cmd.profile || cmd.location || cmd.gbp, x => x.name || x.bizName, 'profile');
+  return {c, g};
+}
+claudeRegister('gbp.addkeyword', async cmd => {
+  const {c, g} = claudeGbpTarget(cmd);
+  const text = String(cmd.keyword || '').trim();
+  if (!text) throw new Error('No keyword given.');
+  if (g.keywords.some(k => k.text.toLowerCase() === text.toLowerCase()))
+    return '"' + text + '" was already being tracked for ' + g.name + '.';
+  const kw = {id: uid(), text, scans: []};
+  g.keywords.push(kw);
+  g.activeKeywordId = kw.id;
+  return {message: 'Added "' + text + '" to ' + c.name + ' / ' + g.name + '.',
+          undo: () => { g.keywords = g.keywords.filter(k => k.id !== kw.id); }};
+});
+claudeRegister('gbp.removekeyword', async cmd => {
+  const {c, g} = claudeGbpTarget(cmd);
+  const kw = claudePick(g.keywords, cmd.keyword, k => k.text, 'keyword');
+  const at = g.keywords.indexOf(kw);
+  tombstone('kw', kw.id);
+  g.keywords.splice(at, 1);
+  if (g.activeKeywordId === kw.id) g.activeKeywordId = g.keywords.length ? g.keywords[0].id : null;
+  return {message: 'Removed "' + kw.text + '" and its ' + kw.scans.length +
+            ' scan' + (kw.scans.length === 1 ? '' : 's') + ' from ' + c.name + ' / ' + g.name + '.',
+          undo: () => { g.keywords.splice(at, 0, kw); untombstone('kw', kw.id); }};
+});
+claudeRegister('gbp.setgrid', async cmd => {
+  const {c, g} = claudeGbpTarget(cmd);
+  const was = {gridSize: g.gridSize, spacingKm: g.spacingKm, zoom: g.zoom, surface: g.surface};
+  const said = [];
+  if (cmd.size != null){
+    const n = parseInt(cmd.size, 10);
+    if (!(n >= 3 && n <= 15 && n % 2 === 1)) throw new Error('Grid size must be an odd number from 3 to 15.');
+    g.gridSize = n; said.push(n + ' × ' + n);
+  }
+  if (cmd.spacingKm != null || cmd.spacing != null){
+    const s = parseFloat(cmd.spacingKm != null ? cmd.spacingKm : cmd.spacing);
+    if (!(s > 0 && s <= 500)) throw new Error('Spacing must be a positive number of kilometres.');
+    g.spacingKm = s; said.push(s + ' km apart');
+  }
+  if (cmd.zoom != null){
+    const z = String(cmd.zoom).toLowerCase();
+    if (z !== 'auto' && !(parseInt(z, 10) >= 3 && parseInt(z, 10) <= 20))
+      throw new Error('Zoom must be "auto" or a number from 3 to 20.');
+    g.zoom = z === 'auto' ? 'auto' : parseInt(z, 10); said.push('read at ' + g.zoom + 'z');
+  }
+  if (cmd.surface != null){
+    const s = String(cmd.surface).toLowerCase();
+    if (['local', 'maps', 'organic'].indexOf(s) === -1)
+      throw new Error('Surface must be local, maps or organic.');
+    g.surface = s; said.push('on the ' + s + ' surface');
+  }
+  if (!said.length) throw new Error('Nothing to change — give size, spacingKm, zoom or surface.');
+  return {message: c.name + ' / ' + g.name + ' grid is now ' + said.join(', ') + '.',
+          undo: () => Object.assign(g, was)};
+});
+claudeRegister('gbp.scan', async cmd => {
+  const {c, g} = claudeGbpTarget(cmd);
+  if (!providerReady()) throw new Error('No search provider is configured — set one up in GBP Locations, step 4.');
+  const kw = claudePick(g.keywords, cmd.keyword, k => k.text, 'keyword');
+  state.activeClientId = c.id;
+  state.activeGbpId = g.id;
+  g.activeKeywordId = kw.id;
+  renderAll();
+  const scan = createScan();
+  if (!scan) throw new Error('The grid could not be built — check that this profile has a centre point.');
+  await runScan(scan);
+  const found = (scan.points || []).filter(p => p.rank > 0).length;
+  return 'Scanned "' + kw.text + '" for ' + c.name + ' / ' + g.name + ' — visible at ' +
+         found + ' of ' + scan.points.length + ' points.';
+});
+
+/* ---- running one command ---------------------------------------------- */
+async function claudeRunCommand(cmd){
+  const name = String(cmd.do || cmd.action || cmd.cmd || cmd.command || '').trim().toLowerCase();
+  if (!name) throw new Error('No command given — every entry needs a "do" field.');
+  const fn = CLAUDE_COMMANDS[name] || CLAUDE_COMMANDS[name.replace(/[_\s-]+/g, '')];
+  if (!fn) throw new Error('"' + name + '" is not a command. See ' + CLAUDE_HOWTO + ' for the list.');
+  const out = await fn(cmd);
+  return (out && typeof out === 'object' && out.message) ? out : {message: String(out || 'Done.')};
+}
+
+/* ---- the loop --------------------------------------------------------- */
+async function claudeReadInbox(){
+  let fh;
+  try{ fh = await claudeDir.getFileHandle(CLAUDE_INBOX); }
+  catch(err){ return null; }            /* no file yet is the normal state */
+  let text;
+  try{ text = await (await fh.getFile()).text(); }
+  catch(err){ return null; }
+  if (!text.trim()) return null;
+  let data;
+  try{ data = JSON.parse(text); }
+  catch(err){
+    /* A half-written file: the next poll will find it whole. Only complain
+       if it is still broken a few seconds later. */
+    return {broken: err.message};
+  }
+  const list = Array.isArray(data) ? data : (data.commands || data.command || []);
+  const arr = Array.isArray(list) ? list : [list];
+  return {commands: arr.filter(x => x && typeof x === 'object')};
+}
+async function claudeClearInbox(){
+  try{
+    const fh = await claudeDir.getFileHandle(CLAUDE_INBOX, {create: true});
+    const w = await fh.createWritable();
+    await w.write(JSON.stringify({commands: [],
+      note: 'Put commands in the "commands" array. GBP Reporter empties this file as soon as it reads it. See ' + CLAUDE_HOWTO + '.'}, null, 2));
+    await w.close();
+  }catch(err){}
+}
+async function claudeWriteOutbox(results){
+  try{
+    const fh = await claudeDir.getFileHandle(CLAUDE_OUTBOX, {create: true});
+    const w = await fh.createWritable();
+    await w.write(JSON.stringify({
+      tool: 'GBP Reporter',
+      respondedAt: new Date().toISOString(),
+      readMe: 'What GBP Reporter did with the last batch of commands. Read ' +
+              CLAUDE_SNAPSHOT + ' again afterwards — it was rewritten once these ran.',
+      results: results
+    }, null, 2));
+    await w.close();
+  }catch(err){}
+}
+
+async function claudeCmdPoll(){
+  if (claudeCmdBusy || !claudeDir || !claudeCmdOn() || isPublicView()) return;
+  if (document.hidden) return;
+  claudeCmdBusy = true;
+  try{
+    if (!(await claudeDirReady(false))) return;
+    const box = await claudeReadInbox();
+    if (!box || box.broken || !box.commands || !box.commands.length) return;
+
+    /* Taken off the doormat before any of it runs, so a second tab polling
+       the same folder finds it empty rather than running it all again. */
+    const batch = box.commands;
+    await claudeClearInbox();
+
+    const results = [];
+    const done = claudeDoneIds();
+    for (let i = 0; i < batch.length; i++){
+      const cmd = batch[i];
+      const id = String(cmd.id || ('auto-' + Date.now() + '-' + i));
+      const label = String(cmd.do || cmd.action || cmd.cmd || '?');
+      if (done.indexOf(id) !== -1){
+        results.push({id, do: label, status: 'skipped',
+          message: 'Already run earlier — ids are never executed twice.'});
+        continue;
+      }
+      try{
+        const out = await claudeRunCommand(cmd);
+        claudeMarkDone(id);
+        results.push({id, do: label, status: 'done', message: out.message});
+        claudeLogAdd({id, at: Date.now(), do: label, ok: true, message: out.message,
+                      undoable: !!out.undo});
+        if (out.undo) claudeUndo[id] = out.undo;
+      }catch(err){
+        /* A failed command is marked done too. Retrying it automatically
+           would mean the same error forever, and Claude can read the reason
+           in the results file and send a corrected one. */
+        claudeMarkDone(id);
+        const msg = (err && err.message) || 'failed';
+        results.push({id, do: label, status: 'failed', message: msg});
+        claudeLogAdd({id, at: Date.now(), do: label, ok: false, message: msg});
+      }
+    }
+    save();
+    renderAll();
+    await claudeWriteNow();
+    await claudeWriteOutbox(results);
+    const ok = results.filter(r => r.status === 'done').length;
+    const bad = results.filter(r => r.status === 'failed').length;
+    if (ok || bad){
+      toast('Claude ran ' + ok + ' change' + (ok === 1 ? '' : 's') +
+            (bad ? ', ' + bad + ' failed' : '') + ' — see Claude activity.',
+            bad ? 'err' : 'ok');
+    }
+  }catch(err){
+    /* Never let a polling error take the app down with it. */
+  }finally{
+    claudeCmdBusy = false;
+  }
+}
+function claudeCmdStart(){
+  clearInterval(claudeCmdTimer);
+  claudeCmdTimer = setInterval(claudeCmdPoll, CLAUDE_POLL_MS);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) claudeCmdPoll(); });
+  window.addEventListener('focus', () => claudeCmdPoll());
+}
+
+/* ---- the vocabulary, written where Claude will find it ---------------- */
+function buildClaudeHowTo(){
+  const clients = (state.clients || []).map(c => c.name);
+  const seo = (state.seoClients || []).map(c => c.name);
+  return [
+'# How to make changes in GBP Reporter',
+'',
+'You can change this workspace, not just read it. Write a file called',
+'`' + CLAUDE_INBOX + '` into this same folder. GBP Reporter polls for it every',
+'few seconds while it is open, runs what is in it, empties the file, and writes',
+'`' + CLAUDE_OUTBOX + '` saying what happened. Read that, and re-read',
+'`' + CLAUDE_SNAPSHOT + '`, to confirm.',
+'',
+'## The file',
+'',
+'```json',
+'{',
+'  "commands": [',
+'    { "id": "1", "do": "seo.removeLocation",',
+'      "client": "Westwood Estates",',
+'      "keyword": "year round wedding venue",',
+'      "location": "Morocco" },',
+'',
+'    { "id": "2", "do": "seo.addLocation",',
+'      "client": "Westwood Estates",',
+'      "keyword": "year round wedding venue",',
+'      "location": "Ponoka, Alberta",',
+'      "scan": true }',
+'  ]',
+'}',
+'```',
+'',
+'Every command needs a unique `id`. An id is never run twice, so re-sending a',
+'file is safe. Names are matched loosely (case, punctuation, a unique prefix),',
+'but an ambiguous name is refused rather than guessed.',
+'',
+'## Keyword rankings (the SEO clients module)',
+'',
+'| do | fields |',
+'|---|---|',
+'| `seo.addKeyword` | client, keyword, location _(optional)_, market _(optional)_, scan _(optional)_ |',
+'| `seo.addLocation` | client, keyword, location, market _(optional)_, scan _(optional)_ |',
+'| `seo.removeKeyword` | client, keyword — removes the keyword and every location on it |',
+'| `seo.removeLocation` | client, keyword, location |',
+'| `seo.renameKeyword` | client, keyword, to |',
+'| `seo.setMarket` | client, keyword, location, market |',
+'| `seo.scan` | client, keyword _(optional — all if omitted)_, location _(optional)_ |',
+'| `seo.setWebsite` | client, website |',
+'| `seo.addClient` | client, website _(optional)_ |',
+'',
+'## Local grids (the GBP module)',
+'',
+'| do | fields |',
+'|---|---|',
+'| `gbp.addKeyword` | client, profile, keyword |',
+'| `gbp.removeKeyword` | client, profile, keyword |',
+'| `gbp.setGrid` | client, profile, size, spacingKm, zoom, surface |',
+'| `gbp.scan` | client, profile, keyword |',
+'',
+'## Housekeeping',
+'',
+'| do | fields |',
+'|---|---|',
+'| `ping` | proves the channel works |',
+'| `refresh` | rewrites the export from the live workspace |',
+'',
+'## What to expect',
+'',
+'- **A scan costs money and takes time.** Only send `scan: true` or `seo.scan`',
+'  when the person asked for a fresh check. Adding a keyword without scanning',
+'  leaves it with no rank until the next scan, which is usually what is wanted.',
+'- **Nothing happens while the app is closed.** Commands sit in the file until',
+'  GBP Reporter is open in a browser tab. If the results file does not change,',
+'  say the app may not be open rather than assuming the command failed.',
+'- **Every change is logged in the app** under "Claude activity", and removals',
+'  can be undone there. Say what you changed in plain words when you report back.',
+'',
+'## What is in this workspace right now',
+'',
+'- Local grid clients: ' + (clients.length ? clients.join(', ') : '(none)'),
+'- Keyword ranking clients: ' + (seo.length ? seo.join(', ') : '(none)'),
+'',
+'_Written ' + new Date().toLocaleString() + '._'
+  ].join('\n');
+}
+
+
+/* ---- the activity panel ----------------------------------------------- */
+function claudeAgo(ts){
+  const s = Math.max(0, Math.round((Date.now() - ts) / 1000));
+  if (s < 60) return 'just now';
+  const m = Math.round(s / 60);
+  if (m < 60) return m + ' min ago';
+  const h = Math.round(m / 60);
+  if (h < 24) return h + ' hr ago';
+  return new Date(ts).toLocaleDateString();
+}
+function renderClaudeLog(){
+  const body = $('claudeActsBody');
+  const toggle = $('claudeCmdToggle');
+  if (toggle) toggle.checked = claudeCmdOn();
+  const hint = $('claudeActsHint');
+  if (hint){
+    hint.textContent = !claudeDir ? 'No folder chosen yet'
+      : (claudeCmdOn() ? 'Watching the folder every few seconds' : 'Commands are switched off');
+  }
+  /* The badge is the only part of this that is visible without opening the
+     panel, so it counts what a person would want to be told about: things
+     that happened since they last looked. */
+  const list = claudeLogRead();
+  const unseen = list.filter(e => !e.seen).length;
+  document.querySelectorAll('[data-claude-acts]').forEach(btn => {
+    btn.innerHTML = '';
+    btn.appendChild(document.createTextNode('Claude activity'));
+    if (unseen){
+      const b = document.createElement('b');
+      b.textContent = unseen > 9 ? '9+' : String(unseen);
+      btn.appendChild(b);
+    }
+  });
+  if (!body) return;
+  body.innerHTML = '';
+  if (!list.length){
+    const d = document.createElement('div');
+    d.className = 'claude-acts-empty';
+    d.textContent = claudeDir
+      ? 'Nothing yet. Ask Claude to change something in this workspace and it will appear here.'
+      : 'Choose a folder first, then Claude can both read this workspace and change it.';
+    body.appendChild(d);
+    return;
+  }
+  list.forEach(e => {
+    const row = document.createElement('div');
+    row.className = 'claude-act' + (e.ok ? '' : ' bad');
+    const c = document.createElement('code');
+    c.textContent = e.do;
+    row.appendChild(c);
+    const p = document.createElement('p');
+    p.textContent = e.message;
+    row.appendChild(p);
+    const foot = document.createElement('div');
+    foot.className = 'claude-act-foot';
+    const when = document.createElement('span');
+    when.textContent = claudeAgo(e.at);
+    foot.appendChild(when);
+    /* Undo only survives while the page is open: the closure that puts the
+       record back cannot be written to localStorage. Saying so is better
+       than offering a button that has quietly stopped working. */
+    if (e.undoable && claudeUndo[e.id]){
+      const u = document.createElement('button');
+      u.className = 'claude-act-undo'; u.type = 'button'; u.textContent = 'Undo';
+      u.addEventListener('click', () => {
+        try{ claudeUndo[e.id](); }catch(err){ toast('That could not be undone', 'err'); return; }
+        delete claudeUndo[e.id];
+        e.undone = true;
+        e.message = 'Undone — ' + e.message.charAt(0).toLowerCase() + e.message.slice(1);
+        try{
+          const all = claudeLogRead().map(x => x.id === e.id ? e : x);
+          localStorage.setItem(CLAUDE_LOG_KEY, JSON.stringify(all));
+        }catch(err){}
+        save(); renderAll(); claudeWriteNow();
+        renderClaudeLog();
+        toast('Put back');
+      });
+      foot.appendChild(u);
+    }
+    row.appendChild(foot);
+    body.appendChild(row);
+  });
+}
+function claudeActsOpen(on){
+  claudeLogOpen = on;
+  const p = $('claudeActs'), s = $('claudeScrim');
+  if (p){ p.classList.toggle('on', on); p.setAttribute('aria-hidden', on ? 'false' : 'true'); }
+  if (s) s.classList.toggle('on', on);
+  if (on){
+    try{
+      const all = claudeLogRead().map(e => Object.assign(e, {seen: true}));
+      localStorage.setItem(CLAUDE_LOG_KEY, JSON.stringify(all));
+    }catch(err){}
+    claudeCmdPoll();
+  }
+  renderClaudeLog();
+}
+function wireClaudeLog(){
+  document.querySelectorAll('[data-claude-acts]').forEach(btn => {
+    if (btn.dataset.wired) return;
+    btn.dataset.wired = '1';
+    btn.addEventListener('click', () => claudeActsOpen(!claudeLogOpen));
+  });
+  const x = $('claudeActsX'); if (x) x.addEventListener('click', () => claudeActsOpen(false));
+  const s = $('claudeScrim'); if (s) s.addEventListener('click', () => claudeActsOpen(false));
+  const t = $('claudeCmdToggle');
+  if (t) t.addEventListener('change', () => claudeCmdSet(t.checked));
+  const c = $('claudeActsClear');
+  if (c) c.addEventListener('click', () => {
+    if (!confirm('Clear the record of what Claude has changed? The changes themselves stay.')) return;
+    claudeLogClear();
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && claudeLogOpen) claudeActsOpen(false); });
+  renderClaudeLog();
+}
+
+/* ---- refresh ----------------------------------------------------------- */
+/* What "refresh" has to mean here: this workspace can be changed from three
+   places at once — this tab, another device through the cloud, and Claude
+   through the folder. A refresh reconciles all three and redraws, so the
+   screen is never quietly a version behind. */
+let refreshing = false;
+/* Two shapes of the same control: a pill in each topbar, and a quiet one that
+   sits among the tools on a toolbar that already has its own button language. */
+function claudeRefreshBtns(){
+  return Array.prototype.slice.call(document.querySelectorAll('.rfsh, [data-refresh]'));
+}
+async function refreshWorkspace(){
+  if (refreshing) return;
+  refreshing = true;
+  claudeRefreshBtns().forEach(b => { b.classList.add('spin'); b.disabled = true; });
+  let said = 'Up to date';
+  try{
+    /* 1. anything typed a moment ago goes out first, so the merge below
+          cannot resurrect what was just deleted here. */
+    save();
+    /* 2. the cloud copy, merged rather than adopted — a record missing from
+          one side has not been deleted, only not heard about yet. */
+    if (fbReady && fbDb && fbUid){
+      const res = await cloudLoadState();
+      if (res.status === 'ok' && res.data && Array.isArray(res.data.clients)){
+        state = mergeStates(state, adoptRemote(res.data));
+        state.owner = fbUid;
+        try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(err){}
+        cloudBaseStamp = res.stamp || cloudBaseStamp;
+        said = 'Refreshed from the cloud';
+      }
+    }
+    /* 3. anything Claude left in the folder, run now rather than on the
+          next tick of the poll. */
+    if (claudeDir && claudeCmdOn()) await claudeCmdPoll();
+    hydrateSettings();
+    renderAll();
+    if (claudeDir) claudeWriteNow();
+  }catch(err){
+    said = 'Could not reach the cloud — showing this browser’s copy';
+  }finally{
+    refreshing = false;
+    claudeRefreshBtns().forEach(b => { b.classList.remove('spin'); b.disabled = false; });
+  }
+  toast(said);
+}
+function wireRefresh(){
+  claudeRefreshBtns().forEach(b => {
+    if (b.dataset.wired) return;
+    b.dataset.wired = '1';
+    b.addEventListener('click', refreshWorkspace);
+  });
+  /* R with nothing focused. A keyboard shortcut that fires while someone is
+     typing a keyword would be a bug, not a shortcut. */
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'r' && e.key !== 'R') return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
+    e.preventDefault();
+    refreshWorkspace();
   });
 }
 
@@ -7660,6 +8423,8 @@ function wireIntroBanners(){
 }
 try{ wireIntroBanners(); }catch(err){}
 try{ wireClaudeSync(); }catch(err){}
+try{ wireClaudeLog(); }catch(err){}
+try{ wireRefresh(); }catch(err){}
 
 /* ==========================================================================
    STATE
@@ -7813,6 +8578,15 @@ function tombstone(kind, id){
   }
 }
 function wasDeleted(reg, kind, id){ return !!(reg && reg[delKey(kind, id)]); }
+/* Undoing a deletion has to lift the tombstone as well as put the record
+   back. Leave the tombstone standing and the next cloud merge reads the
+   restored record as something this browser hasn't heard was deleted yet,
+   and removes it again — the undo would appear to work and then quietly
+   come apart on the next sync. */
+function untombstone(kind, id){
+  if (!id || !state.deleted) return;
+  delete state.deleted[delKey(kind, id)];
+}
 
 /* ---- local backups -------------------------------------------------------
    Taken before anything that replaces the whole workspace. Two are kept; if
@@ -17850,6 +18624,180 @@ renderAll = function(){
   renderSerpRecents();
   if (hubOpen) renderHubMeta();
 };
+
+
+/* ---------- commands from Claude, for this module ----------
+   The command loop lives in the first script block and cannot see anything
+   in here, so the handlers that need this module's functions are registered
+   with it from inside the closure. */
+function claudeSeoClient(cmd){
+  ensureSeoState();
+  return claudePick(state.seoClients, cmd.client, c => c.name, 'keyword-ranking client');
+}
+function claudeSeoKeyword(c, cmd){
+  return claudePick(c.keywords, cmd.keyword, k => k.text, 'keyword');
+}
+function claudeSeoLocation(k, cmd){
+  return claudePick(k.locations, cmd.location || cmd.market, l => l.label, 'location');
+}
+/* A scan is money and minutes, so it only runs when it was actually asked
+   for — never as a side effect of tidying a list. */
+function claudeWantsScan(cmd){
+  return cmd.scan === true || cmd.scan === 'true' || cmd.scan === 1;
+}
+
+claudeRegister('seo.addclient', async cmd => {
+  ensureSeoState();
+  const name = String(cmd.client || '').trim();
+  if (!name) throw new Error('No client name given.');
+  const already = state.seoClients.find(c => (c.name || '').toLowerCase() === name.toLowerCase());
+  if (already) return '"' + name + '" already exists.';
+  const c = blankSeoClient(name);
+  if (cmd.website) c.website = String(cmd.website).trim();
+  state.seoClients.push(c);
+  state.activeSeoClientId = c.id;
+  renderSeoTree();
+  return {message: 'Created the client "' + name + '".',
+          undo: () => { state.seoClients = state.seoClients.filter(x => x.id !== c.id); }};
+});
+
+claudeRegister('seo.setwebsite', async cmd => {
+  const c = claudeSeoClient(cmd);
+  const was = c.website;
+  const url = String(cmd.website || cmd.url || '').trim();
+  if (!url) throw new Error('No website given.');
+  c.website = url;
+  return {message: c.name + '’s website is now ' + url + '.',
+          undo: () => { c.website = was; }};
+});
+
+claudeRegister('seo.addkeyword', async cmd => {
+  const c = claudeSeoClient(cmd);
+  const text = String(cmd.keyword || '').trim();
+  if (!text) throw new Error('No keyword given.');
+  let k = c.keywords.find(x => x.text.toLowerCase() === text.toLowerCase());
+  const madeKeyword = !k;
+  if (!k){ k = {id: uid(), text, locations: []}; c.keywords.push(k); }
+
+  const label = String(cmd.location || '').trim();
+  let loc = null;
+  if (label && !k.locations.some(l => (l.label || '').toLowerCase() === label.toLowerCase())){
+    loc = blankSeoLocation(label, claudeMarketIdx(cmd.market, 0));
+    k.locations.push(loc);
+  }
+  if (!madeKeyword && !loc) return '"' + text + '" was already tracked for ' + c.name + '.';
+
+  renderSeoKeywords();
+  const said = madeKeyword ? 'Added "' + text + '"' : 'Added a location to "' + text + '"';
+  const where = loc ? ' for ' + loc.label : '';
+  if (loc && claudeWantsScan(cmd)){
+    await seoScanAndRender(c, [{k, loc}]);
+    return said + where + ' and scanned it — ' +
+      (loc.rank ? 'ranking #' + loc.rank : 'not in the results') + '.';
+  }
+  return {message: said + where + ' for ' + c.name +
+            (loc ? '. No scan run — send seo.scan when you want a rank.' : '.'),
+          undo: () => {
+            if (madeKeyword) c.keywords = c.keywords.filter(x => x.id !== k.id);
+            else if (loc) k.locations = k.locations.filter(l => l.id !== loc.id);
+          }};
+});
+
+claudeRegister('seo.addlocation', async cmd => {
+  const c = claudeSeoClient(cmd);
+  const k = claudeSeoKeyword(c, cmd);
+  const label = String(cmd.location || '').trim();
+  if (!label) throw new Error('No location given.');
+  if (k.locations.some(l => (l.label || '').toLowerCase() === label.toLowerCase()))
+    return '"' + k.text + '" is already tracked for ' + label + '.';
+  const loc = blankSeoLocation(label, claudeMarketIdx(cmd.market, 0));
+  k.locations.push(loc);
+  renderSeoKeywords();
+  if (claudeWantsScan(cmd)){
+    await seoScanAndRender(c, [{k, loc}]);
+    return 'Now tracking "' + k.text + '" in ' + label + ' — ' +
+      (loc.rank ? 'ranking #' + loc.rank : 'not in the results') + '.';
+  }
+  return {message: 'Now tracking "' + k.text + '" in ' + label +
+            '. No scan run — send seo.scan when you want a rank.',
+          undo: () => { k.locations = k.locations.filter(l => l.id !== loc.id); }};
+});
+
+claudeRegister('seo.removelocation', async cmd => {
+  const c = claudeSeoClient(cmd);
+  const k = claudeSeoKeyword(c, cmd);
+  const loc = claudeSeoLocation(k, cmd);
+  const at = k.locations.indexOf(loc);
+  k.locations.splice(at, 1);
+  renderSeoKeywords();
+  return {message: 'Removed "' + k.text + '" from ' + loc.label + ' for ' + c.name +
+            (k.locations.length ? '.' : ' — that keyword now has no locations left.'),
+          undo: () => { k.locations.splice(at, 0, loc); }};
+});
+
+claudeRegister('seo.removekeyword', async cmd => {
+  const c = claudeSeoClient(cmd);
+  const k = claudeSeoKeyword(c, cmd);
+  const at = c.keywords.indexOf(k);
+  c.keywords.splice(at, 1);
+  if (c.activeKeywordId === k.id) c.activeKeywordId = c.keywords.length ? c.keywords[0].id : null;
+  renderSeoKeywords();
+  const n = k.locations.length;
+  return {message: 'Removed "' + k.text + '" from ' + c.name +
+            (n ? ' along with its ' + n + ' location' + (n === 1 ? '' : 's') : '') + '.',
+          undo: () => { c.keywords.splice(at, 0, k); }};
+});
+
+claudeRegister('seo.renamekeyword', async cmd => {
+  const c = claudeSeoClient(cmd);
+  const k = claudeSeoKeyword(c, cmd);
+  const to = String(cmd.to || cmd.newKeyword || '').trim();
+  if (!to) throw new Error('No new wording given — use "to".');
+  const was = k.text;
+  if (c.keywords.some(x => x !== k && x.text.toLowerCase() === to.toLowerCase()))
+    throw new Error('"' + to + '" is already tracked for ' + c.name + '.');
+  k.text = to;
+  renderSeoKeywords();
+  return {message: 'Renamed "' + was + '" to "' + to + '". The old ranks stay attached, ' +
+            'but they were measured against the old wording.',
+          undo: () => { k.text = was; }};
+});
+
+claudeRegister('seo.setmarket', async cmd => {
+  const c = claudeSeoClient(cmd);
+  const k = claudeSeoKeyword(c, cmd);
+  const loc = claudeSeoLocation(k, cmd);
+  const was = loc.regionIdx;
+  loc.regionIdx = claudeMarketIdx(cmd.market, was);
+  renderSeoKeywords();
+  return {message: '"' + k.text + '" in ' + loc.label + ' is now searched as ' +
+            (REGIONS[loc.regionIdx] || REGIONS[0]).label + '.',
+          undo: () => { loc.regionIdx = was; }};
+});
+
+claudeRegister('seo.scan', async cmd => {
+  const c = claudeSeoClient(cmd);
+  if (!c.website || !c.website.trim())
+    throw new Error(c.name + ' has no website set, and a rank check needs one.');
+  if (!providerReady())
+    throw new Error('No search provider is configured — set one up in GBP Locations, step 4.');
+  const pairs = [];
+  if (cmd.keyword){
+    const k = claudeSeoKeyword(c, cmd);
+    if (cmd.location) pairs.push({k, loc: claudeSeoLocation(k, cmd)});
+    else k.locations.forEach(loc => pairs.push({k, loc}));
+  } else {
+    c.keywords.forEach(k => k.locations.forEach(loc => pairs.push({k, loc})));
+  }
+  const live = pairs.filter(p => p.loc.label && p.loc.label.trim());
+  if (!live.length) throw new Error('Nothing to scan — no keyword there has a location yet.');
+  state.activeSeoClientId = c.id;
+  await seoScanAndRender(c, live);
+  const ranked = live.filter(p => p.loc.rank > 0);
+  return 'Scanned ' + live.length + ' keyword location' + (live.length === 1 ? '' : 's') +
+    ' for ' + c.name + ' — ' + ranked.length + ' ranking' +
+    (ranked.length ? ' (' + ranked.slice(0, 5).map(p => p.k.text + ' #' + p.loc.rank).join(', ') + ')' : '') + '.';
+});
 
 fillRegions($('seoNewRegion'));
 fillRegions($('seoBulkDefaultRegion'));

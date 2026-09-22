@@ -11942,40 +11942,22 @@ function dotPopup(p, idx, scan){
     d.appendChild(q);
   }
 
-  /* TWO links, because they are not the same promise and pretending otherwise
-     is what made "open the result" look wrong.
-
-     A Google Maps URL carries a viewport and nothing else. It has no way to
-     say WHERE THE SEARCHER IS, so Maps answers it from the browser's own
-     location and sign-in, and the list you get is yours rather than the one
-     this point was read at. It is useful for looking at the area; it cannot
-     reproduce a reading and never could.
-
-     The pinned search can. tbm=lcl carries a uule, which is the parameter
-     that actually tells Google to answer as though the searcher were standing
-     at this coordinate, with this radius, with personalisation off. That is
-     the link to check a number against, so it goes first and says so. */
+  /* ONE link, so there is never a question of which to trust. It opens the
+     same surface the number was read on: Google Maps at the exact coordinate
+     and zoom the provider was handed for a map-pack reading, or the Google
+     results page for a web-results reading. */
   const links = document.createElement('div');
   links.className = 'pop-links';
-
-  const pinned = document.createElement('a');
-  pinned.href = pointSearchUrl(scan, p);
-  pinned.target = '_blank'; pinned.rel = 'noopener';
-  pinned.className = 'pop-link-main';
-  pinned.textContent = 'Open the pinned search';
-  pinned.title = 'The local results as if you were standing at this exact coordinate, ' +
-    'with personalisation off. This is the one that reproduces the reading.';
-  links.appendChild(pinned);
-
-  const mapsLink = document.createElement('a');
-  mapsLink.href = pointMapsUrl(scan, p);
-  mapsLink.target = '_blank'; mapsLink.rel = 'noopener';
-  mapsLink.className = 'pop-link-alt';
-  mapsLink.textContent = 'Open Google Maps';
-  mapsLink.title = 'The same patch of ground on Maps. A Maps URL cannot carry a ' +
-    'location pin, so Google answers it from where your browser is \u2014 useful for ' +
-    'looking around, not for checking a rank.';
-  links.appendChild(mapsLink);
+  const webRead = readSpec(scan, p).surface === 'web';
+  const openLink = document.createElement('a');
+  openLink.href = webRead ? pointSearchUrl(scan, p) : pointMapsUrl(scan, p);
+  openLink.target = '_blank'; openLink.rel = 'noopener';
+  openLink.className = 'pop-link-main';
+  openLink.textContent = webRead ? 'Open Google search' : 'Open Google Maps';
+  openLink.title = webRead
+    ? 'The Google results page at this point, the same search this number was read from.'
+    : 'Google Maps at the exact coordinate and zoom this number was read at. Use a private window, and do not move the map before counting.';
+  links.appendChild(openLink);
   d.appendChild(links);
 
   /* The list below is the reading. The number above is an index into it, so
@@ -12003,7 +11985,7 @@ function dotPopup(p, idx, scan){
     const note = document.createElement('div');
     if (p.read){
       note.className = 'pop-warn';
-      note.textContent = 'The pinned search rebuilds the exact request above. Google still ' +
+      note.textContent = 'The link above opens the same search as the request above. Google still ' +
         'serves live results, so the order can move between then and now \u2014 the list above ' +
         'is the record of what was actually read.';
     } else {

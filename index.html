@@ -701,7 +701,12 @@ kbd{font-family:var(--mono);font-size:10.5px;background:#fff;border:1px solid va
 .rank-dot.thin{border-style:dotted;border-width:3px;}
 .rank-dot.failed{background:repeating-linear-gradient(45deg,#9aa4ac,#9aa4ac 4px,#77828b 4px,#77828b 8px);}
 .rank-dot.busy{background:var(--console-3);}
-.rank-dot.wide{box-shadow:0 0 0 3px rgba(255,255,255,.6),0 4px 12px rgba(20,28,36,.45);}
+/* A miss here, but the listing does exist once the map opens out. It reads as
+   a miss — because it is one — with a brand ring to say the profile is known
+   in the area. It must never look like a rank. */
+.rank-dot.wide{
+  box-shadow:0 0 0 2px #fff, 0 0 0 4px var(--brand), 0 4px 12px rgba(20,28,36,.4);
+}
 .leaflet-popup-content-wrapper{border-radius:var(--r-lg);box-shadow:var(--sh-3);}
 .leaflet-popup-content{font-family:var(--ui);font-size:12px;line-height:1.65;margin:14px 15px;min-width:236px;}
 .leaflet-popup-content a{color:var(--brand-deep);}
@@ -709,6 +714,27 @@ kbd{font-family:var(--mono);font-size:10.5px;background:#fff;border:1px solid va
 .pop-r{font-family:var(--mono);font-size:22px;font-weight:700;line-height:1;margin:2px 0 8px;}
 .pop-line{color:var(--ink-2);font-size:11.5px;}
 .pop-coord{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);margin:7px 0;letter-spacing:-.02em;}
+/* The exact request behind the number, so it can be checked rather than
+   believed. Set in the data face because it is data, and quiet because it is
+   evidence rather than a headline. */
+.pop-sent{
+  font-family:var(--mono); font-size:9.5px; line-height:1.55; color:var(--ink-3);
+  background:var(--card-2); border:1px solid var(--line-2); border-radius:7px;
+  padding:5px 8px; margin:0 0 8px; word-break:break-all;
+}
+/* Found, but not at this point's view. Boxed off because it is a different
+   measurement from the one on the dot and must never be read as the rank. */
+.pop-wide{
+  font-size:11.5px; line-height:1.6; color:var(--ink-2);
+  background:var(--brand-wash); border:1px solid #f3d9c1;
+  border-left:3px solid var(--brand); border-radius:8px;
+  padding:8px 10px; margin:7px 0;
+}
+.pop-wide b{color:var(--brand-deep); font-weight:700;}
+.pop-wide-link{
+  display:inline-block; margin-top:5px; font-size:11px; font-weight:600;
+  color:var(--brand-deep);
+}
 .pop-acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px;}
 .pop-acts button{font-size:11px;padding:5px 9px;border-radius:8px;border:1px solid var(--line);background:var(--card-2);cursor:pointer;font-family:var(--ui);font-weight:600;color:var(--ink-2);}
 .pop-acts button:hover{border-color:var(--brand);color:var(--brand-deep);background:var(--brand-wash);}
@@ -4072,13 +4098,13 @@ table td{font-size:12.5px;}
                     </select>
                   </div>
                   <label class="sw" style="margin-bottom:6px"><input type="checkbox" id="deepVerify" checked/><i></i><span>Widen the search before calling a point absent</span></label>
-                  <div class="hint" style="margin-bottom:14px">When a point finds nothing, GBP Reporter re-runs it at a wider map view and then on the other surface before it will report the profile as missing. Points that find the profile straight away cost one call as usual — only the empty ones cost extra.</div>
+                  <div class="hint" style="margin-bottom:14px">When a point finds nothing, GBP Reporter re-runs it at a wider map view and then on the other surface, so a miss can be told apart from a listing that is simply known further out. <b>A wider view never becomes the rank at the point</b> — the number on the grid is always what the configured view returned, and anything found wider is reported separately with its own link. Only the empty points cost extra calls.</div>
                   <div class="f">
                     <label for="proxyPrefix">CORS proxy prefix <span class="opt">only if requests are blocked</span></label>
                     <input id="proxyPrefix" type="text" placeholder="https://your-proxy.example.com/" autocomplete="off"/>
                   </div>
-                  <label class="sw"><input type="checkbox" id="includeAds"/><i></i><span>Let an ad-only appearance set the rank</span></label>
-                  <div class="hint">Sponsored appearances are always recorded and shown either way — this only decides whether an ad-only sighting counts as the profile's position.</div>
+                  <label class="sw"><input type="checkbox" id="includeAds"/><i></i><span>Read the sponsored slots too</span></label>
+                  <div class="hint">Sponsored appearances are recorded and shown beside the rank. They are never turned <em>into</em> a rank: a paid slot alongside 28 organic results used to be reported as position 29, which is a number that appears nowhere on Google and that nobody could count to. A point that only appears in the ads is a miss with an ad noted on it.</div>
                 </div>
               </section>
             </div>
@@ -4133,7 +4159,7 @@ table td{font-size:12.5px;}
                   <span><i style="background:var(--rank-5)"></i>51+ or absent</span>
                   <span><i style="background:var(--rank-none)"></i>not read yet</span>
                   <span><i style="background:var(--rank-2);border:2px dashed #fff"></i>name match only</span>
-                  <span><i style="background:var(--rank-1);box-shadow:0 0 0 2px rgba(0,0,0,.15)"></i>found only on a wider view</span>
+                  <span><i style="background:var(--rank-1);box-shadow:0 0 0 2px rgba(0,0,0,.15)"></i>missing here, found on a wider view</span>
                   <span><i style="background:repeating-linear-gradient(45deg,#9aa4ac,#9aa4ac 3px,#77828b 3px,#77828b 6px)"></i>read failed</span>
                 </div>
                 <div class="status" id="mapStatus" style="padding:0 16px 12px"></div>
@@ -8185,7 +8211,7 @@ function renderGridInfo(){
     : '';
   $('gridInfo').innerHTML = '<strong>' + (n*n) + ' searches</strong> covering roughly ' + span + ' km × ' + span +
     ' km \u00b7 about <strong>' + mins + '</strong> at ' + lanes + ' point' + (lanes === 1 ? '' : 's') + ' at a time. ' +
-    'A point that finds the profile costs one call; a point that finds nothing costs up to five while GBP Reporter widens the search to be sure.' +
+    'A point that finds the profile costs one call; a point that finds nothing costs up to five while GBP Reporter checks whether it is missing here or missing everywhere.' +
     areaWarn;
 }
 
@@ -8416,8 +8442,14 @@ function buildScanUrl(keyword, lat, lng, opts){
 
    The coordinate is written at seven decimals because that is exactly what
    went to the provider in location_coordinate — same string, same place. */
-function mapsUrl(kw, lat, lng, hl, zoom, gl, radius){
-  const z = radiusZoom(radius, lat, zoom);
+function mapsUrl(kw, lat, lng, hl, zoom, gl, radius, exactZoom){
+  /* When the reading went out with a real map zoom — which is what the Maps
+     endpoint is given — that number is the truth and nothing is derived from
+     anything. The radius round trip below is only for readings taken before
+     the sent zoom was recorded. */
+  const z = (exactZoom != null && isFinite(exactZoom))
+    ? Number(exactZoom)
+    : radiusZoom(radius, lat, zoom);
   const p = ['hl=' + encodeURIComponent((hl || 'en').split('-')[0])];
   if (gl) p.push('gl=' + encodeURIComponent(String(gl).toLowerCase() === 'uk' ? 'gb' : gl));
   return 'https://www.google.com/maps/search/' + encodeURIComponent(kw) +
@@ -8479,15 +8511,34 @@ function pointSearchUrl(scan, p){
 }
 function pointMapsUrl(scan, p){
   const {s, lat, lng} = readPoint(scan, p);
-  return mapsUrl(scan.keyword, lat, lng, s.hl, s.zoom, s.gl, s.radius);
+  return mapsUrl(scan.keyword, lat, lng, s.hl, s.zoom, s.gl, s.radius,
+                 s.sentZoom != null ? s.sentZoom : null);
+}
+/* The same link for the wider view a point was found on, when it was. Kept
+   separate so the two facts never share a link. */
+function pointWideMapsUrl(scan, p){
+  const w = p && p.wideRead;
+  if (!w) return null;
+  return mapsUrl(scan.keyword, w.lat != null ? w.lat : p.lat,
+                 w.lng != null ? w.lng : p.lng,
+                 w.hl, w.zoom, w.gl, w.radius,
+                 w.sentZoom != null ? w.sentZoom : null);
 }
 /* Written in the same breath as the rank itself, so the two can never come
    to describe different searches. */
 function recordRead(p, step, region, read){
   const zoom = (step && step.zoom) || 14;
+  const sent = (read && read.sent) || null;
   return {
     surface: (step && step.surface) || 'local',
     zoom: zoom,
+    /* What the provider was literally handed. The link is rebuilt from this
+       rather than from a radius derived from a zoom derived from this — a
+       round trip that assumed a 1000px viewport and drifted by up to a whole
+       zoom level, which on the edge of a grid is the difference between
+       twenty listings and three. */
+    sent: sent,
+    sentZoom: sent ? sent.zoom : (step && step.surface === 'web' ? null : zoom),
     radius: zoomRadius(zoom, p.lat),
     /* The exact coordinate that went out in location_coordinate, at the same
        seven decimals, so the link is rebuilt from the query rather than from
@@ -9728,26 +9779,57 @@ function dotPopup(p, idx, scan){
     }
     d.appendChild(m);
   }
-  if (p.adRank && !p.matchedViaAd){
+  if (p.adRank){
     const a = document.createElement('div');
     a.className = 'pop-line';
-    a.textContent = 'Also running an ad here — sponsored slot ' + p.adRank + '.';
+    a.textContent = p.rank >= 1
+      ? ('Also running an ad here — sponsored slot ' + p.adRank + '.')
+      : ('In the sponsored slots at ' + p.adRank + ', but nowhere in the organic ' +
+         'results here. A paid slot is not a ranking, so the point counts as a miss.');
     d.appendChild(a);
   }
-  if (p.widened){
+  /* Found, but not here. Its own sentence, its own number and its own link,
+     because it is a different measurement from the one on the dot. */
+  if (p.wideRank){
     const w = document.createElement('div');
-    w.className = 'pop-line'; w.style.color = 'var(--brand-deep)';
-    const step = (p.attempts || []).find(a => a.rank >= 1);
-    w.textContent = 'The tight view here returned nothing, so the search was widened' +
-      (step ? ' to ' + step.zoom + 'z on the ' + (step.surface === 'web' ? 'web results' : 'map pack') : '') + ' to find it.';
+    w.className = 'pop-wide';
+    const where = p.wideSurface === 'web' ? 'the web results' : 'the map pack';
+    const head = document.createElement('b');
+    head.textContent = 'Not in the results at this view.';
+    w.appendChild(head);
+    w.appendChild(document.createTextNode(
+      ' It does appear at #' + p.wideRank + ' on ' + where +
+      ' once the map is opened out to ' + p.wideZoom + 'z — a wider search than' +
+      ' this point was set to, so it is not the rank here.'));
+    const wu = pointWideMapsUrl(scan, p);
+    if (wu){
+      const wl = document.createElement('a');
+      wl.href = wu; wl.target = '_blank'; wl.rel = 'noopener';
+      wl.className = 'pop-wide-link';
+      wl.textContent = 'Open that wider view';
+      w.appendChild(document.createElement('br'));
+      w.appendChild(wl);
+    }
     d.appendChild(w);
+  }
+  if (p.viewShifted && !p.wideRank){
+    const v = document.createElement('div');
+    v.className = 'pop-line'; v.style.color = 'var(--alert)';
+    v.textContent = 'The configured view returned no data, so this reading is from the ' +
+      'next view that did. Read it again to try the configured one.';
+    d.appendChild(v);
   }
   if (p.rank === 0 && p.attempts && p.attempts.length){
     const a = document.createElement('div');
     a.className = 'pop-line';
-    a.textContent = 'Checked ' + p.attempts.map(x => x.zoom + 'z ' + (x.surface === 'web' ? 'web' : 'map') +
-      (x.error ? ' (no data)' : ' (' + x.listings + ' listings)')).join(', ') +
-      ' — the profile was in none of the views that returned data.';
+    const views = 'Checked ' + p.attempts.map(x => x.zoom + 'z ' + (x.surface === 'web' ? 'web' : 'map') +
+      (x.error ? ' (no data)' : ' (' + x.listings + ' listings)')).join(', ');
+    /* Only claim it was nowhere when it really was nowhere. The wider view
+       above may well have found it, and the two sentences sitting next to
+       each other contradicting one another is worse than either alone. */
+    a.textContent = p.wideRank
+      ? (views + ' — present only in the wider one.')
+      : (views + ' — the profile was in none of the views that returned data.');
     d.appendChild(a);
   } else if (p.rank === 0 && p.names && p.names.length){
     const a = document.createElement('div');
@@ -9779,6 +9861,21 @@ function dotPopup(p, idx, scan){
   co.textContent = p.lat.toFixed(5) + ', ' + p.lng.toFixed(5);
   d.appendChild(co);
 
+  /* The exact request. A number you cannot check is a number you have to take
+     on faith, and this is the whole of what was asked: which index, which
+     coordinate, which zoom, in which language. The link below opens the same
+     thing, rebuilt from this record rather than approximated from it. */
+  const sentSpec = p.read && p.read.sent;
+  if (sentSpec){
+    const q = document.createElement('div');
+    q.className = 'pop-sent';
+    q.textContent = 'Asked ' + (sentSpec.endpoint === 'google/maps' ? 'Google Maps' : 'Google web') +
+      ' for “' + sentSpec.coord + '” · ' + (sentSpec.lang || 'en') +
+      ' · depth ' + sentSpec.depth;
+    q.title = 'Exactly the request this number came from. The link below rebuilds it.';
+    d.appendChild(q);
+  }
+
   /* One link, not two. Two links stacked on top of each other asked the
      reader to decide which of them was the real one before they could check
      anything, and the answer was never obvious from the words. The map view
@@ -9805,11 +9902,12 @@ function dotPopup(p, idx, scan){
   }
   if (p.adNames && p.adNames.length){
     d.appendChild(listBlock('Sponsored listings read here (' + p.adNames.length + ')', p.adNames, p.adMatched, (n, i) => {
-      p.adRank = i + 1; p.adMatched = n;
-      p.rank = (p.names ? p.names.length : 0) + i + 1;
-      p.matched = n; p.matchConfidence = 'manual'; p.matchedViaAd = true;
+      /* Picking a sponsored listing records a sponsored placement. It does
+         not invent an organic position out of it. */
+      p.adRank = i + 1; p.adMatched = n; p.adConfidence = 'manual';
+      p.adOnly = p.rank === 0;
       commitPointEdit(idx, scan);
-    }, p.adRank ? p.adRank - 1 : null, !!p.matchedViaAd));
+    }, p.adRank ? p.adRank - 1 : null, false));
   }
 
   if (p.rank != null){
@@ -9960,7 +10058,7 @@ function renderVerdict(scan){
   const corrected = (read.find(p => p.corrected) || {}).corrected;
   if (corrected && normName(corrected) !== normName(scan.keyword))
     html += '<div class="flag">Google is answering this as <strong>' + esc(corrected) + '</strong>, not <strong>' + esc(scan.keyword) + '</strong>. Track the corrected spelling instead — the results you see in a browser come from the corrected query, so the two will never line up.</div>';
-  if (widened) html += '<div class="flag">' + widened + ' point' + (widened === 1 ? ' needed' : 's needed') + ' a wider map view before the profile appeared. Those are real sightings, but the listing is thin on the ground there — it only surfaces once the search covers more area.</div>';
+  if (widened) html += '<div class="flag">' + widened + ' point' + (widened === 1 ? '' : 's') + ' counted as a miss here but did turn up once the map was opened out. Those are not rankings at these points — they are a sign the listing is known in the area without being a strong enough answer to appear at this view.</div>';
   if (fuzzy) html += '<div class="flag">' + fuzzy + ' point' + (fuzzy === 1 ? ' was' : 's were') + ' matched on the business name alone. Add the profile link, phone or website on step one to turn those into exact matches.</div>';
   if (absent && !found.length) html += '<div class="flag">Nothing found anywhere, at any width. If you can see the listing on Google yourself, check the business name on step one matches the listing exactly, then open a dot, expand “Listings read here” and click the right one.</div>';
   box.innerHTML = html;
@@ -10019,7 +10117,7 @@ function tipStats(scan, g){
     avg: avgRank(pts),
     innerVis: visPct(inner), outerVis: visPct(outer),
     innerAvg: avgRank(inner), outerAvg: avgRank(outer),
-    adOnly: pts.filter(p => p.matchedViaAd).length,
+    adOnly: pts.filter(p => p.adOnly).length,
     widened: pts.filter(p => p.widened).length,
     fuzzy: pts.filter(p => p.matchConfidence === 'fuzzy').length,
     rivalReviews: mean(rivalReviews), rivalRating: mean(rivalRatings),
@@ -10085,8 +10183,8 @@ function buildTips(scan, g){
 
   if (s.widened >= 2){
     t.push({p:'med', title:'The listing is thin where it does appear',
-      body:s.widened + ' points only produced this profile once the search was widened. Google knows the business exists there but does not consider it a strong local answer yet. Photos added on a regular cadence, a complete service list and reviews from customers in those directions are what thicken that signal.',
-      ev:s.widened + ' points needed a wider view'});
+      body:s.widened + ' points show nothing at the view they were set to, yet produce this profile once the map is opened out. Google knows the business exists there and does not yet consider it a strong enough local answer to show it. Photos added on a regular cadence, a complete service list and reviews from customers in those directions are what thicken that signal.',
+      ev:s.widened + ' points found only on a wider view'});
   }
 
   if (s.found && s.share < 40){
@@ -10360,7 +10458,7 @@ async function runScan(scan){
     const read = scan.points.filter(p => p.rank != null).length;
     const fuzzy = scan.points.filter(p => p.matchConfidence === 'fuzzy').length;
     const thin = scan.points.filter(p => p.sparse && p.rank != null).length;
-    const adOnly = scan.points.filter(p => p.matchedViaAd).length;
+    const adOnly = scan.points.filter(p => p.adOnly).length;
     const absent = scan.points.filter(p => p.rank === 0).length;
     let msg = read === total
       ? 'Scan complete \u2014 all ' + total + ' points read.'
@@ -10452,9 +10550,23 @@ async function dfsQuery(keyword, p, region, surface, opts){
   const url = (state.settings.proxyPrefix || '').trim() + endpoint;
   const lang = (region.hl || 'en').split('-')[0];
   const coord = p.lat.toFixed(7) + ',' + p.lng.toFixed(7);
+  /* The map endpoint is given a real map zoom; the organic endpoint is given
+     a coordinate and nothing else, and resolves the view itself. Recording
+     which of those actually happened is the difference between a link that
+     reproduces the reading and one that guesses at it. */
+  const sentCoord = surface === 'web' ? coord : (coord + ',' + zoom + 'z');
   const task = surface === 'web'
     ? {keyword, location_coordinate:coord, language_code:lang, device:'desktop', depth}
-    : {keyword, location_coordinate:coord + ',' + zoom + 'z', language_code:lang, depth};
+    : {keyword, location_coordinate:sentCoord, language_code:lang, depth};
+  const sent = {
+    provider: 'dataforseo',
+    endpoint: surface === 'web' ? 'google/organic' : 'google/maps',
+    surface, coord: sentCoord,
+    /* null on the web surface, because no zoom was sent and inventing one for
+       the link is exactly how the two came to disagree. */
+    zoom: surface === 'web' ? null : zoom,
+    lang, depth, at: Date.now()
+  };
 
   let res;
   try{
@@ -10489,6 +10601,7 @@ async function dfsQuery(keyword, p, region, surface, opts){
     err.empty = /no search result/i.test(msg) || t.status_code === 40501 || t.status_code === 40502;
     throw err;
   }
+  data.__sent = sent;
   return data;
 }
 function normalizeDfs(data, surface){
@@ -10513,11 +10626,12 @@ function normalizeDfs(data, surface){
     const usePack = pack.length > 0;
     const organic = usePack ? pack : items.filter(i => i.type === 'organic').map(pick).filter(x => x.title);
     const ads = items.filter(i => i.type === 'paid').map(pick).filter(x => x.title);
-    return {organic, ads, corrected, listKind: usePack ? 'pack' : 'organic'};
+    return {organic, ads, corrected, listKind: usePack ? 'pack' : 'organic',
+            sent: data.__sent || null};
   }
   const organic = items.filter(i => (i.type === 'maps_search' || i.type === 'local_pack') && !i.is_paid).map(pick).filter(x => x.title);
   const ads = items.filter(i => i.is_paid || i.type === 'maps_paid').map(pick).filter(x => x.title);
-  return {organic, ads, corrected, listKind: 'maps'};
+  return {organic, ads, corrected, listKind: 'maps', sent: data.__sent || null};
 }
 
 async function serperQuery(keyword, p, region, surface, opts){
@@ -10644,22 +10758,28 @@ function readListings(results, target){
     adRank: null, adMatched: null,
     sparse: organic.length < SPARSE,
     corrected: (results && results.corrected) || null,
-    listKind: (results && results.listKind) || null
+    listKind: (results && results.listKind) || null,
+    /* Carried so the read record can say exactly what the provider was
+       handed, rather than reconstructing it afterwards. */
+    sent: (results && results.sent) || null
   };
   for (let i = 0; i < organic.length; i++){
     const conf = identify(organic[i], target, strict);
     if (conf){ out.rank = i + 1; out.matched = organic[i].title; out.matchConfidence = conf; break; }
   }
+  /* A sponsored slot is a real placement and a real fact, and it is NOT a
+     position in the organic list. The old code turned "ad slot 1 alongside 28
+     organic results" into rank #29 — a number that appears nowhere on
+     Google, that nobody could ever count to, and that then averaged into the
+     grid's statistics as though it were a ranking. The ad is now reported as
+     an ad, and the organic rank stays whatever it actually was. */
   for (let i = 0; i < ads.length; i++){
     const conf = identify(ads[i], target, strict);
     if (conf){
-      out.adRank = i + 1; out.adMatched = ads[i].title;
-      if (out.rank === 0 && includeAds){
-        out.rank = organic.length + i + 1;
-        out.matched = ads[i].title;
-        out.matchConfidence = conf;
-        out.matchedViaAd = true;
-      }
+      out.adRank = i + 1;
+      out.adMatched = ads[i].title;
+      out.adConfidence = conf;
+      out.adOnly = out.rank === 0;
       break;
     }
   }
@@ -10669,21 +10789,32 @@ function readListings(results, target){
   return out;
 }
 function applyListings(p, results, target, step, region){
-  Object.assign(p, readListings(results, target));
-  p.verified = false; p.widened = false; p.attempts = null;
-  if (region) p.read = recordRead(p, step, region, p);
+  const read = readListings(results, target);
+  Object.assign(p, read);
+  p.verified = false; p.widened = false; p.attempts = null; p.viewShifted = false;
+  clearWide(p);
+  if (region) p.read = recordRead(p, step, region, read);
 }
 
 /* ---------------------------------------------------------------------------
-   Resolving one point.
+   RESOLVING ONE POINT — AND WHY THE NUMBER IS THE VIEW YOU ASKED FOR
 
-   A single tight reading is the reason edge-of-town points come back empty:
-   Google returns whatever fits the map view it was asked for, and on the
-   outskirts that can be five listings that don't include the business at all.
-   So a point is only reported as absent after the search has been widened
-   twice and then tried on the other surface. The first reading that finds the
-   profile wins, and the ladder is recorded on the point so the report can say
-   exactly what was checked.
+   This used to climb a ladder of up to five views and report whichever rung
+   first found the profile. A point that was nowhere to be seen at the
+   configured view came back as "#12" because widening the map to 12z
+   eventually turned it up. The number on the grid was then a rank at a view
+   nobody had chosen, mixed in among numbers that were ranks at the view
+   everybody had chosen, and no amount of footnoting makes those two the same
+   measurement.
+
+   So rung zero — the exact surface and zoom the grid is configured for — is
+   the only thing that can set p.rank. If the profile is not there, the point
+   is a miss, and it is drawn as a miss.
+
+   The wider views are still read, because knowing that a listing surfaces
+   once the map opens up is genuinely useful. They just land in their own
+   fields (p.wideRank, p.wideRead) and are reported as their own fact, with
+   their own link. Two readings, two numbers, two links, never merged.
 --------------------------------------------------------------------------- */
 function zoomLadder(base, surface){
   const other = surface === 'local' ? 'web' : 'local';
@@ -10695,6 +10826,11 @@ function zoomLadder(base, surface){
     {surface: other, zoom: Math.max(base - 4, 6)}
   ];
 }
+/* Every wide-view field, in one place, so a re-read can never leave half of a
+   previous answer behind on the point. */
+const WIDE_FIELDS = ['wideRank','wideNames','wideRead','wideSurface','wideZoom','wideMatched'];
+function clearWide(p){ WIDE_FIELDS.forEach(k => { delete p[k]; }); }
+
 async function resolvePoint(keyword, p, region, target, cfg){
   const c = cfg || {};
   const base = c.zoom || 14;
@@ -10703,7 +10839,9 @@ async function resolvePoint(keyword, p, region, target, cfg){
   const deep = state.settings.deepVerify !== false && !relay;
   const ladder = relay ? [{surface, zoom: base}] : zoomLadder(base, surface);
   const attempts = [];
-  let chosen = null, chosenStep = null, widened = false, lastErr = null, reads = 0;
+  let atView = null, atStep = null;      // rung zero: the view that was configured
+  let wide = null, wideStep = null;      // the first other view that found it
+  let lastErr = null, reads = 0;
 
   for (let i = 0; i < ladder.length; i++){
     const step = ladder[i];
@@ -10713,31 +10851,54 @@ async function resolvePoint(keyword, p, region, target, cfg){
       const res = await providerQuery(keyword, p, region, step.surface, {zoom: step.zoom});
       read = readListings(res, target);
     }catch(err){
-      if (err.fatal) throw err;              // bad credentials or a blocked browser: stop the whole run
+      if (err.fatal) throw err;            // bad credentials or a blocked browser: stop the whole run
       lastErr = err;
       attempts.push({surface: step.surface, zoom: step.zoom, listings: 0, rank: 0, error: err.message});
       if (c.onStep) c.onStep(step, i, attempts[attempts.length - 1]);
-      continue;                              // one dead view never ends the point
+      continue;                            // one dead view never ends the point
     }
     reads++;
     attempts.push({surface: step.surface, zoom: step.zoom, listings: read.names.length, rank: read.rank});
     if (c.onStep) c.onStep(step, i, attempts[attempts.length - 1]);
-    if (!chosen || (chosen.rank === 0 && read.names.length > chosen.names.length)){ chosen = read; chosenStep = step; }
-    if (read.rank >= 1){ chosen = read; chosenStep = step; widened = i > 0; break; }
-    // Shallow mode still walks on when a view came back empty or threadbare — an
-    // empty view is the usual cause of a false "not found", not proof of one.
-    if (!deep && read.names.length >= SPARSE) break;
+
+    if (i === 0){
+      /* Whatever this says is the answer, including "not here". */
+      atView = read; atStep = step;
+      if (read.rank >= 1) break;           // found where it was asked for: done
+      if (!deep) break;                    // widening switched off: the miss stands
+      continue;
+    }
+    /* Everything below rung zero is context, not the answer. */
+    if (!atView && !wide){ atView = read; atStep = step; }   // rung zero never returned data
+    if (read.rank >= 1 && !wide){ wide = read; wideStep = step; break; }
   }
 
   if (!reads) throw (lastErr || new Error('no view of this point could be read'));
-  Object.assign(p, chosen);
+
+  /* If rung zero could not be read at all, the point is standing on a view it
+     was not configured for, and says so rather than pretending otherwise. */
+  const shifted = !!(atStep && (atStep.zoom !== base || atStep.surface !== surface));
+
+  Object.assign(p, atView);
   p.attempts = attempts;
-  p.widened = widened;
-  p.verified = p.rank === 0 && reads > 1;
-  /* Same assignment as the rank: the rung that produced this number, so the
-     link can reproduce it exactly rather than approximate it. */
-  p.read = recordRead(p, chosenStep, region, chosen);
+  p.viewShifted = shifted;
+  p.read = recordRead(p, atStep, region, atView);
   p.error = null;
+
+  clearWide(p);
+  if (wide && wide.rank >= 1 && p.rank === 0){
+    /* Found, but not here. Its own number, its own record, its own link. */
+    p.wideRank = wide.rank;
+    p.wideNames = wide.names;
+    p.wideMatched = wide.matched;
+    p.wideSurface = wideStep.surface;
+    p.wideZoom = wideStep.zoom;
+    p.wideRead = recordRead(p, wideStep, region, wide);
+  }
+  /* "widened" now means what it says: absent at this view, present on a wider
+     one. It is no longer a qualifier on a rank — the rank is zero. */
+  p.widened = !!p.wideRank;
+  p.verified = p.rank === 0 && reads > 1;
 }
 
 /* ==========================================================================
@@ -10806,7 +10967,9 @@ function runPaste(fromGesture){
   }
   const p = currentScan.points[currentIdx];
   p.rank = res.rank; p.matched = res.matched;
-  p.adRank = res.adRank; p.adMatched = res.adMatched; p.matchedViaAd = res.viaAd;
+  p.adRank = res.adRank; p.adMatched = res.adMatched;
+  p.adOnly = !res.rank && !!res.adRank;
+  p.matchedViaAd = false;
   p.matchConfidence = res.rank ? 'fuzzy' : null;
   p.names = res.organicNames.slice(0, 100);
   p.adNames = res.adNames.slice(0, 30);
@@ -10903,8 +11066,10 @@ function parsePaste(text, bizName, includeAds){
     if (!e.ad){ organicPos++; organicNames.push(e.name); } else { adPos++; adNames.push(e.name); }
     if (bizName && nameMatches(e.name, bizName)){
       if (e.ad){
+        /* A sponsored slot on a pasted page is a sponsored slot too. The old
+           line set rank to the OVERALL position counting ads and organic
+           together, which is neither of the two numbers Google shows. */
         if (adRank == null){ adRank = adPos; adMatched = e.name; }
-        if (includeAds && rank === 0){ rank = overall; matched = e.name; viaAd = true; }
       } else if (rank === 0){
         rank = organicPos; matched = e.name;
       }
@@ -11574,14 +11739,13 @@ function applyCompareListings(p, results, gbps){
       const conf = identify(organic[i], g, strict);
       if (conf){ rec.rank = i + 1; rec.matched = organic[i].title; rec.matchConfidence = conf; break; }
     }
+    /* Same rule as everywhere else: a sponsored slot is reported as a
+       sponsored slot, never converted into an organic position. */
     for (let i = 0; i < ads.length; i++){
       const conf = identify(ads[i], g, strict);
       if (conf){
         rec.adRank = i + 1; rec.adMatched = ads[i].title;
-        if (rec.rank === 0 && includeAds){
-          rec.rank = organic.length + i + 1; rec.matched = ads[i].title;
-          rec.matchConfidence = conf; rec.matchedViaAd = true;
-        }
+        rec.adOnly = rec.rank === 0;
         break;
       }
     }

@@ -457,6 +457,12 @@ input::placeholder,textarea::placeholder{color:#a9b4bd;}
   flex:1; min-width:120px; font-size:12px; color:var(--ink-2);
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
+/* The area a radius covers is read back after the circle is drawn, so the
+   slot exists before its answer does. Quiet and italic while it waits, so a
+   momentarily empty label does not read as a failure. */
+.geo-out .geo-name.pending{color:var(--ink-3); font-style:italic;}
+.geo-out .geo-within{font-weight:600; color:var(--ink);}
+.geo-out .geo-within.pending{font-weight:400;}
 .geo-out .geo-act{
   flex:none; background:var(--card); border:1px solid var(--line); color:var(--ink-2);
   border-radius:7px; padding:4px 9px; font-family:var(--ui); font-size:10.5px; font-weight:700;
@@ -3234,6 +3240,7 @@ body.pin-locked{overflow:hidden;}
   color:var(--brand-deep); background:var(--brand-wash);
   border:1px solid #f3d9c1; padding:3px 10px; border-radius:20px;
 }
+.geo-out .geo-area b{font-weight:inherit;}
 .geo-out .geo-area i{
   flex:none; width:11px; height:11px; border-radius:3px;
   border:1.5px dashed var(--brand-deep); opacity:.85;
@@ -5156,9 +5163,14 @@ const GEO_PEG_SVG =
    label in the app has to come back in one language. zoom=18 asks for
    building-level detail, and Nominatim widens that by itself out in open
    country, which is exactly the behaviour wanted. */
-async function nominatimReverse(lat, lng){
+async function nominatimReverse(lat, lng, zoom){
+  /* Nominatim's reverse `zoom` is an administrative LEVEL, not a map zoom:
+     3 country, 5 state, 8 county, 10 city, 12 town, 14 suburb, 16 street,
+     18 building. Asking at the level that matches how much ground is being
+     searched is the whole trick behind naming a radius properly. */
+  const z = Math.max(3, Math.min(18, Number(zoom) || 18));
   const url = 'https://nominatim.openstreetmap.org/reverse?format=json&addressdetails=1' +
-    '&accept-language=en&zoom=18&lat=' + encodeURIComponent(lat) + '&lon=' + encodeURIComponent(lng);
+    '&accept-language=en&zoom=' + z + '&lat=' + encodeURIComponent(lat) + '&lon=' + encodeURIComponent(lng);
   const res = await fetch(url, {headers:{Accept:'application/json'}});
   if (!res.ok) throw new Error('HTTP ' + res.status);
   const data = await res.json();
@@ -5290,6 +5302,102 @@ async function geoAreaOutline(hit){
    three of them and they kept drifting apart. Whatever value is in force is
    always present as an option even when it is not one of the steps — a
    radius pulled to 23 km on the map has to survive being shown in a menu. */
+
+/* ==========================================================================
+   WHAT A RADIUS IS ACTUALLY ASKING ABOUT
+   ==========================================================================
+   A circle has a centre, and the centre has an address, but the address is
+   not what the circle means. A 500 km radius drawn from a field outside
+   Blackfalds was reporting itself as "Blackfalds" — naming a hamlet for a
+   search that covers most of a province. Google does not do this: it reads
+   the area back at the level the search actually covers and says "Lacombe,
+   AB", or "Alberta", or "Canada".
+
+   Nominatim's reverse endpoint takes exactly the parameter needed. Its
+   `zoom` is an administrative level, so asking at the level the radius
+   spans returns the place at that level. Pull the edge out and the answer
+   climbs the ladder by itself: street, town, city, county, province,
+   country.
+
+   The thresholds are the ground each level realistically covers. Alberta is
+   roughly 600 km top to bottom, so a radius past ~200 km stops being a
+   region and starts being the province; past ~600 km it has left the
+   province behind and the honest answer is the country.
+   ========================================================================== */
+const GEO_SCOPE_LADDER = [
+  {under:1000,     zoom:18, kind:'address'},
+  {under:3000,     zoom:16, kind:'street'},
+  {under:8000,     zoom:14, kind:'neighbourhood'},
+  {under:20000,    zoom:12, kind:'town'},
+  {under:60000,    zoom:10, kind:'city'},
+  {under:200000,   zoom:8,  kind:'region'},
+  {under:600000,   zoom:5,  kind:'province'},
+  {under:Infinity, zoom:3,  kind:'country'}
+];
+function geoScopeStep(metres){
+  const m = Number(metres) || GEO_EXACT_RADIUS;
+  for (let i = 0; i < GEO_SCOPE_LADDER.length; i++){
+    if (m < GEO_SCOPE_LADDER[i].under) return GEO_SCOPE_LADDER[i];
+  }
+  return GEO_SCOPE_LADDER[GEO_SCOPE_LADDER.length - 1];
+}
+/* Plain English for the level, so the readout can say what kind of answer
+   it is giving rather than leaving the user to infer it. */
+const GEO_SCOPE_WORD = {
+  address:'address', street:'street', neighbourhood:'neighbourhood',
+  town:'town', city:'city and district', region:'region',
+  province:'province or state', country:'country'
+};
+
+/* The name at that level, assembled from the address parts rather than from
+   display_name — which at zoom 5 still returns the full "Alberta, Canada"
+   but at zoom 8 returns a comma-soup line with the postcode in it. Each
+   rung takes the parts that belong to it and the one above for context,
+   which is how "Lacombe, Alberta" and "Alberta, Canada" both come out
+   readable. */
+function geoScopeName(hit, zoom){
+  const a = (hit && hit.address) || {};
+  const country = a.country || '';
+  const state   = a.state || a.province || '';
+  const region  = a.state_district || a.county || a.region || '';
+  const city    = a.city || a.town || a.village || a.municipality || a.hamlet || '';
+  const local   = a.suburb || a.neighbourhood || a.quarter || a.city_district || '';
+  const street  = [a.house_number, a.road].filter(Boolean).join(' ');
+  const z = Number(zoom) || 18;
+
+  let parts;
+  if      (z <= 3)  parts = [country];
+  else if (z <= 5)  parts = [state || country, state ? country : ''];
+  else if (z <= 8)  parts = [region || city || state, state || country];
+  else if (z <= 10) parts = [city || region || state, state];
+  else if (z <= 12) parts = [city || local || region, state];
+  else if (z <= 14) parts = [local || city, city || state];
+  else if (z <= 16) parts = [street || local || city, city || state];
+  else              parts = [street || (hit && hit.name) || local || city, city, state];
+
+  const seen = [];
+  parts.filter(Boolean).forEach(p => { if (seen.indexOf(p) === -1) seen.push(p); });
+  return seen.join(', ') || (hit && hit.display_name) || '';
+}
+
+/* Reading the area back costs a request, so it is cached by level and by
+   centre rounded to about a hundred metres — dragging a circle's edge in and
+   out over the same town must not hammer Nominatim, whose usage policy is
+   one request a second. */
+const geoScopeCache = new Map();
+async function geoScopeFor(lat, lng, radius){
+  const step = geoScopeStep(radius);
+  const key = step.zoom + ':' + Number(lat).toFixed(3) + ',' + Number(lng).toFixed(3);
+  if (geoScopeCache.has(key)) return geoScopeCache.get(key);
+  let out = null;
+  try{
+    const hit = await nominatimReverse(Number(lat).toFixed(7), Number(lng).toFixed(7), step.zoom);
+    if (hit) out = {name: geoScopeName(hit, step.zoom), hit: hit, zoom: step.zoom, kind: step.kind};
+  }catch(err){ out = null; }
+  geoScopeCache.set(key, out);
+  return out;
+}
+
 function fillRadiusSelect(sel, value, autoValue){
   if (!sel) return;
   const v = Number(value) || GEO_EXACT_RADIUS;
@@ -5377,7 +5485,13 @@ function renderGeoOut(out, g){
     tag.appendChild(document.createTextNode('Whole area'));
     tag.title = 'The region itself is the search area — its own boundary, not a circle around a point in the middle of it.';
   } else if (mode === 'radius'){
-    tag.appendChild(document.createTextNode('Within ' + radiusLabel(g.radius)));
+    /* Its own element, because the radius menu changes this number without
+       redrawing the readout — and a tag still reading "Within 10 km" beside
+       a 500 km circle is the readout lying about the search. */
+    const dist = document.createElement('b');
+    dist.className = 'geo-dist';
+    dist.textContent = 'Within ' + radiusLabel(g.radius);
+    tag.appendChild(dist);
     tag.title = 'A circle of ' + radiusLabel(g.radius) + ' around this centre.';
   } else if (mode === 'pin'){
     tag.appendChild(document.createTextNode('Dropped pin'));
@@ -5404,7 +5518,17 @@ function renderGeoOut(out, g){
      thing it sits inside. An address keeps its full line, because for an
      address every part of it is worth reading. */
   let name;
-  if (isArea || geoIsBroad(g.hit)){
+  if (mode === 'radius'){
+    /* A circle is named by the ground it covers, not by whatever address
+       happens to sit under its centre. The answer arrives a moment after
+       the circle does, so the slot is rendered first and filled in. */
+    name = document.createElement('span');
+    name.className = 'geo-name geo-within';
+    const known = g.scope && g.scope.name;
+    name.textContent = known || 'Reading the area\u2026';
+    if (!known) name.classList.add('pending');
+    else name.title = (g.scope.hit && g.scope.hit.display_name) || known;
+  } else if (isArea || geoIsBroad(g.hit)){
     const parts = geoScopeParts(g.hit);
     name = document.createElement('span');
     name.className = 'geo-scope';
@@ -5504,6 +5628,31 @@ function renderGeoOut(out, g){
   e.appendChild(copy); e.appendChild(view);
 }
 
+function paintGeoDistance(out, radius){
+  const e = typeof out === 'string' ? $(out) : out;
+  if (!e) return;
+  const d = e.querySelector('.geo-dist');
+  if (d) d.textContent = 'Within ' + radiusLabel(radius);
+  const tag = e.querySelector('.geo-area');
+  if (tag) tag.title = 'A circle of ' + radiusLabel(radius) + ' around this centre.';
+}
+
+function paintGeoScope(out, scope){
+  const e = typeof out === 'string' ? $(out) : out;
+  if (!e) return;
+  const w = e.querySelector('.geo-within');
+  if (!w) return;
+  w.classList.remove('pending');
+  if (scope && scope.name){
+    w.textContent = scope.name;
+    w.title = 'Read back at ' + (GEO_SCOPE_WORD[scope.kind] || 'area') +
+      ' level, because that is about what this radius covers.' +
+      ((scope.hit && scope.hit.display_name) ? '\n' + scope.hit.display_name : '');
+  } else {
+    w.textContent = 'Could not name this area \u2014 the circle still works';
+  }
+}
+
 /* ==========================================================================
    ONE LOCATION FIELD, THREE MUTUALLY EXCLUSIVE WAYS TO SET IT
    ==========================================================================
@@ -5594,11 +5743,30 @@ function wireGeoFinder(cfg){
     });
   });
 
+  /* Naming the ground a circle covers. Re-run whenever the circle changes
+     size or moves, because a radius pulled from 10 km to 500 km is asking
+     about a province rather than a town and the label has to keep up. */
+  let scopeSeq = 0;
+  function refreshScope(lat, lng, r, m){
+    if (m !== 'radius') return;
+    const token = ++scopeSeq;
+    const el = typeof cfg.out === 'string' ? $(cfg.out) : cfg.out;
+    const w = el && el.querySelector('.geo-within');
+    if (w){ w.textContent = 'Reading the area\u2026'; w.classList.add('pending'); }
+    geoScopeFor(lat, lng, r).then(sc => {
+      if (token !== scopeSeq) return;
+      input.dataset.geoScope = (sc && sc.name) || '';
+      paintGeoScope(cfg.out, sc);
+    });
+  }
+
   function clearResolved(){
     delete input.dataset.geoCountry; delete input.dataset.geoIso;
     delete input.dataset.geoLat; delete input.dataset.geoLng;
     delete input.dataset.geoRadius; delete input.dataset.geoArea;
     delete input.dataset.geoBounds; delete input.dataset.geoOsm;
+    delete input.dataset.geoScope;
+    scopeSeq++;   // any answer still in flight is for the old circle
     input.dataset.geoMode = mode;
     geoOutClear(cfg.out); setStatus(cfg.status, '', '');
     if (typeof cfg.onClear === 'function') cfg.onClear();
@@ -5663,12 +5831,19 @@ function wireGeoFinder(cfg){
     };
     renderGeoOut(cfg.out, {
       lat, lng, country, label, hit, market: cfg.market,
-      mode: m, area, bounds, radius, autoRadius: fit,
+      mode: m, area, bounds, radius, autoRadius: fit, scope: o.scope || null,
       /* Changing the radius has to reach the same places the original value
-         did, or the menu would be decoration. */
-      onRadius(v){ input.dataset.geoRadius = String(v); writeRadius(v); fire(v); },
+         did, or the menu would be decoration. And a different radius is a
+         different question, so the area it names is read again. */
+      onRadius(v){
+        input.dataset.geoRadius = String(v); writeRadius(v); fire(v);
+        paintGeoDistance(cfg.out, v);
+        refreshScope(lat, lng, v, m);
+      },
       onMap(){ openMap(); }
     });
+    if (o.scope && o.scope.name) input.dataset.geoScope = o.scope.name;
+    else refreshScope(lat, lng, radius, m);
     fire(radius);
   }
 
@@ -5701,7 +5876,7 @@ function wireGeoFinder(cfg){
         if (res.mode && res.mode !== mode) setMode(res.mode, {keep:true});
         applyPlace(res.hit, {
           lat: res.lat, lng: res.lng, label: res.label, mode: res.mode || mode,
-          radius: res.radius, area: res.area, bounds: res.bounds
+          radius: res.radius, area: res.area, bounds: res.bounds, scope: res.scope
         });
       }
     });
@@ -7245,7 +7420,7 @@ let pinPickerEl = null, pinPickerMap = null, pinPickerCfg = null,
     pinPickerMode = 'pin', pinPickerLatLng = null, pinPickerLookup = 0,
     pinPickerRadius = GEO_EXACT_RADIUS, pinPickerHit = null,
     pinPickerArea = false, pinPickerBounds = null, pinPickerLabel = '',
-    pinPickerOsm = null;
+    pinPickerOsm = null, pinPickerScope = null;
 /* Every layer the picker can put on the map. Kept in one object because
    switching modes has to be able to take all of them off again — a circle
    left behind after a switch to Drop pin is a radius nobody asked for,
@@ -7339,7 +7514,8 @@ function buildPinPicker(){
     pinPickerRadius = Number(e.target.value) || pinPickerRadius;
     drawPinZone();
     fitPinZone();
-    paintPinPicker(pinPickerLabel, false);
+    /* A different radius is a different area, so it is named again. */
+    lookupPinPicker();
   });
   $('pinPickerModes').querySelectorAll('.geo-mode').forEach(el => {
     el.addEventListener('click', () => setPickerMode(el.dataset.m));
@@ -7640,7 +7816,9 @@ function drawPinZone(){
       pinPickerRadius = roundRadius(pinPickerRadius);
       syncRadiusSelect();
       updateZoneShapes();
-      paintPinPicker(pinPickerLabel, false);
+      /* Only on release: naming the area costs a request, and one per
+         pointer-move would be a request a millisecond. */
+      lookupPinPicker();
     });
   } else {
     updateZoneShapes();
@@ -7759,7 +7937,8 @@ function paintPinPicker(label, pending){
   } else {
     coordEl.textContent = pinPickerLatLng.lat.toFixed(6) + ', ' + pinPickerLatLng.lng.toFixed(6);
   }
-  nameEl.textContent = (label != null ? label : pinPickerLabel) || (pending ? 'Reading this spot…' : '');
+  nameEl.textContent = (label != null ? label : pinPickerLabel) ||
+    (pending ? (pinPickerMode === 'radius' ? 'Naming this area…' : 'Reading this spot…') : '');
   nameEl.classList.toggle('pending', !!pending && !label);
   $('pinPickerUse').disabled = false;
 }
@@ -7770,6 +7949,25 @@ function lookupPinPicker(){
   if (!pinPickerLatLng) return;
   const token = ++pinPickerLookup;
   const {lat, lng} = pinPickerLatLng;
+
+  /* A circle is named by what it covers. Pull the edge out and the answer
+     climbs from a street to a town to a county to the province, because the
+     level being asked about climbs with it. The other two modes want the
+     address under the point, which is a different question. */
+  if (pinPickerMode === 'radius'){
+    paintPinPicker('', true);   // clear the old area's name while the new one loads
+    geoScopeFor(lat, lng, pinPickerRadius).then(sc => {
+      if (token !== pinPickerLookup) return;
+      pinPickerScope = sc;
+      /* The scope's own hit still carries the country, which is what the
+         country-level APIs downstream need. */
+      pinPickerHit = (sc && sc.hit) || null;
+      paintPinPicker(sc && sc.name ? sc.name
+        : 'Could not name this area \u2014 the circle still works', false);
+    });
+    return;
+  }
+
   nominatimReverse(lat.toFixed(7), lng.toFixed(7))
     .then(hit => {
       if (token !== pinPickerLookup) return;
@@ -7820,6 +8018,7 @@ function openPinPicker(cfg){
   pinPickerBounds = (cfg && cfg.bounds) || null;
   pinPickerRadius = Number(cfg && cfg.radius) || GEO_EXACT_RADIUS;
   pinPickerOsm = (cfg && cfg.osm) || null;
+  pinPickerScope = null;
   if (cfg && cfg.label) pinPickerLabel = cfg.label;
 
   const dock = $('pinPickerDock');
@@ -7884,10 +8083,11 @@ function usePinPicker(){
      than inventing a street for it. */
   const label = area && pinPickerLabel
     ? pinPickerLabel
-    : (hit && hit.display_name
+    : ((hit && hit.display_name && pinPickerMode !== 'radius')
         ? hit.display_name
         : (pinPickerMode === 'radius'
-            ? (radiusLabel(pinPickerRadius) + ' around ' + lat.toFixed(5) + ', ' + lng.toFixed(5))
+            ? (radiusLabel(pinPickerRadius) + ' around ' +
+               ((pinPickerScope && pinPickerScope.name) || (lat.toFixed(5) + ', ' + lng.toFixed(5))))
             : ('Dropped pin · ' + lat.toFixed(5) + ', ' + lng.toFixed(5))));
   /* An area handed back has to stay an area: its extent and its OSM identity
      travel with it, or the field it lands in would see a bare coordinate and
@@ -7911,7 +8111,8 @@ function usePinPicker(){
   closePinPicker();
   if (typeof pinPickerCfg.onPick === 'function'){
     pinPickerCfg.onPick({hit: synthetic, lat, lng, label, radius,
-                         mode: pinPickerMode, area: area, bounds: bounds});
+                         mode: pinPickerMode, area: area, bounds: bounds,
+                         scope: pinPickerMode === 'radius' ? pinPickerScope : null});
   }
 }
 

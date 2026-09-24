@@ -4,14 +4,14 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <meta name="referrer" content="no-referrer"/>
-<title>GBP Reporter — Local rank grids for Google Business Profiles</title>
+<title>EDGE SEO Reporter — Local rank grids for Google Business Profiles</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;450;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
 <style>
 /* ============================================================
-   GBP REPORTER — local rank console
+   EDGE SEO REPORTER — local rank console
    Design language: a field survey instrument.
    Graphite console rail (the instrument body) · paper workspace
    (the chart) · orange as the signal colour · mono type for every
@@ -4288,7 +4288,7 @@ body.so-locked{overflow:hidden;}
 <div class="auth-screen" id="loginScreen">
   <div class="auth-card">
     <div class="auth-logo"><img id="loginLogo" alt="EDGE Marketing &amp; Design"/></div>
-    <h1>GBP Reporter</h1>
+    <h1>EDGE SEO Reporter</h1>
     <p class="auth-sub">Sign in to reach your team's shared clients — every client, profile and scan lives in one place for everyone.</p>
     <div class="f">
       <label for="authEmail">Email</label>
@@ -4500,7 +4500,7 @@ body.so-locked{overflow:hidden;}
               <section class="step open" data-step="1">
                 <div class="step-head">
                   <div class="step-n">1</div>
-                  <div class="step-title">Profile identity<small>How GBP Reporter recognises this listing</small></div>
+                  <div class="step-title">Profile identity<small>How EDGE SEO Reporter recognises this listing</small></div>
                   <svg class="step-chev" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
                 </div>
                 <div class="step-body">
@@ -4710,7 +4710,7 @@ body.so-locked{overflow:hidden;}
                     </select>
                   </div>
                   <label class="sw" style="margin-bottom:6px"><input type="checkbox" id="deepVerify" checked/><i></i><span>Widen the search before calling a point absent</span></label>
-                  <div class="hint" style="margin-bottom:14px">When a point finds nothing, GBP Reporter re-runs it at a wider map view and then on the other surface, so a miss can be told apart from a listing that is simply known further out. <b>A wider view never becomes the rank at the point</b> — the number on the grid is always what the configured view returned, and anything found wider is reported separately with its own link. Only the empty points cost extra calls.</div>
+                  <div class="hint" style="margin-bottom:14px">When a point finds nothing, EDGE SEO Reporter re-runs it at a wider map view and then on the other surface, so a miss can be told apart from a listing that is simply known further out. <b>A wider view never becomes the rank at the point</b> — the number on the grid is always what the configured view returned, and anything found wider is reported separately with its own link. Only the empty points cost extra calls.</div>
                   <div class="f">
                     <label for="proxyPrefix">CORS proxy prefix <span class="opt">only if requests are blocked</span></label>
                     <input id="proxyPrefix" type="text" placeholder="https://your-proxy.example.com/" autocomplete="off"/>
@@ -5266,7 +5266,7 @@ body.so-locked{overflow:hidden;}
     <div class="rail-tree" id="seoClientTree"></div>
 
     <div class="rail-foot">
-      <div class="sync" id="seoSyncPill"><i></i><span>Saved with GBP Reporter data</span></div>
+      <div class="sync" id="seoSyncPill"><i></i><span>Saved with EDGE SEO Reporter data</span></div>
       <div class="mini-row">
         <button class="mini-btn" id="seoImportBtn">Import clients</button>
         <button class="mini-btn" id="seoExportAllBtn">Export all (.xlsx)</button>
@@ -5502,7 +5502,7 @@ body.so-locked{overflow:hidden;}
                     </div>
                     <div class="seo-autoscan-status" id="seoAutoStatusLine"></div>
                   </div>
-                  <div class="hint seo-autoscan-note">Runs only while GBP Reporter is open in a browser tab somewhere. It checks once a minute and catches up on the next visit if a run was missed.</div>
+                  <div class="hint seo-autoscan-note">Runs only while EDGE SEO Reporter is open in a browser tab somewhere. It checks once a minute and catches up on the next visit if a run was missed.</div>
                   <div class="seo-runnow">
                     <button class="btn btn-go btn-full" id="seoRunNowBtn" type="button">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3.2-6.9"/><path d="M21 3v6h-6"/></svg>
@@ -5893,7 +5893,7 @@ window.EDGE_LOGO_RATIO = 512/200;
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
 <script>
 /* ==========================================================================
-   GBP REPORTER — local rank console
+   EDGE SEO REPORTER — local rank console
    Data model:  client → gbps[] → keywords[] → scans[]
                 client → compareScans[]   (one keyword across every profile)
    Everything autosaves to localStorage immediately and mirrors to Firestore.
@@ -8037,16 +8037,16 @@ function buildClaudeSnapshot(){
   }));
 
   return {
-    tool: 'GBP Reporter',
+    tool: 'EDGE SEO Reporter',
     snapshotVersion: 1,
     generatedAt: new Date().toISOString(),
-    readMe: 'RE-READ THIS FILE BEFORE ANSWERING. GBP Reporter rewrites it within ' +
+    readMe: 'RE-READ THIS FILE BEFORE ANSWERING. EDGE SEO Reporter rewrites it within ' +
             'seconds of every scan and every edit, so a copy read earlier in a ' +
             'conversation is very likely stale. Read it fresh, quote generatedAt in ' +
             'the answer, and never ask for an export or an attachment — the folder ' +
             'copy is always the current one. This workspace can also be CHANGED from ' +
             'this folder: see ' + CLAUDE_HOWTO + ' beside this file for the commands. ' +
-            'Written automatically by GBP Reporter so an assistant can answer ' +
+            'Written automatically by EDGE SEO Reporter so an assistant can answer ' +
             'questions about this workspace. Rank 0 means the profile was not in ' +
             'the results at that point’s own map view; null means the point could ' +
             'not be read at all. A "notHereButAt" value is a sighting on a WIDER ' +
@@ -8060,7 +8060,7 @@ function buildClaudeSnapshot(){
    answered from a glance rather than by parsing a few hundred kilobytes. */
 function buildClaudeBrief(snap){
   const L = [];
-  L.push('# GBP Reporter — workspace brief');
+  L.push('# EDGE SEO Reporter — workspace brief');
   L.push('');
   L.push('**Generated:** ' + new Date(snap.generatedAt).toLocaleString() +
          '  ·  `' + snap.generatedAt + '`  ·  no credentials');
@@ -8070,13 +8070,13 @@ function buildClaudeBrief(snap){
      scans ago, then asks for a fresh export — when the folder copy beside it has
      been current the whole time. */
   L.push('> **If you are an assistant reading this: re-read this file now, before answering.**');
-  L.push('> GBP Reporter rewrites it within seconds of every scan and every edit, so a copy');
+  L.push('> EDGE SEO Reporter rewrites it within seconds of every scan and every edit, so a copy');
   L.push('> read earlier in this conversation is very likely out of date. Read it fresh, say');
   L.push('> the **Generated** time above in your answer so the reader can see how current it');
   L.push('> is, and never ask for an export or an attachment — the folder copy is the live one.');
   L.push('>');
   L.push('> **You can also change this workspace, not just read it.** Write a command file');
-  L.push('> into this same folder and GBP Reporter runs it within seconds — add or remove a');
+  L.push('> into this same folder and EDGE SEO Reporter runs it within seconds — add or remove a');
   L.push('> keyword, fix a wrong location, start a scan. The whole vocabulary is in');
   L.push('> `' + CLAUDE_HOWTO + '` beside this file. Do not tell the person to make');
   L.push('> the change by hand without checking there first.');
@@ -8407,7 +8407,7 @@ function claudeMarketIdx(name, fallback){
 const CLAUDE_COMMANDS = {};
 function claudeRegister(name, fn){ CLAUDE_COMMANDS[String(name).toLowerCase()] = fn; }
 
-claudeRegister('ping', async () => 'GBP Reporter is listening. Commands are running.');
+claudeRegister('ping', async () => 'EDGE SEO Reporter is listening. Commands are running.');
 
 claudeRegister('refresh', async () => {
   renderAll();
@@ -8526,7 +8526,7 @@ async function claudeClearInbox(){
     const fh = await claudeDir.getFileHandle(CLAUDE_INBOX, {create: true});
     const w = await fh.createWritable();
     await w.write(JSON.stringify({commands: [],
-      note: 'Put commands in the "commands" array. GBP Reporter empties this file as soon as it reads it. See ' + CLAUDE_HOWTO + '.'}, null, 2));
+      note: 'Put commands in the "commands" array. EDGE SEO Reporter empties this file as soon as it reads it. See ' + CLAUDE_HOWTO + '.'}, null, 2));
     await w.close();
   }catch(err){}
 }
@@ -8535,9 +8535,9 @@ async function claudeWriteOutbox(results){
     const fh = await claudeDir.getFileHandle(CLAUDE_OUTBOX, {create: true});
     const w = await fh.createWritable();
     await w.write(JSON.stringify({
-      tool: 'GBP Reporter',
+      tool: 'EDGE SEO Reporter',
       respondedAt: new Date().toISOString(),
-      readMe: 'What GBP Reporter did with the last batch of commands. Read ' +
+      readMe: 'What EDGE SEO Reporter did with the last batch of commands. Read ' +
               CLAUDE_SNAPSHOT + ' again afterwards — it was rewritten once these ran.',
       results: results
     }, null, 2));
@@ -8616,10 +8616,10 @@ function buildClaudeHowTo(){
   const clients = (state.clients || []).map(c => c.name);
   const seo = (state.seoClients || []).map(c => c.name);
   return [
-'# How to make changes in GBP Reporter',
+'# How to make changes in EDGE SEO Reporter',
 '',
 'You can change this workspace, not just read it. Write a file called',
-'`' + CLAUDE_INBOX + '` into this same folder. GBP Reporter polls for it every',
+'`' + CLAUDE_INBOX + '` into this same folder. EDGE SEO Reporter polls for it every',
 'few seconds while it is open, runs what is in it, empties the file, and writes',
 '`' + CLAUDE_OUTBOX + '` saying what happened. Read that, and re-read',
 '`' + CLAUDE_SNAPSHOT + '`, to confirm.',
@@ -8683,7 +8683,7 @@ function buildClaudeHowTo(){
 '  when the person asked for a fresh check. Adding a keyword without scanning',
 '  leaves it with no rank until the next scan, which is usually what is wanted.',
 '- **Nothing happens while the app is closed.** Commands sit in the file until',
-'  GBP Reporter is open in a browser tab. If the results file does not change,',
+'  EDGE SEO Reporter is open in a browser tab. If the results file does not change,',
 '  say the app may not be open rather than assuming the command failed.',
 '- **Every change is logged in the app** under "Claude activity", and removals',
 '  can be undone there. Say what you changed in plain words when you report back.',
@@ -9613,7 +9613,7 @@ $('authPassword').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.p
 $('authEmail').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); $('authPassword').focus(); } });
 $('signOutBtn').addEventListener('click', async () => {
   if (!fbAuth) return;
-  if (!confirm('Sign out of GBP Reporter on this computer?')) return;
+  if (!confirm('Sign out of EDGE SEO Reporter on this computer?')) return;
   try{ await fbAuth.signOut(); }catch(e){}
 });
 
@@ -9974,7 +9974,7 @@ function renderMeter(){
     bars[i].className = i < n ? (hasCid ? 'lit top' : 'lit') : '';
   }
   let verdict, note;
-  if (!g || n === 0){ verdict = 'Add details'; note = 'GBP Reporter needs at least the business name to recognise this listing in the results.'; }
+  if (!g || n === 0){ verdict = 'Add details'; note = 'EDGE SEO Reporter needs at least the business name to recognise this listing in the results.'; }
   else if (hasCid && n >= 3){ verdict = 'Certain'; note = 'A CID match is unmistakable. This profile will be identified even if a competitor shares its name.'; }
   else if (hasCid){ verdict = 'Certain'; note = 'The CID from the profile link identifies this listing exactly. Add the phone and website as backup for providers that don\'t return a CID.'; }
   else if (n >= 3){ verdict = 'Strong'; note = 'Phone and website matches are near-certain. Paste the full maps link to add a CID and make it exact.'; }
@@ -10502,7 +10502,7 @@ function lkPanelInner(g, forModal){
   if (g.listing) h += listingCardHtml(g.listing, g, {actions:!forModal});
   if (mine && lkState.cands.length) h += lkCandidatesHtml(lkState.cands, g.listing ? 'Other listings Google returned' : 'Google returned these — which one is yours?');
   if (!g.listing && !(mine && lkState.cands.length)){
-    h += '<div class="lk-empty">Nothing confirmed yet. Look the listing up and GBP Reporter will load the profile Google actually has — its exact name, CID, Place ID, phone, website and pin — and scan for <b>that</b>.</div>';
+    h += '<div class="lk-empty">Nothing confirmed yet. Look the listing up and EDGE SEO Reporter will load the profile Google actually has — its exact name, CID, Place ID, phone, website and pin — and scan for <b>that</b>.</div>';
     h += lkLinkSummaryHtml(g);
     if (forModal) h += lkMatchRulesHtml(g);
   }
@@ -10690,7 +10690,7 @@ function renderGridInfo(){
   $('gridInfo').innerHTML = '<strong>' + (n*n) + ' searches</strong> covering roughly ' + span + ' km × ' + span +
     ' km \u00b7 each read at ' + z + 'z, a view about <strong>' + viewKm.toFixed(1) + ' km</strong> across' +
     ' \u00b7 about <strong>' + mins + '</strong> at ' + lanes + ' point' + (lanes === 1 ? '' : 's') + ' at a time. ' +
-    'A point that finds the profile costs one call; a point that finds nothing costs up to five while GBP Reporter checks whether it is missing here or missing everywhere.' +
+    'A point that finds the profile costs one call; a point that finds nothing costs up to five while EDGE SEO Reporter checks whether it is missing here or missing everywhere.' +
     areaWarn;
 }
 
@@ -10824,7 +10824,7 @@ $('exportBtn').addEventListener('click', () => {
   const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'gbp-reporter-data-' + new Date().toISOString().slice(0,10) + '.json';
+  a.download = 'edge-seo-reporter-data-' + new Date().toISOString().slice(0,10) + '.json';
   a.click();
   URL.revokeObjectURL(a.href);
   toast('Data exported', 'ok');
@@ -10837,7 +10837,7 @@ $('importFile').addEventListener('change', e => {
   reader.onload = () => {
     try{
       const data = JSON.parse(reader.result);
-      if (!data || !Array.isArray(data.clients)) throw new Error('that file isn\'t a GBP Reporter export');
+      if (!data || !Array.isArray(data.clients)) throw new Error('that file isn\'t an EDGE SEO Reporter export');
       adoptRemote(data);
       if (typeof data.updatedAt !== 'number') data.updatedAt = 0;
       backupLocal('before-import');
@@ -13243,7 +13243,7 @@ function buildTips(scan, g){
 
   if (s.fuzzy >= Math.max(2, s.read * 0.15)){
     t.push({p:'low', title:'Tighten how this profile is identified',
-      body:s.fuzzy + ' points were matched on the business name alone, which is the one thing that can put a competitor\u2019s number in your client\u2019s report. Paste the full maps link on step one so GBP Reporter has the CID, and fill in the phone and website. It changes nothing about the rankings — it makes the report unarguable.',
+      body:s.fuzzy + ' points were matched on the business name alone, which is the one thing that can put a competitor\u2019s number in your client\u2019s report. Paste the full maps link on step one so EDGE SEO Reporter has the CID, and fill in the phone and website. It changes nothing about the rankings — it makes the report unarguable.',
       ev:s.fuzzy + ' name-only matches'});
   }
 
@@ -15200,7 +15200,7 @@ function pdfHeader(doc, W, title, sub){
   doc.setTextColor(190,200,210);
   doc.text(doc.splitTextToSize(sub, W - 90 - logoW)[0], 40, 56);
   doc.setFontSize(7.5); doc.setTextColor(150,162,172);
-  doc.text('GBP REPORTER  ·  ' + new Date().toLocaleString(), 40, 72);
+  doc.text('EDGE SEO REPORTER  ·  ' + new Date().toLocaleString(), 40, 72);
 }
 function pdfFooter(doc, W, H){
   const pages = doc.internal.getNumberOfPages();
@@ -15212,9 +15212,9 @@ function pdfFooter(doc, W, H){
     if (window.EDGE_LOGO){
       const lh = 11, lw = lh * (window.EDGE_LOGO_RATIO || 2.56);
       doc.addImage(window.EDGE_LOGO, 'PNG', 40, H - 36, lw, lh, undefined, 'FAST');
-      doc.text('GBP Reporter  ·  edgemarketing.ca', 40 + lw + 10, H - 27);
+      doc.text('EDGE SEO Reporter  ·  edgemarketing.ca', 40 + lw + 10, H - 27);
     } else {
-      doc.text('GBP Reporter · EDGE Marketing & Design Inc.', 40, H - 27);
+      doc.text('EDGE SEO Reporter · EDGE Marketing & Design Inc.', 40, H - 27);
     }
     doc.text(i + ' / ' + pages, W - 40, H - 27, {align:'right'});
   }
@@ -16590,7 +16590,7 @@ if (EMBED_ID){
      tool's state.clients) and reuses the GBP engine's autosave, geocoding
      and live-search functions so results are exactly as accurate as the
      rank grid. Nothing above this point was changed in a way that affects
-     behaviour — GBP Reporter works exactly as it did before.
+     behaviour — EDGE SEO Reporter works exactly as it did before.
      ========================================================================== -->
 <script>
 (function(){
@@ -17811,7 +17811,7 @@ function renderSeoCrumbs(){
 }
 
 /* ---------- automatic scans: panel + best-effort in-tab scheduler ----------
-   This only fires while GBP Reporter is open in some browser tab (there's
+   This only fires while EDGE SEO Reporter is open in some browser tab (there's
    no server behind this app to run it unattended). It's still useful on
    its own for anyone who keeps the tool open in the background, and the
    same autoScan settings saved here are exactly what a scheduled job

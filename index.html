@@ -3854,6 +3854,417 @@ table td{font-size:12.5px;}
   .rfsh, .rfsh svg{transition:none !important;}
   .rfsh.spin svg{animation-duration:2s;}
 }
+
+/* ==========================================================================
+   SCAN IN PROGRESS — the loading screen every scan shows
+   ========================================================================== */
+.so-root{position:fixed; inset:0; z-index:8800; display:none; font-family:var(--ui); color:var(--ink);}
+.so-root.on{display:block;}
+body.so-open .toast-wrap{z-index:8900;}
+body.so-locked{overflow:hidden;}
+.so-scrim{
+  position:absolute; inset:0; background:rgba(14,19,25,.62);
+  backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+  animation:soFade .24s var(--ease);
+}
+.so-root.dock .so-scrim{background:rgba(14,19,25,.24); backdrop-filter:none; -webkit-backdrop-filter:none;}
+.so-stage{position:absolute; inset:0; display:grid; place-items:center; padding:20px; overflow-y:auto;}
+.so-root.dock .so-stage{place-items:end center; padding-bottom:26px;}
+.so-card{
+  position:relative; width:100%; max-width:470px; overflow:hidden;
+  background:var(--card); border-radius:24px; outline:none;
+  box-shadow:0 34px 90px -28px rgba(8,12,18,.62), 0 10px 26px -12px rgba(8,12,18,.3), inset 0 0 0 1px rgba(255,255,255,.6);
+  padding:30px 30px 22px; text-align:center;
+  animation:soRise .34s var(--ease);
+}
+.so-card::before{
+  content:""; position:absolute; inset:0 0 auto 0; height:4px;
+  background:linear-gradient(90deg,var(--brand-deep),var(--brand-hi),var(--brand),var(--brand-deep));
+  background-size:300% 100%; animation:soSheen 2.6s linear infinite;
+}
+.so-root.is-finished .so-card::before{animation:none; background:var(--brand);}
+.so-root.is-done .so-card::before{background:var(--good);}
+.so-root.is-error .so-card::before{background:var(--alert);}
+.so-root.is-stopped .so-card::before{background:var(--ink-3);}
+
+/* the radar: three rings going out, a sweep going round */
+.so-radar{position:relative; width:98px; height:98px; margin:0 auto 16px; flex:none;}
+.so-radar::before{
+  content:""; position:absolute; inset:6px; border-radius:50%;
+  background:radial-gradient(circle, var(--brand-wash) 0%, rgba(253,241,230,.55) 55%, rgba(253,241,230,0) 72%);
+}
+.so-radar span{
+  position:absolute; inset:0; border-radius:50%; border:2px solid rgba(232,119,34,.6);
+  opacity:0; animation:soRing 2.4s cubic-bezier(.2,.6,.3,1) infinite;
+}
+.so-radar span:nth-child(2){animation-delay:.8s;}
+.so-radar span:nth-child(3){animation-delay:1.6s;}
+.so-radar b{
+  position:absolute; inset:10px; border-radius:50%;
+  background:conic-gradient(from 0deg, rgba(232,119,34,0) 0deg, rgba(232,119,34,0) 250deg, rgba(232,119,34,.42) 352deg, rgba(232,119,34,0) 360deg);
+  animation:spin 1.7s linear infinite;
+}
+.so-radar i{
+  position:absolute; inset:27px; border-radius:50%; display:grid; place-items:center;
+  background:var(--console); color:#fff;
+  box-shadow:0 10px 22px -8px rgba(20,28,36,.6), inset 0 0 0 2px rgba(255,255,255,.08);
+  transition:background .3s var(--ease), transform .3s var(--ease);
+}
+.so-radar i svg{width:21px; height:21px;}
+.so-root.is-finished .so-radar span, .so-root.is-finished .so-radar b{animation:none; opacity:0;}
+.so-root.is-finished .so-radar i{animation:soPop .42s var(--ease);}
+.so-root.is-done .so-radar i{background:var(--good);}
+.so-root.is-error .so-radar i{background:var(--alert);}
+.so-root.is-stopped .so-radar i{background:var(--ink-2);}
+.so-root.is-stopping .so-radar b{animation-duration:3.4s;}
+
+.so-eyebrow{
+  display:inline-flex; align-items:center; gap:8px;
+  font-size:10.5px; font-weight:700; letter-spacing:.12em; text-transform:uppercase;
+  color:var(--brand-deep); background:var(--brand-wash); border:1px solid #f3d9c1;
+  border-radius:999px; padding:4px 12px 4px 10px;
+}
+.so-eyebrow i{width:7px; height:7px; border-radius:50%; background:var(--brand); animation:pulseRing 1.6s infinite; flex:none;}
+.so-root.is-finished .so-eyebrow i{animation:none;}
+.so-root.is-done .so-eyebrow{color:var(--good); background:var(--good-wash); border-color:#bfe3d3;}
+.so-root.is-done .so-eyebrow i{background:var(--good);}
+.so-root.is-error .so-eyebrow{color:var(--alert); background:#fbe9e6; border-color:#f1c6bf;}
+.so-root.is-error .so-eyebrow i{background:var(--alert);}
+.so-root.is-stopped .so-eyebrow, .so-root.is-stopping .so-eyebrow{color:var(--ink-2); background:var(--card-2); border-color:var(--line);}
+.so-root.is-stopped .so-eyebrow i, .so-root.is-stopping .so-eyebrow i{background:var(--ink-3);}
+
+.so-title{
+  font-family:var(--display); font-size:21px; font-weight:600; letter-spacing:-.02em;
+  line-height:1.3; margin:12px 0 4px; color:var(--ink); overflow-wrap:anywhere;
+}
+.so-sub{margin:0; font-size:12.5px; line-height:1.55; color:var(--ink-2); overflow-wrap:anywhere;}
+.so-sub:empty{display:none;}
+
+.so-bar{
+  position:relative; height:11px; border-radius:999px; overflow:hidden;
+  background:#f1e4d7; margin:20px 0 9px; box-shadow:inset 0 1px 2px rgba(20,28,36,.08);
+}
+.so-bar i{
+  position:absolute; top:0; bottom:0; left:0; width:0; border-radius:inherit; overflow:hidden;
+  background:linear-gradient(90deg,var(--brand-hi),var(--brand-deep));
+  transition:width .45s var(--ease);
+}
+.so-bar i::after{
+  content:""; position:absolute; inset:0;
+  background:repeating-linear-gradient(-45deg, rgba(255,255,255,.24) 0 8px, rgba(255,255,255,0) 8px 16px);
+  background-size:22.63px 22.63px; animation:soStripes .8s linear infinite;
+}
+.so-bar.indet i{width:36%; transition:none; animation:soIndet 1.35s var(--ease) infinite;}
+.so-root.is-done .so-bar i{background:var(--good);}
+.so-root.is-error .so-bar i{background:var(--alert);}
+.so-root.is-stopped .so-bar i{background:var(--ink-3);}
+.so-root.is-finished .so-bar i::after{animation:none; opacity:0;}
+
+.so-meta{
+  display:flex; align-items:baseline; justify-content:space-between; gap:10px; flex-wrap:wrap;
+  font-size:11.5px; color:var(--ink-3); font-variant-numeric:tabular-nums;
+}
+.so-count{font-family:var(--mono); font-weight:700; color:var(--ink); letter-spacing:-.01em;}
+.so-count:empty{display:none;}
+.so-count.plain{font-family:var(--ui); font-weight:600; color:var(--ink-2); letter-spacing:0;}
+.so-clock{margin-left:auto;}
+.so-clock span[data-so-elapsed]{font-family:var(--mono); color:var(--ink-2); font-weight:600;}
+
+.so-now{display:flex; flex-wrap:wrap; justify-content:center; gap:6px; margin:14px 0 0;}
+.so-now span{
+  display:inline-flex; align-items:center; gap:7px; max-width:100%; min-width:0;
+  font-size:11.5px; background:var(--card-2); border:1px solid var(--line);
+  border-radius:999px; padding:5px 11px 5px 9px; animation:soFade .25s var(--ease);
+}
+.so-now span::before{content:""; width:6px; height:6px; border-radius:50%; background:var(--brand); flex:none; animation:blink 1.2s infinite;}
+.so-now b{font-weight:600; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0;}
+.so-now em{font-style:normal; color:var(--ink-3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:0 1 auto; min-width:0;}
+.so-now em::before{content:"\00b7"; margin-right:6px; color:var(--line);}
+.so-now .so-more{background:none; border-style:dashed; color:var(--ink-3);}
+.so-now .so-more::before{display:none;}
+
+.so-stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(86px,1fr)); gap:8px; margin:16px 0 0;}
+.so-stat{background:var(--card-2); border:1px solid var(--line-2); border-radius:13px; padding:9px 8px 8px;}
+.so-stat b{display:block; font-family:var(--mono); font-size:17px; font-weight:700; line-height:1.15; color:var(--ink); font-variant-numeric:tabular-nums;}
+.so-stat span{display:block; margin-top:3px; font-size:9.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-3);}
+.so-stat.good b{color:var(--good);}
+.so-stat.bad b{color:var(--alert);}
+
+.so-note{margin:16px 0 0; font-size:11.5px; line-height:1.55; color:var(--ink-3);}
+.so-note:empty{display:none;}
+
+.so-acts{display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap; margin-top:18px;}
+.so-link{
+  display:inline-flex; align-items:center; gap:6px; border:none; background:none; cursor:pointer;
+  font:600 11.5px/1 var(--ui); color:var(--ink-3); padding:8px 6px; border-radius:8px;
+}
+.so-link svg{width:13px; height:13px;}
+.so-link:hover{color:var(--ink); background:var(--card-2);}
+.so-stop{display:inline-flex; align-items:center; gap:7px; color:var(--alert); border-color:#f1c6bf;}
+.so-stop svg{width:12px; height:12px;}
+.so-stop:hover:not(:disabled){background:#fbe9e6; border-color:var(--alert);}
+.so-stop:disabled{opacity:.6; cursor:wait;}
+.so-close{display:none;}
+.so-root.is-finished .so-close{display:inline-flex;}
+.so-root.is-finished .so-stop, .so-root.is-finished .so-link{display:none;}
+
+/* the docked form, for grid scans: radar on the left, map visible behind */
+.so-root.dock .so-card{
+  max-width:640px; text-align:left; padding:22px 24px 18px;
+  display:grid; grid-template-columns:auto minmax(0,1fr); column-gap:22px; align-items:start;
+}
+.so-root.dock .so-radar{width:78px; height:78px; margin:4px 0 0;}
+.so-root.dock .so-radar i{inset:21px;}
+.so-root.dock .so-radar i svg{width:18px; height:18px;}
+.so-root.dock .so-title{font-size:18px; margin-top:9px;}
+.so-root.dock .so-bar{margin-top:15px;}
+.so-root.dock .so-now{justify-content:flex-start; margin-top:11px;}
+.so-root.dock .so-stats{margin-top:12px;}
+.so-root.dock .so-note{margin-top:12px;}
+.so-root.dock .so-acts{justify-content:flex-end; margin-top:12px;}
+
+/* minimised: a pill that keeps counting */
+.so-pill{
+  position:fixed; left:50%; bottom:22px; transform:translateX(-50%);
+  display:none; align-items:center; gap:11px; pointer-events:auto;
+  background:var(--console); color:#fff; border:none; border-radius:999px;
+  padding:9px 16px 9px 10px; cursor:pointer; font:600 12.5px/1 var(--ui);
+  box-shadow:0 18px 40px -14px rgba(8,12,18,.7), inset 0 0 0 1px rgba(255,255,255,.07);
+  animation:soPillIn .28s var(--ease);
+}
+.so-root.mini{pointer-events:none;}
+.so-root.mini .so-scrim, .so-root.mini .so-stage{display:none;}
+.so-root.mini .so-pill{display:inline-flex;}
+.so-pill-spin{width:18px; height:18px; border-radius:50%; border:2.5px solid rgba(255,255,255,.18); border-top-color:var(--brand-hi); animation:spin .8s linear infinite; flex:none;}
+.so-root.is-finished .so-pill-spin{animation:none; border-color:var(--good); background:var(--good);}
+.so-pill-txt{font-variant-numeric:tabular-nums; white-space:nowrap;}
+.so-pill-bar{display:block; width:74px; height:5px; border-radius:99px; background:rgba(255,255,255,.14); overflow:hidden; text-decoration:none;}
+.so-pill-bar s{display:block; height:100%; width:0; background:var(--brand-hi); border-radius:inherit; text-decoration:none; transition:width .4s var(--ease);}
+.so-pill em{font-style:normal; font-weight:500; color:#aebbc7; font-size:11.5px;}
+.so-root.is-done .so-pill-bar s{background:var(--good);}
+.so-root.is-error .so-pill-bar s{background:var(--alert);}
+.so-pill:hover em{color:#fff;}
+
+@keyframes soFade{from{opacity:0}to{opacity:1}}
+@keyframes soRise{from{opacity:0; transform:translateY(14px) scale(.985)}to{opacity:1; transform:none}}
+@keyframes soPillIn{from{opacity:0; transform:translate(-50%,12px)}to{opacity:1; transform:translate(-50%,0)}}
+@keyframes soRing{0%{transform:scale(.42); opacity:.95} 100%{transform:scale(1.04); opacity:0}}
+@keyframes soSheen{0%{background-position:0 0} 100%{background-position:300% 0}}
+@keyframes soStripes{0%{background-position:0 0} 100%{background-position:22.63px 0}}
+@keyframes soIndet{0%{left:-38%} 100%{left:102%}}
+@keyframes soPop{0%{transform:scale(.6)} 60%{transform:scale(1.12)} 100%{transform:scale(1)}}
+
+@media (max-width:600px){
+  .so-card{padding:24px 18px 18px; border-radius:20px;}
+  .so-title{font-size:18px;}
+  .so-root.dock .so-card{grid-template-columns:1fr; text-align:center; padding:20px 18px 16px;}
+  .so-root.dock .so-radar{margin:0 auto 10px;}
+  .so-root.dock .so-now, .so-root.dock .so-acts{justify-content:center;}
+  .so-meta{justify-content:center;}
+  .so-clock{margin-left:0;}
+  .so-pill{bottom:14px; max-width:calc(100vw - 28px);}
+  .so-pill-bar{display:none;}
+}
+@media (prefers-reduced-motion:reduce){
+  .so-radar span, .so-radar b, .so-card::before, .so-bar i::after{animation-duration:6s !important;}
+  .so-card, .so-scrim, .so-pill{animation:none !important;}
+}
+
+/* ==========================================================================
+   THE TRACKED BUSINESS ON THE MAP — halo under the dots, name card above
+   ========================================================================== */
+.biz-marker{background:none; border:none;}
+.biz-halo{position:absolute; left:-30px; top:-30px; width:60px; height:60px; pointer-events:none;}
+.biz-halo::before{
+  content:""; position:absolute; inset:3px; border-radius:50%;
+  border:2px solid var(--brand); background:rgba(232,119,34,.14);
+  box-shadow:0 0 0 5px rgba(232,119,34,.10);
+}
+.biz-halo i{
+  position:absolute; inset:0; border-radius:50%;
+  border:2px solid rgba(232,119,34,.55); opacity:0;
+  animation:bizPulse 2.8s cubic-bezier(.2,.6,.3,1) infinite;
+}
+.biz-halo i:nth-child(2){animation-delay:1.4s;}
+.biz-halo b{
+  position:absolute; left:50%; top:50%; width:13px; height:13px; margin:-6.5px 0 0 -6.5px;
+  border-radius:50%; background:var(--console); border:2.5px solid #fff;
+  box-shadow:0 2px 6px rgba(20,28,36,.45);
+}
+
+.biz-flag{
+  position:absolute; left:0; bottom:27px; transform:translateX(-50%);
+  display:flex; flex-direction:column; align-items:center;
+  animation:bizDrop .55s var(--ease) both;
+}
+.biz-card{
+  display:flex; align-items:center; gap:9px; max-width:250px;
+  background:var(--console); color:#fff; white-space:nowrap; cursor:pointer;
+  border-radius:14px; padding:6px 14px 6px 6px;
+  box-shadow:0 14px 30px -12px rgba(8,12,18,.7), 0 2px 7px rgba(8,12,18,.28), inset 0 0 0 1px rgba(255,255,255,.08);
+  transition:transform .18s var(--ease), box-shadow .18s var(--ease), padding .18s var(--ease), border-radius .18s var(--ease);
+}
+.biz-card:hover{transform:translateY(-2px); box-shadow:0 18px 34px -12px rgba(8,12,18,.75), 0 3px 9px rgba(8,12,18,.3), inset 0 0 0 1px rgba(255,255,255,.1);}
+.biz-badge{
+  flex:none; width:29px; height:29px; border-radius:50%; display:grid; place-items:center;
+  background:linear-gradient(135deg,var(--brand-hi),var(--brand-deep)); color:#fff;
+  font:700 11px/1 var(--display); letter-spacing:.02em;
+  box-shadow:inset 0 0 0 2px rgba(255,255,255,.2), 0 2px 6px -2px rgba(184,87,15,.7);
+}
+.biz-txt{display:flex; flex-direction:column; min-width:0; line-height:1.22;}
+.biz-txt b{font:600 12.5px/1.22 var(--display); letter-spacing:-.005em; overflow:hidden; text-overflow:ellipsis; max-width:196px;}
+.biz-txt em{font-style:normal; font-size:10.5px; color:#c9d3dc; margin-top:2px; overflow:hidden; text-overflow:ellipsis; max-width:196px;}
+.biz-star{color:#f7b93e;}
+.biz-dim{color:#93a1ae;}
+.biz-stem{
+  display:block; width:2px; height:14px; border-radius:2px;
+  background:linear-gradient(180deg,var(--console),rgba(25,31,38,.45));
+}
+/* folded down when the next row of dots is close: a badge in the diagonal gap */
+.biz-marker.biz-compact .biz-flag{
+  left:var(--biz-dx,34px); top:calc(-1 * var(--biz-dy,34px)); bottom:auto;
+  transform:translate(-50%,-50%); animation:bizFade .45s var(--ease) both;
+}
+.biz-marker.biz-compact .biz-stem{display:none;}
+.biz-marker.biz-compact .biz-flag::before{
+  content:""; position:absolute; left:50%; top:50%; z-index:-1;
+  width:var(--biz-lead,0px); height:2px; border-radius:2px; background:var(--console);
+  transform-origin:0 50%; transform:rotate(135deg) translateX(14px);
+}
+.biz-marker.biz-compact .biz-txt{display:none;}
+.biz-marker.biz-compact .biz-card{padding:2px; border-radius:50%;}
+.biz-marker.biz-compact .biz-badge{width:25px; height:25px; font-size:9.5px;}
+.biz-marker.biz-compact:hover .biz-txt,
+.biz-marker.biz-compact:focus-within .biz-txt{display:flex;}
+.biz-marker.biz-compact:hover .biz-card,
+.biz-marker.biz-compact:focus-within .biz-card{padding:6px 14px 6px 6px; border-radius:14px;}
+.biz-marker.biz-compact:hover .biz-badge,
+.biz-marker.biz-compact:focus-within .biz-badge{width:29px; height:29px; font-size:11px;}
+.biz-marker:focus{outline:none;}
+.biz-marker:focus-visible .biz-card{box-shadow:0 0 0 3px rgba(232,119,34,.55), 0 14px 30px -12px rgba(8,12,18,.7);}
+
+/* its popup */
+.biz-popup .leaflet-popup-content{margin:14px 16px 13px; min-width:230px;}
+.biz-pop-eyebrow{
+  display:flex; align-items:center; gap:7px; margin-bottom:10px;
+  font-size:9.5px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--brand-deep);
+}
+.biz-pop-eyebrow i{width:6px; height:6px; border-radius:50%; background:var(--brand); box-shadow:0 0 0 3px rgba(232,119,34,.18);}
+.biz-pop-head{display:flex; align-items:center; gap:11px;}
+.biz-pop-badge{
+  flex:none; width:38px; height:38px; border-radius:50%; display:grid; place-items:center;
+  background:linear-gradient(135deg,var(--brand-hi),var(--brand-deep)); color:#fff;
+  font:700 13px/1 var(--display); box-shadow:0 6px 14px -6px rgba(184,87,15,.7);
+}
+.biz-pop-name{font-family:var(--display); font-size:14.5px; font-weight:600; letter-spacing:-.01em; line-height:1.3; color:var(--ink);}
+.biz-pop-cat{font-size:11.5px; color:var(--ink-2); margin-top:1px;}
+.biz-pop-rate{margin-top:9px; font-size:12px; color:var(--ink);}
+.biz-pop-rate .biz-dim{color:var(--ink-3);}
+.biz-pop-addr{margin-top:5px; font-size:11.5px; color:var(--ink-2); line-height:1.5;}
+.biz-pop-rank{
+  display:flex; align-items:center; gap:9px; margin-top:10px; padding:8px 10px;
+  background:var(--card-2); border:1px solid var(--line-2); border-radius:10px;
+  font-size:11.5px; line-height:1.45; color:var(--ink-2);
+}
+.biz-pop-chip{flex:none; font-family:var(--mono); font-weight:700; font-size:11.5px; color:#fff; padding:3px 8px; border-radius:7px; background:var(--rank-none);}
+.biz-pop-chip.good{background:var(--rank-1);}
+.biz-pop-chip.mid{background:var(--rank-2);}
+.biz-pop-chip.warn{background:var(--rank-3);}
+.biz-pop-chip.bad{background:var(--rank-4);}
+.biz-pop-chip.lost{background:var(--rank-5);}
+.leaflet-popup-content a.biz-pop-link{display:inline-block; margin-top:10px; font-weight:700; color:var(--brand-deep); text-decoration:none;}
+.leaflet-popup-content a.biz-pop-link:hover{text-decoration:underline;}
+.biz-pop-note{margin-top:9px; padding-top:8px; border-top:1px dashed var(--line); font-size:10.5px; line-height:1.5; color:var(--ink-3);}
+
+/* the legend entry */
+.legend i.lg-biz{background:var(--console); box-shadow:0 0 0 2px #fff, 0 0 0 4px var(--brand); margin:0 3px;}
+
+@keyframes bizPulse{0%{transform:scale(.5); opacity:.9} 100%{transform:scale(1.45); opacity:0}}
+@keyframes bizDrop{from{opacity:0; transform:translate(-50%,-10px)} to{opacity:1; transform:translate(-50%,0)}}
+@keyframes bizFade{from{opacity:0} to{opacity:1}}
+
+/* the identity chip in the map header — one line, no taller than the title
+   beside it, so the map below keeps every pixel it had */
+.biz-chip{
+  display:inline-flex; align-items:center; gap:8px; max-width:100%; min-width:0; flex:0 1 auto;
+  border:none; cursor:pointer; font:inherit; text-align:left; line-height:1;
+  background:var(--console); color:#fff; border-radius:999px; padding:2px 11px 2px 2px;
+  box-shadow:0 6px 16px -8px rgba(8,12,18,.55), inset 0 0 0 1px rgba(255,255,255,.07);
+  transition:transform .15s var(--ease), box-shadow .15s var(--ease);
+}
+.biz-chip[hidden]{display:none;}
+.biz-chip:hover{transform:translateY(-1px); box-shadow:0 10px 20px -8px rgba(8,12,18,.6), inset 0 0 0 1px rgba(255,255,255,.1);}
+.biz-chip:focus-visible{outline:none; box-shadow:0 0 0 3px rgba(232,119,34,.45);}
+.biz-chip .biz-badge{width:20px; height:20px; font-size:8.5px; box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.2);}
+.biz-chip-txt{display:flex; align-items:baseline; gap:7px; min-width:0; white-space:nowrap;}
+.biz-chip-txt b{font:600 12px/1.2 var(--display); letter-spacing:-.005em; overflow:hidden; text-overflow:ellipsis; min-width:0; max-width:230px;}
+.biz-chip-txt em{font-style:normal; font-size:10.5px; color:#c9d3dc; overflow:hidden; text-overflow:ellipsis; max-width:220px;}
+.biz-chip-ring{
+  flex:none; width:9px; height:9px; border-radius:50%; margin-left:2px;
+  background:var(--console); box-shadow:0 0 0 1.5px #fff, 0 0 0 3.5px var(--brand);
+}
+@media (max-width:640px){ .biz-chip-txt em{display:none;} .biz-chip-txt b{max-width:200px;} }
+@media (prefers-reduced-motion:reduce){
+  .biz-halo i{animation:none;}
+  .biz-flag{animation:none;}
+}
+
+/* ==========================================================================
+   SEO CLIENTS — renaming a location, per-location selection
+   ========================================================================== */
+.seo-lg-label.seo-lg-label-rn{flex:0 1 auto;}
+.seo-lg-rename{
+  flex:none; margin-right:auto; display:inline-flex; align-items:center; gap:5px;
+  border:1px solid transparent; background:transparent; color:var(--ink-3);
+  font:600 11px/1 var(--ui); padding:5px 9px; border-radius:8px; cursor:pointer;
+  opacity:0; transition:opacity .15s var(--ease), background .15s var(--ease), color .15s var(--ease), border-color .15s var(--ease);
+}
+.seo-lg-rename svg{width:12px; height:12px; flex:none;}
+.seo-lg-head:hover .seo-lg-rename, .seo-lg-rename:focus-visible,
+#seoKeywordList.seo-edit-mode .seo-lg-rename{opacity:1;}
+.seo-lg-rename:hover{background:var(--card); border-color:var(--line); color:var(--brand-deep);}
+@media (hover:none){ .seo-lg-rename{opacity:1;} .seo-lg-rename span{display:none;} }
+
+.seo-lg-head.is-renaming{cursor:default; flex-wrap:wrap; align-items:flex-start;}
+.seo-lg-head.is-renaming:hover{background:none;}
+.seo-lg-head.is-renaming .seo-lg-caret, .seo-lg-head.is-renaming .seo-lg-pin{margin-top:10px;}
+.seo-lg-rn{flex:1 1 320px; min-width:0; display:flex; flex-direction:column; gap:8px; cursor:auto;}
+.seo-lg-rn-top{display:flex; align-items:center; gap:7px; flex-wrap:wrap;}
+.seo-lg-rn-input{
+  flex:1 1 200px; min-width:0; padding:7px 11px; border-radius:9px;
+  font:600 14px/1.3 var(--display); letter-spacing:-.01em; color:var(--ink);
+  border:1.5px solid var(--brand) !important; background:var(--card);
+  box-shadow:0 0 0 4px rgba(232,119,34,.12) !important;
+}
+.seo-lg-rn-tidy{
+  display:inline-flex; align-items:center; gap:6px; flex:none;
+  border:1px solid var(--line); background:var(--card-2); color:var(--ink-2);
+  border-radius:9px; padding:7px 10px; font:600 11px/1 var(--ui); cursor:pointer;
+  transition:all .15s var(--ease);
+}
+.seo-lg-rn-tidy b{font:700 12px/1 var(--display); color:var(--brand-deep);}
+.seo-lg-rn-tidy:hover{border-color:var(--brand); color:var(--brand-deep); background:var(--brand-wash);}
+.seo-lg-rn-choice{
+  display:flex; flex-direction:column; gap:7px; padding:10px 12px;
+  background:var(--brand-wash); border:1px solid #f3d9c1; border-radius:10px;
+}
+.seo-lg-rn-q{font-size:11.5px; font-weight:700; color:var(--brand-deep);}
+.seo-lg-rn-choice label{display:flex; align-items:flex-start; gap:8px; cursor:pointer; font-size:12px; color:var(--ink); line-height:1.4;}
+.seo-lg-rn-choice input{margin:2px 0 0; accent-color:var(--brand); flex:none; width:14px; height:14px;}
+.seo-lg-rn-choice b{font-weight:600;}
+.seo-lg-rn-choice small{display:block; color:var(--ink-3); font-size:11px;}
+.seo-lg-rn-hint{font-size:11px; color:var(--ink-3); line-height:1.5;}
+.seo-lg-rn-hint.warn{color:var(--brand-deep); font-weight:600;}
+
+.seo-lg-group-check{margin:0 1px 0 0;}
+#seoKeywordList.seo-edit-mode .seo-lg-row.seo-lg-row-selected{background:var(--brand-wash); box-shadow:inset 3px 0 0 var(--brand);}
+#seoKeywordList.seo-edit-mode .seo-lg-row.seo-lg-row-selected:hover{background:#fcebdc;}
+/* A keyword still waiting for a location: its name was being squeezed to
+   nothing by the location field beside it. */
+.seo-lg-unassigned-row .seo-lg-text{flex:1 1 auto; min-width:120px;}
+.seo-lg-unassigned-row .seo-lg-quick-loc{flex:0 1 260px; width:260px; min-width:140px;}
+.seo-lg-unassigned-row .btn{flex:none;}
+@media (max-width:900px){ .seo-lg-unassigned-row .seo-lg-quick-loc{flex:1 1 100%; width:100%;} }
 </style>
 </head>
 <body>
@@ -4330,6 +4741,7 @@ table td{font-size:12.5px;}
               <div class="map-card" id="mapCard">
                 <div class="map-head">
                   <h3 id="mapTitle">Coverage map</h3>
+                  <button type="button" class="biz-chip" id="bizChip" hidden></button>
                   <div class="map-sub" id="mapSub"></div>
                   <div class="embed-kw-switch" id="embedKwSwitch"></div>
                   <div class="tools">
@@ -4348,6 +4760,7 @@ table td{font-size:12.5px;}
                 </div>
                 <div id="map"></div>
                 <div class="legend">
+                  <span id="legendBiz" style="display:none"><i class="lg-biz"></i>your business</span>
                   <span><i style="background:var(--rank-1)"></i>1–3</span>
                   <span><i style="background:var(--rank-2)"></i>4–10</span>
                   <span><i style="background:var(--rank-3)"></i>11–25</span>
@@ -5186,6 +5599,7 @@ table td{font-size:12.5px;}
               <div class="seo-bulk-edit-controls" id="seoBulkEditControls" style="display:none">
                 <label><input type="checkbox" id="seoSelectAllCheck"/> Select all</label>
                 <button type="button" class="seo-bulk-link" id="seoSelectNoLocBtn">Select keywords without a location</button>
+                <button type="button" class="seo-bulk-link" id="seoTidyLocsBtn" title="ALBERTA or alberta becomes Alberta on every card. Names already written in mixed case are left alone; pins and rank history are kept.">Tidy location capitals</button>
                 <div class="seo-bulk-spacer"></div>
                 <span class="seo-bulk-count" id="seoBulkCountLabel">0 selected</span>
                 <button class="btn btn-sm" id="seoDeleteSelBtn" disabled style="color:var(--alert)">Delete selected</button>
@@ -10113,17 +10527,11 @@ function renderListingPanel(){
   btn.textContent = g.listing ? 'Look up again' : 'Look up this listing on Google';
   if ($('scanCheck') && $('scanCheck').classList.contains('on')) renderScanCheck();
 }
+/* The confirmed listing is drawn by drawBizMarker() now — one marker for the
+   tracked business, the same one the public embed link shows. */
 function drawListingPin(){
-  try{
-    if (listingPin){ listingPin.remove(); listingPin = null; }
-    const g = activeGbp();
-    if (!g || !g.listing || g.listing.lat == null || g.listing.lng == null) return;
-    listingPin = L.marker([g.listing.lat, g.listing.lng], {
-      icon: L.divIcon({className:'', iconSize:[26,34], iconAnchor:[13,33],
-        html:'<div class="lk-pin"><svg viewBox="0 0 26 34"><path d="M13 1C6.4 1 1 6.3 1 12.9 1 22 13 33 13 33s12-11 12-20.1C25 6.3 19.6 1 13 1z"/><circle cx="13" cy="13" r="4.6"/></svg></div>'}),
-      zIndexOffset:900, keyboard:false
-    }).addTo(map).bindTooltip('Tracked listing: ' + esc(g.listing.title || ''), {direction:'top', offset:[0,-30]});
-  }catch(e){ /* map not ready yet */ }
+  if (listingPin){ try{ listingPin.remove(); }catch(e){} listingPin = null; }
+  drawBizMarker();
 }
 function lkHandleAction(e){
   const g = activeGbp();
@@ -11647,6 +12055,234 @@ function recenterMap(){
       radius:6, color:'#fff', weight:2, fillColor:'#1b222a', fillOpacity:1
     }).addTo(map).bindTooltip(g.bizName || g.name || 'Business', {direction:'top'});
   }
+  /* The tracked business goes on last, so it can stand in for the centre dot
+     when the two are the same place. */
+  drawBizMarker();
+}
+
+/* ==========================================================================
+   THE TRACKED BUSINESS ON THE MAP
+   ==========================================================================
+   The profile being tracked is drawn on every coverage map — in the tool and
+   on the public embed link — as a marker of its own: a soft halo around its
+   exact spot that sits *under* the rank dots (so the rank at the business
+   stays readable), and a name card standing above it on a short stem, over
+   the dots. Click it for the listing's details and its rank right at the
+   business. When the map is zoomed out far enough that the card would sit
+   on the next row of dots, it folds down to a round badge and opens again on
+   hover.
+
+   Where the pin comes from, best first:
+     1. the listing confirmed on step one (Google's own pin for it),
+     2. the business details published with an embed link,
+     3. the listing recorded on the scan being shown,
+     4. the grid centre — only when it is a point, never a whole area.
+   ========================================================================== */
+let bizHalo = null, bizFlag = null, bizCompactWired = false;
+
+function gbpBizInfo(g, scan){
+  if (!g) return null;
+  const L0 = (g.listing && !g.listing.stale && g.listing.lat != null && g.listing.lng != null) ? g.listing : null;
+  const pub = g.bizInfo || null;
+  const sb = (scan && scan.business) || null;
+  const SL = (sb && sb.listing && sb.listing.lat != null && sb.listing.lng != null) ? sb.listing : null;
+  let lat = null, lng = null, exact = true;
+  if (L0){ lat = L0.lat; lng = L0.lng; }
+  else if (pub && pub.lat != null && pub.lng != null){ lat = pub.lat; lng = pub.lng; }
+  else if (SL){ lat = SL.lat; lng = SL.lng; }
+  else {
+    const c = (g.center && g.center.lat != null) ? g.center : (scan && scan.center);
+    const area = !!(g.center && g.center.area) || !!(pub && pub.centreIsArea);
+    if (c && c.lat != null && c.lng != null && !area){ lat = c.lat; lng = c.lng; exact = false; }
+  }
+  if (lat == null || lng == null || isNaN(Number(lat)) || isNaN(Number(lng))) return null;
+  const pick = function(){ for (let i = 0; i < arguments.length; i++){ const v = arguments[i]; if (v != null && v !== '') return v; } return null; };
+  return {
+    lat: Number(lat), lng: Number(lng), exact,
+    name: pick(L0 && L0.title, pub && pub.name, SL && SL.title, g.bizName, sb && sb.name, g.name) || 'Business',
+    category: pick(L0 && L0.category, pub && pub.category, SL && SL.category),
+    address: pick(L0 && L0.address, pub && pub.address, SL && SL.address),
+    rating: pick(L0 && L0.rating, pub && pub.rating),
+    reviews: pick(L0 && L0.reviews, pub && pub.reviews),
+    cid: pick(L0 && L0.cid, pub && pub.cid, SL && SL.cid, g.cid, sb && sb.cid),
+    placeId: pick(L0 && L0.placeId, pub && pub.placeId, SL && SL.placeId, g.placeId)
+  };
+}
+
+/* What goes out with a public embed link, so the client's copy of the map
+   can draw the same marker without access to the workspace. Plain values
+   only: Firestore refuses undefined. */
+function gbpBizPublish(g){
+  if (!g) return null;
+  const L0 = (g.listing && !g.listing.stale) ? g.listing : null;
+  const num = v => (v == null || v === '' || isNaN(Number(v))) ? null : Number(v);
+  const str = v => (v == null || v === '') ? null : String(v);
+  return {
+    name: str((L0 && L0.title) || g.bizName || g.name),
+    category: str(L0 && L0.category),
+    address: str(L0 && L0.address),
+    rating: num(L0 && L0.rating),
+    reviews: num(L0 && L0.reviews),
+    cid: str((L0 && L0.cid) || g.cid),
+    placeId: str((L0 && L0.placeId) || g.placeId),
+    lat: num(L0 && L0.lat), lng: num(L0 && L0.lng),
+    centreIsArea: !!(g.center && g.center.area)
+  };
+}
+
+function bizInitials(name){
+  const skip = /^(the|and|of|&|ltd|inc|llc|co|corp)$/i;
+  const words = String(name || '').replace(/[^\p{L}\p{N}\s&]/gu, ' ').split(/\s+/).filter(w => w && !skip.test(w));
+  if (!words.length) return '★';
+  return (words[0][0] + (words[1] ? words[1][0] : '')).toUpperCase();
+}
+function bizStarsLine(info){
+  if (info.rating == null) return info.category ? esc(info.category) : 'Google Business Profile';
+  return '<span class="biz-star">★</span> ' + esc(Number(info.rating).toFixed(1)) +
+    (info.reviews != null ? ' <span class="biz-dim">(' + esc(Number(info.reviews).toLocaleString()) + ')</span>' : '') +
+    (info.category ? ' <span class="biz-dim">· ' + esc(info.category) + '</span>' : '');
+}
+/* The rank read at the grid point nearest the business, when one is close
+   enough to count as "at the business" — usually the centre point. */
+function bizRankHere(info, scan){
+  if (!info || !scan || !Array.isArray(scan.points) || !scan.points.length) return null;
+  let best = null, bestKm = Infinity;
+  scan.points.forEach(p => {
+    if (p.lat == null || p.lng == null) return;
+    const km = cmpDistanceKm(info.lat, info.lng, p.lat, p.lng);
+    if (km < bestKm){ bestKm = km; best = p; }
+  });
+  const reach = Math.min(0.3, ((scan.grid && scan.grid.spacingKm) || 1) / 3);
+  if (!best || bestKm > reach || best.rank == null) return null;
+  return best.rank;
+}
+function bizPopupHtml(info, scan){
+  const rank = bizRankHere(info, scan);
+  const mapsHref = lkMapsUrl({cid: info.cid, placeId: info.placeId, title: info.name, address: info.address || ''});
+  let rankLine = '';
+  if (rank != null && scan){
+    const cls = rankClass(rank);
+    rankLine = '<div class="biz-pop-rank"><span class="biz-pop-chip ' + cls + '">' + (rank === 0 ? 'Not found' : '#' + rank) + '</span>' +
+      '<span>' + (rank === 0 ? 'not in the results' : (scan.surface === 'web' ? 'in the web results' : 'in the map pack')) +
+      ' for “' + esc(scan.keyword || '') + '” right at the business</span></div>';
+  }
+  const note = (!info.exact && !isPublicView())
+    ? '<div class="biz-pop-note">Shown at the grid centre. Confirm the listing on step one and the map (and the embed link) will use Google’s exact pin.</div>'
+    : '';
+  return '<div class="biz-pop">' +
+    '<div class="biz-pop-eyebrow"><i></i>Tracked Google Business Profile</div>' +
+    '<div class="biz-pop-head"><span class="biz-pop-badge">' + esc(bizInitials(info.name)) + '</span>' +
+      '<div><div class="biz-pop-name">' + esc(info.name) + '</div>' +
+      (info.category ? '<div class="biz-pop-cat">' + esc(info.category) + '</div>' : '') + '</div></div>' +
+    (info.rating != null ? '<div class="biz-pop-rate"><span class="biz-star">★</span> <b>' + esc(Number(info.rating).toFixed(1)) + '</b>' +
+      (info.reviews != null ? ' <span class="biz-dim">' + esc(Number(info.reviews).toLocaleString()) + ' Google reviews</span>' : '') + '</div>' : '') +
+    (info.address ? '<div class="biz-pop-addr">' + esc(info.address) + '</div>' : '') +
+    rankLine +
+    '<a class="biz-pop-link" href="' + esc(mapsHref) + '" target="_blank" rel="noopener">View on Google Maps ↗</a>' +
+    note +
+    '</div>';
+}
+
+/* When the next row of dots is too close for the name card, the card folds
+   to a round badge and moves into the empty space diagonally up and to the
+   right — the one spot in a grid that is equally far from all four of its
+   neighbours — with a short leader line back to the halo. The full card
+   comes back on hover, and the name is always in the map header. */
+function bizUpdateCompact(){
+  if (!bizFlag || !bizFlag._bizInfo) return;
+  const el = bizFlag.getElement && bizFlag.getElement();
+  if (!el) return;
+  const scan = currentScan;
+  let spacingPx = null;
+  if (scan && scan.points && scan.points.length > 1 && scan.grid && scan.grid.spacingKm){
+    try{
+      const at = L.latLng(bizFlag._bizInfo.lat, bizFlag._bizInfo.lng);
+      const up = L.latLng(bizFlag._bizInfo.lat + (Number(scan.grid.spacingKm) * 1000) / 111320, bizFlag._bizInfo.lng);
+      spacingPx = Math.abs(map.latLngToContainerPoint(at).y - map.latLngToContainerPoint(up).y);
+    }catch(e){ spacingPx = null; }
+  }
+  const compact = spacingPx != null ? spacingPx < 112 : map.getZoom() < 11;
+  el.classList.toggle('biz-compact', compact);
+  if (compact){
+    const half = Math.max(30, Math.min(64, (spacingPx || 68) / 2));
+    const lead = Math.max(0, half * Math.SQRT2 - 14 - 29);
+    el.style.setProperty('--biz-dx', half + 'px');
+    el.style.setProperty('--biz-dy', half + 'px');
+    el.style.setProperty('--biz-lead', lead + 'px');
+  }
+  /* The popup points at whichever form is showing. */
+  const pop = bizFlag.getPopup && bizFlag.getPopup();
+  if (pop){
+    const h = compact ? Math.max(30, Math.min(64, (spacingPx || 68) / 2)) : 0;
+    pop.options.offset = compact ? L.point(h, -h - 14) : L.point(0, -78);
+  }
+}
+
+/* The identity chip in the map's header: the business's name and rating,
+   always readable whatever the zoom, and a click away from its details. */
+function paintBizChip(info){
+  const chip = $('bizChip');
+  if (!chip) return;
+  if (!info){ chip.hidden = true; chip.innerHTML = ''; return; }
+  chip.hidden = false;
+  chip.title = info.name + ' \u2014 the tracked Google Business Profile. Click to see it on the map.';
+  chip.innerHTML =
+    '<span class="biz-badge">' + esc(bizInitials(info.name)) + '</span>' +
+    '<span class="biz-chip-txt"><b>' + esc(info.name) + '</b><em>' + bizStarsLine(info) + '</em></span>' +
+    '<span class="biz-chip-ring" aria-hidden="true"></span>';
+  if (!chip.dataset.wired){
+    chip.dataset.wired = '1';
+    chip.addEventListener('click', () => { if (bizFlag) bizFlag.openPopup(); });
+  }
+}
+
+function drawBizMarker(){
+  try{
+    if (bizHalo){ bizHalo.remove(); bizHalo = null; }
+    if (bizFlag){ bizFlag.remove(); bizFlag = null; }
+    const legend = $('legendBiz');
+    const g = activeGbp();
+    const kw = activeKeyword();
+    const scan = currentScan || (kw && kw.scans.length ? kw.scans[kw.scans.length - 1] : null);
+    const info = gbpBizInfo(g, scan);
+    if (legend) legend.style.display = info ? '' : 'none';
+    paintBizChip(info);
+    if (!info) return;
+
+    bizHalo = L.marker([info.lat, info.lng], {
+      icon: L.divIcon({className:'biz-marker', iconSize:[0,0], iconAnchor:[0,0],
+        html:'<div class="biz-halo"><i></i><i></i><b></b></div>'}),
+      interactive:false, keyboard:false, zIndexOffset:-6000
+    }).addTo(map);
+
+    const sub = bizStarsLine(info);
+    bizFlag = L.marker([info.lat, info.lng], {
+      icon: L.divIcon({className:'biz-marker', iconSize:[0,0], iconAnchor:[0,0],
+        html:'<div class="biz-flag' + (info.exact ? '' : ' approx') + '">' +
+               '<div class="biz-card">' +
+                 '<span class="biz-badge">' + esc(bizInitials(info.name)) + '</span>' +
+                 '<span class="biz-txt"><b>' + esc(info.name) + '</b><em>' + sub + '</em></span>' +
+               '</div>' +
+               '<span class="biz-stem"></span>' +
+             '</div>'}),
+      zIndexOffset:6000, keyboard:true, title: info.name + ' — the tracked business', riseOnHover:true
+    }).addTo(map);
+    bizFlag._bizInfo = info;
+    bizFlag.bindPopup(() => bizPopupHtml(info, currentScan || scan), {maxWidth:300, minWidth:230, offset:[0,-78], className:'biz-popup'});
+
+    /* The grid-centre dot says the same thing in a smaller voice. Where the
+       two coincide, the business marker speaks for both. */
+    if (centerMarker){
+      const cl = centerMarker.getLatLng();
+      if (cmpDistanceKm(cl.lat, cl.lng, info.lat, info.lng) < 0.06){ centerMarker.remove(); centerMarker = null; }
+    }
+    if (!bizCompactWired){
+      bizCompactWired = true;
+      map.on('zoomend', bizUpdateCompact);
+      map.on('resize', bizUpdateCompact);
+    }
+    setTimeout(bizUpdateCompact, 0);
+  }catch(e){ /* map not ready yet */ }
 }
 /* ---------------------------------------------------------------------------
    Scan theatre. Everything below is presentation: a sonar ring on the point
@@ -11708,6 +12344,319 @@ async function runPool(count, concurrency, shouldStop, worker){
   }
   await Promise.all(runners);
 }
+
+/* ==========================================================================
+   SCAN IN PROGRESS — the loading screen every scan shows.
+   ==========================================================================
+   One component for every kind of scan in the app: a single keyword, a
+   whole client, a GBP grid, a comparison, a single re-read. While it is up
+   the rest of the page is covered, so there is never any doubt that work is
+   happening and that the thing to do is wait for it.
+
+     const ov = ScanOverlay.open({title, sub, total, onStop, variant});
+     ScanOverlay.update(ov, {done, now, stats, note});
+     ScanOverlay.finish(ov, {state:'done'|'stopped'|'error', title, sub});
+
+   variant 'dock' sits the card at the bottom of a lighter scrim, for the
+   grid scans, where the map filling in behind it is part of the show.
+   "Keep working meanwhile" shrinks it to a pill at the bottom of the screen
+   that still shows progress, and a click brings the full screen back.
+   Purely presentation: nothing here reads, requests or stores a rank.
+   ========================================================================== */
+const ScanOverlay = (function(){
+  let root = null, cur = null, seq = 0, ticker = null, closeTimer = null, lastFocus = null;
+  const ICON = {
+    scan: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>',
+    done: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+    stopped: '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="7" y="7" width="10" height="10" rx="2.2"/></svg>',
+    error: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 6.5v7M12 17.5h.01"/></svg>',
+    stop: '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6.5" y="6.5" width="11" height="11" rx="2"/></svg>',
+    shrink: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"/></svg>'
+  };
+  const q = sel => root ? root.querySelector(sel) : null;
+  const setText = (sel, v) => { const e = q(sel); if (e) e.textContent = v == null ? '' : String(v); };
+
+  function build(){
+    if (root) return;
+    root = document.createElement('div');
+    root.className = 'so-root';
+    root.setAttribute('role', 'dialog');
+    root.setAttribute('aria-modal', 'true');
+    root.setAttribute('aria-labelledby', 'soTitle');
+    root.setAttribute('aria-describedby', 'soSub');
+    root.innerHTML =
+      '<div class="so-scrim"></div>' +
+      '<div class="so-stage">' +
+        '<div class="so-card" tabindex="-1">' +
+          '<div class="so-radar" aria-hidden="true"><span></span><span></span><span></span><b></b><i data-so-icon>' + ICON.scan + '</i></div>' +
+          '<div class="so-body">' +
+            '<div class="so-eyebrow"><i></i><span data-so-eyebrow>Scan in progress</span></div>' +
+            '<h3 class="so-title" id="soTitle" data-so-title>Scanning…</h3>' +
+            '<p class="so-sub" id="soSub" data-so-sub></p>' +
+            '<div class="so-bar" data-so-bar role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i data-so-fill></i></div>' +
+            '<div class="so-meta">' +
+              '<span class="so-count" data-so-count aria-live="polite"></span>' +
+              '<span class="so-clock"><span data-so-elapsed>0:00</span> elapsed<span data-so-left-wrap> · <span data-so-left>estimating…</span></span></span>' +
+            '</div>' +
+            '<div class="so-now" data-so-now></div>' +
+            '<div class="so-stats" data-so-stats></div>' +
+            '<p class="so-note" data-so-note></p>' +
+            '<div class="so-acts">' +
+              '<button type="button" class="so-link" data-so-bg>' + ICON.shrink + '<span>Keep working meanwhile</span></button>' +
+              '<button type="button" class="btn so-stop" data-so-stop>' + ICON.stop + '<span>Stop scan</span></button>' +
+              '<button type="button" class="btn btn-go so-close" data-so-close>Close</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      '<button type="button" class="so-pill" data-so-pill title="Show the scan">' +
+        '<i class="so-pill-spin"></i><span class="so-pill-txt" data-so-pill-txt>Scanning…</span>' +
+        '<u class="so-pill-bar"><s data-so-pill-fill></s></u><em>Show</em>' +
+      '</button>';
+    document.body.appendChild(root);
+
+    q('[data-so-stop]').addEventListener('click', () => {
+      if (!cur || cur.finished || cur.stopping) return;
+      cur.stopping = true;
+      root.classList.add('is-stopping');
+      const b = q('[data-so-stop]');
+      b.disabled = true; b.querySelector('span').textContent = 'Stopping…';
+      setText('[data-so-eyebrow]', 'Stopping');
+      setText('[data-so-note]', 'Letting the checks already under way finish — everything read so far is kept.');
+      try{ if (cur.onStop) cur.onStop(); }catch(e){}
+    });
+    q('[data-so-bg]').addEventListener('click', () => minimise(true));
+    q('[data-so-pill]').addEventListener('click', () => minimise(false));
+    q('[data-so-close]').addEventListener('click', () => close());
+    q('.so-scrim').addEventListener('click', () => { if (cur && cur.finished) close(); });
+
+    /* While the screen is up, keyboard focus stays on it and the app's own
+       shortcuts (R to refresh, Ctrl+S) are held back — a refresh that swaps
+       the workspace out from under a running scan is exactly the thing this
+       screen is here to prevent. */
+    window.addEventListener('keydown', e => {
+      if (!blocking()) return;
+      const inside = root.contains(e.target);
+      if (e.key === 'Tab'){
+        const f = Array.from(root.querySelectorAll('.so-card button')).filter(b => b.offsetParent && !b.disabled);
+        if (!f.length){ e.preventDefault(); return; }
+        const i = f.indexOf(document.activeElement);
+        const next = e.shiftKey ? (i <= 0 ? f.length - 1 : i - 1) : (i === -1 || i === f.length - 1 ? 0 : i + 1);
+        e.preventDefault(); f[next].focus();
+        return;
+      }
+      if (e.key === 'Escape' && cur && cur.finished){ close(); return; }
+      if (inside && (e.key === 'Enter' || e.key === ' ')) return;
+      e.stopImmediatePropagation();
+    }, true);
+    document.addEventListener('focusin', e => {
+      if (blocking() && !root.contains(e.target)) focusCard();
+    });
+    /* Closing the tab mid-scan loses whatever is still in flight, so the
+       browser asks first. */
+    window.addEventListener('beforeunload', e => {
+      if (cur && !cur.finished){ e.preventDefault(); e.returnValue = ''; return ''; }
+    });
+  }
+
+  function blocking(){
+    return !!(cur && root && root.classList.contains('on') && !root.classList.contains('mini'));
+  }
+  function focusCard(){
+    const b = q('[data-so-stop]');
+    const target = (b && b.offsetParent && !b.disabled) ? b : q('.so-card');
+    try{ target.focus({preventScroll:true}); }catch(e){ try{ target.focus(); }catch(e2){} }
+  }
+  function minimise(on){
+    if (!root || !cur) return;
+    root.classList.toggle('mini', !!on);
+    document.body.classList.toggle('so-locked', !on);
+    if (!on) focusCard();
+  }
+
+  /* Docked scans keep clear of the map they are drawing on: with the map on
+     the right the card sits in the left-hand column, and the other way round.
+     Stacked (narrow) layouts keep the bottom dock. */
+  function place(o){
+    const st = q('.so-stage'), card = q('.so-card');
+    st.style.justifyItems = ''; st.style.paddingLeft = ''; st.style.paddingRight = '';
+    card.style.maxWidth = '';
+    root.classList.remove('dock-side');
+    if (!o || o.variant !== 'dock' || !o.avoid) return;
+    const el = typeof o.avoid === 'string' ? $(o.avoid) : o.avoid;
+    if (!el || !el.getBoundingClientRect) return;
+    const r = el.getBoundingClientRect(), W = window.innerWidth;
+    if (W < 900 || !r.width || r.width > W * 0.7) return;
+    const leftSpace = r.left, rightSpace = W - r.right;
+    if (Math.max(leftSpace, rightSpace) < 440) return;
+    const onLeft = leftSpace >= rightSpace;
+    const space = onLeft ? leftSpace : rightSpace;
+    const w = Math.min(560, space - 40);
+    card.style.maxWidth = w + 'px';
+    st.style.justifyItems = onLeft ? 'start' : 'end';
+    if (onLeft) st.style.paddingLeft = Math.max(20, (space - w) / 2) + 'px';
+    else st.style.paddingRight = Math.max(20, (space - w) / 2) + 'px';
+    root.classList.add('dock-side');
+  }
+
+  function fmtClock(ms){
+    const s = Math.max(0, Math.floor(ms / 1000));
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), ss = s % 60;
+    return (h ? h + ':' + String(m).padStart(2, '0') : String(m)) + ':' + String(ss).padStart(2, '0');
+  }
+  function fmtLeft(ms){
+    const s = ms / 1000;
+    if (s < 40) return 'under a minute left';
+    if (s < 90) return 'about a minute left';
+    if (s < 3600) return 'about ' + Math.round(s / 60) + ' min left';
+    return 'about ' + (Math.round(s / 360) / 10) + ' h left';
+  }
+  function paintClock(){
+    if (!cur) return;
+    const now = cur.finished ? cur.finishedAt : Date.now();
+    const elapsed = now - cur.startedAt;
+    setText('[data-so-elapsed]', fmtClock(elapsed));
+    const wrap = q('[data-so-left-wrap]');
+    let left = '';
+    if (!cur.finished && cur.total > 1){
+      if (cur.done > 0 && cur.done < cur.total) left = fmtLeft(elapsed / cur.done * (cur.total - cur.done));
+      else if (cur.done === 0) left = 'estimating time left…';
+    }
+    if (wrap) wrap.style.display = left ? '' : 'none';
+    setText('[data-so-left]', left);
+  }
+  function paintProgress(){
+    if (!cur) return;
+    const bar = q('[data-so-bar]'), fill = q('[data-so-fill]'), pill = q('[data-so-pill-fill]');
+    const total = cur.total || 0, done = Math.min(cur.done || 0, total);
+    const indet = !cur.finished && (total <= 1 || cur.indeterminate);
+    const pct = cur.finished ? 100 : (total ? Math.round(done / total * 100) : 0);
+    bar.classList.toggle('indet', indet);
+    /* a sliver from the start, so an empty bar never reads as a stalled one */
+    fill.style.width = indet ? '' : Math.max(pct, cur.finished ? 0 : 3) + '%';
+    bar.setAttribute('aria-valuenow', String(pct));
+    if (pill) pill.style.width = (indet ? 45 : pct) + '%';
+    let count;
+    if (cur.finished) count = total > 1 ? done + ' of ' + total + ' ' + cur.unit : '';
+    else if (total > 1) count = done + ' of ' + total + ' ' + cur.unit + ' · ' + pct + '%';
+    else count = 'Working on it…';
+    setText('[data-so-count]', count);
+    const cnt = q('[data-so-count]');
+    if (cnt) cnt.classList.toggle('plain', !cur.finished && total <= 1);
+    setText('[data-so-pill-txt]', cur.finished
+      ? (cur.state === 'done' ? 'Scan complete' : cur.state === 'stopped' ? 'Scan stopped' : 'Scan ended')
+      : (total > 1 ? 'Scanning ' + done + ' / ' + total : 'Scanning…'));
+  }
+  function paintNow(list){
+    const box = q('[data-so-now]');
+    if (!box) return;
+    box.innerHTML = '';
+    const items = (list || []).filter(Boolean);
+    items.slice(0, 3).forEach(it => {
+      const s = document.createElement('span');
+      const main = typeof it === 'string' ? it : (it.main || '');
+      const sub = typeof it === 'string' ? '' : (it.sub || '');
+      const b = document.createElement('b'); b.textContent = main; s.appendChild(b);
+      if (sub){ const em = document.createElement('em'); em.textContent = sub; s.appendChild(em); }
+      s.title = main + (sub ? ' — ' + sub : '');
+      box.appendChild(s);
+    });
+    if (items.length > 3){
+      const more = document.createElement('span');
+      more.className = 'so-more';
+      more.textContent = '+' + (items.length - 3) + ' more at once';
+      box.appendChild(more);
+    }
+    box.style.display = items.length ? '' : 'none';
+  }
+  function paintStats(stats){
+    const box = q('[data-so-stats]');
+    if (!box) return;
+    const list = (stats || []).filter(Boolean);
+    box.innerHTML = list.map(s =>
+      '<div class="so-stat' + (s.tone ? ' ' + s.tone : '') + '"><b>' + esc(s.value) + '</b><span>' + esc(s.label) + '</span></div>'
+    ).join('');
+    box.style.display = list.length ? '' : 'none';
+  }
+
+  function open(o){
+    build();
+    o = o || {};
+    clearTimeout(closeTimer); closeTimer = null;
+    clearInterval(ticker);
+    if (!cur || cur.finished) lastFocus = document.activeElement;
+    cur = {
+      id: ++seq, total: Math.max(0, o.total || 0), done: 0, unit: o.unit || 'done',
+      startedAt: Date.now(), finished: false, stopping: false, state: 'running',
+      onStop: typeof o.onStop === 'function' ? o.onStop : null, indeterminate: !!o.indeterminate
+    };
+    root.className = 'so-root on' + (o.variant === 'dock' ? ' dock' : '');
+    place(o);
+    q('[data-so-icon]').innerHTML = ICON.scan;
+    const stop = q('[data-so-stop]');
+    stop.disabled = false; stop.querySelector('span').textContent = o.stopLabel || 'Stop scan';
+    stop.style.display = cur.onStop ? '' : 'none';
+    setText('[data-so-eyebrow]', o.eyebrow || 'Scan in progress');
+    setText('[data-so-title]', o.title || 'Scanning…');
+    setText('[data-so-sub]', o.sub || '');
+    setText('[data-so-note]', o.note || 'Sit tight — results save the moment each one comes back.');
+    paintNow(o.now || []);
+    paintStats(o.stats || []);
+    paintProgress(); paintClock();
+    ticker = setInterval(paintClock, 1000);
+    document.body.classList.add('so-open', 'so-locked');
+    setTimeout(focusCard, 30);
+    return cur.id;
+  }
+  function update(id, o){
+    if (!cur || cur.id !== id || cur.finished || !o) return;
+    if (o.total != null) cur.total = Math.max(0, o.total);
+    if (o.done != null) cur.done = Math.max(0, o.done);
+    if (o.indeterminate != null) cur.indeterminate = !!o.indeterminate;
+    if (o.title != null) setText('[data-so-title]', o.title);
+    if (o.sub != null) setText('[data-so-sub]', o.sub);
+    if (o.note != null && !cur.stopping) setText('[data-so-note]', o.note);
+    if (o.now !== undefined) paintNow(o.now);
+    if (o.stats !== undefined) paintStats(o.stats);
+    paintProgress();
+  }
+  function finish(id, o){
+    if (!cur || cur.id !== id || cur.finished) return;
+    o = o || {};
+    cur.finished = true; cur.finishedAt = Date.now();
+    cur.state = o.state || 'done';
+    clearInterval(ticker); ticker = null;
+    root.classList.remove('is-stopping');
+    root.classList.add('is-finished', 'is-' + cur.state);
+    q('[data-so-icon]').innerHTML = ICON[cur.state] || ICON.done;
+    setText('[data-so-eyebrow]', cur.state === 'done' ? 'Finished' : cur.state === 'stopped' ? 'Stopped' : 'Needs a look');
+    if (o.title != null) setText('[data-so-title]', o.title);
+    if (o.sub != null) setText('[data-so-sub]', o.sub);
+    setText('[data-so-note]', o.note || (cur.state === 'done' ? 'All saved.' : 'Everything read before it stopped is saved.'));
+    if (o.stats !== undefined) paintStats(o.stats);
+    paintNow([]);
+    paintProgress(); paintClock();
+    const hold = o.hold != null ? o.hold : (cur.state === 'done' ? 1700 : 3200);
+    const mine = cur.id;
+    closeTimer = setTimeout(() => { if (cur && cur.id === mine) close(); }, hold);
+    if (!root.classList.contains('mini')) setTimeout(() => { const c = q('[data-so-close]'); if (c && blocking()) c.focus({preventScroll:true}); }, 30);
+  }
+  /* The safety net every caller puts in a finally: whatever happened, the
+     screen never outlives the scan that opened it. */
+  function settle(id){
+    if (cur && cur.id === id && !cur.finished) finish(id, {state:'stopped', title:'Scan ended', sub:''});
+  }
+  function close(){
+    clearTimeout(closeTimer); closeTimer = null;
+    clearInterval(ticker); ticker = null;
+    if (root) root.className = 'so-root';
+    document.body.classList.remove('so-open', 'so-locked');
+    cur = null;
+    if (lastFocus && document.contains(lastFocus)){ try{ lastFocus.focus({preventScroll:true}); }catch(e){} }
+    lastFocus = null;
+  }
+  return {open, update, finish, settle, close, isOpen: () => !!cur};
+})();
 
 /* Rendering the verdict, rebuilding the advice and serialising the whole
    store on every single point is what made a fast scan feel slow. Coalesce. */
@@ -12001,7 +12950,22 @@ function dotPopup(p, idx, scan){
   retry.textContent = p.rank == null ? 'Read this point' : 'Read it again';
   retry.addEventListener('click', async () => {
     retry.disabled = true; retry.textContent = 'Reading…';
-    try{ await retrySingle(scan, idx); } finally { map.closePopup(); }
+    const ov = ScanOverlay.open({
+      variant: 'dock', avoid: 'mapCard', eyebrow: 'Re-reading one point',
+      title: 'Reading point ' + (idx + 1) + ' of ' + scan.points.length,
+      sub: '\u201c' + (scan.keyword || '') + '\u201d \u00b7 ' + p.lat.toFixed(5) + ', ' + p.lng.toFixed(5),
+      total: 1, note: 'Checking this spot again, widening the map view if it has to.'
+    });
+    try{ await retrySingle(scan, idx); }
+    finally{
+      map.closePopup();
+      const r = scan.points[idx];
+      ScanOverlay.finish(ov, {
+        state: (r.rank == null && r.error) ? 'error' : 'done',
+        title: r.rank == null ? 'Still no reading here' : (r.rank === 0 ? 'Not in the results here' : 'Ranks #' + r.rank + ' here'),
+        sub: (r.rank == null && r.error) ? r.error : 'Point ' + (idx + 1) + ' updated on the map.'
+      });
+    }
   });
   acts.appendChild(retry);
 
@@ -12434,7 +13398,36 @@ $('autoScanBtn').addEventListener('click', async () => {
   await runScan(scan);
 });
 
+/* The grid scan, wrapped in the scan-in-progress screen. The screen is
+   docked low so the map filling in behind it stays in view, and it closes
+   itself whatever happens inside — a scan that throws never leaves it up. */
 async function runScan(scan){
+  const g = activeGbp();
+  const n = scan.grid && scan.grid.rows ? scan.grid.rows : Math.round(Math.sqrt(scan.points.length));
+  const card = $('mapCard');
+  if (card && card.scrollIntoView) card.scrollIntoView({block:'nearest'});
+  const ov = ScanOverlay.open({
+    variant: 'dock', avoid: 'mapCard',
+    eyebrow: 'Grid scan in progress',
+    title: 'Scanning \u201c' + (scan.keyword || '') + '\u201d',
+    sub: ((g && (g.bizName || g.name)) || 'This profile') + ' \u00b7 ' + n + ' \u00d7 ' + n + ' grid \u00b7 ' + scan.points.length + ' map points',
+    total: scan.points.length, unit: 'points read',
+    note: 'Watch the map fill in behind this card. Every point is saved the moment it is read \u2014 keep this tab open until it finishes.',
+    onStop: () => { autoStop = true; setStatus('scanStatus', 'Stopping after this point\u2026', 'busy'); }
+  });
+  try{ await runScanInner(scan, ov); }
+  finally{ ScanOverlay.settle(ov); }
+}
+function gridScanStats(scan, failures){
+  const found = scan.points.filter(p => p.rank >= 1).length;
+  const absent = scan.points.filter(p => p.rank === 0).length;
+  return [
+    {label:'Found at', value: found, tone:'good'},
+    {label:'Not found', value: absent},
+    {label:'Failed', value: failures || 0, tone: failures ? 'bad' : ''}
+  ];
+}
+async function runScanInner(scan, ov){
   const g = activeGbp();
   const region = REGIONS[g.regionIdx] || REGIONS[0];
   const total = scan.points.length;
@@ -12456,6 +13449,10 @@ async function runScan(scan){
       index: Math.min(done + active.size, total), total: total,
       step: (active.size > 1 ? active.size + ' points in flight \u00b7 ' : '') + (step || 'working\u2026')
     });
+    ScanOverlay.update(ov, {now: [{
+      main: active.size > 1 ? active.size + ' points at once' : 'Point ' + Math.min(done + active.size, total) + ' of ' + total,
+      sub: step || 'working\u2026'
+    }]});
   }
 
   async function readPoint(i, tries){
@@ -12492,6 +13489,7 @@ async function runScan(scan){
     done++;
     setProgress(done, total, 'progWrap', 'progBar');
     setStatus('scanStatus', 'Read ' + done + ' of ' + total + ' points\u2026', 'busy');
+    ScanOverlay.update(ov, {done: done, total: total, stats: gridScanStats(scan, failures)});
     commitProgress(scan);
     // Nothing is working at all: stop rather than burn the whole grid on it.
     if (failures >= 5 && successes === 0) halted = true;
@@ -12519,6 +13517,9 @@ async function runScan(scan){
     if (pending.length){
       setStatus('scanStatus', 'Second pass \u2014 re-reading ' + pending.length + ' point' + (pending.length === 1 ? '' : 's') + ' that returned nothing\u2026', 'busy');
       done = total - pending.length;
+      ScanOverlay.update(ov, {done: done,
+        title: 'Second pass \u2014 re-reading ' + pending.length + ' point' + (pending.length === 1 ? '' : 's'),
+        note: 'These came back empty the first time, so each one is read again before it is reported as a miss.'});
       await runPool(pending.length, lanes, stop, k => readPoint(pending[k], 2));
     }
   }
@@ -12550,6 +13551,19 @@ async function runScan(scan){
     if (adOnly) msg += ' ' + adOnly + ' found only as an ad.';
     setStatus('scanStatus', msg, read === total ? 'ok' : '');
     if (read === total) toast('Scan complete', 'ok');
+  }
+  {
+    const read = scan.points.filter(p => p.rank != null).length;
+    const found = scan.points.filter(p => p.rank >= 1).length;
+    const bad = scan.points.find(p => p.error);
+    ScanOverlay.finish(ov, {
+      state: (fatal || halted) ? 'error' : (autoStop ? 'stopped' : 'done'),
+      title: (fatal || halted) ? 'The scan stopped early' : (autoStop ? 'Scan stopped' : 'Scan complete'),
+      sub: (fatal || halted)
+        ? ((bad && bad.error) ? bad.error : 'The provider rejected the request.') + ' \u2014 ' + read + ' of ' + total + ' points saved.'
+        : read + ' of ' + total + ' points read \u00b7 visible at ' + found + ' of them',
+      stats: gridScanStats(scan, failures)
+    });
   }
   setTimeout(() => setProgress(0, 0, 'progWrap', 'progBar'), 1400);
 }
@@ -12593,13 +13607,31 @@ $('retryFailedBtn').addEventListener('click', async () => {
   const relay = state.settings.provider === 'direct';
   const lanes = relay ? 1 : Math.max(1, state.settings.concurrency || 6);
   let n = 0;
-  await runPool(targets.length, lanes, () => autoStop, async k => {
-    await retrySingle(scan, targets[k], true);
-    n++;
-    setStatus('scanStatus', 'Re-read ' + n + ' of ' + targets.length + ' flagged points…', 'busy');
-    setProgress(n, targets.length, 'progWrap', 'progBar');
-    if (relay) await sleep(1500);
+  const g0 = activeGbp();
+  const ov = ScanOverlay.open({
+    variant: 'dock', avoid: 'mapCard', eyebrow: 'Re-check in progress',
+    title: 'Re-checking ' + targets.length + ' flagged point' + (targets.length === 1 ? '' : 's'),
+    sub: '\u201c' + (scan.keyword || '') + '\u201d \u00b7 ' + ((g0 && (g0.bizName || g0.name)) || 'this profile'),
+    total: targets.length, unit: 'points re-read',
+    note: 'Unresolved, name-only and thin readings are read again. Each one saves as it lands.',
+    onStop: () => { autoStop = true; }
   });
+  try{
+    await runPool(targets.length, lanes, () => autoStop, async k => {
+      ScanOverlay.update(ov, {now: [{main: 'Point ' + (targets[k] + 1), sub: 're-reading\u2026'}]});
+      await retrySingle(scan, targets[k], true);
+      n++;
+      setStatus('scanStatus', 'Re-read ' + n + ' of ' + targets.length + ' flagged points…', 'busy');
+      setProgress(n, targets.length, 'progWrap', 'progBar');
+      ScanOverlay.update(ov, {done: n, stats: gridScanStats(scan, 0).slice(0, 2)});
+      if (relay) await sleep(1500);
+    });
+    ScanOverlay.finish(ov, {
+      state: autoStop ? 'stopped' : 'done',
+      title: autoStop ? 'Re-check stopped' : 'Re-check complete',
+      sub: n + ' of ' + targets.length + ' point' + (targets.length === 1 ? '' : 's') + ' re-read'
+    });
+  } finally { ScanOverlay.settle(ov); }
   setProgress(targets.length, targets.length, 'progWrap', 'progBar');
   $('autoScanBtn').disabled = false;
   $('stopAutoBtn').disabled = true;
@@ -13337,7 +14369,21 @@ function comparePopup(p, idx, scan, gbps){
   retry.textContent = 'Read this point';
   retry.addEventListener('click', async () => {
     retry.disabled = true; retry.textContent = 'Reading…';
-    try{ await retryCompareSingle(scan, idx); } finally { cmpMap.closePopup(); }
+    const ov = ScanOverlay.open({
+      variant: 'dock', avoid: ($('cmpMapCard') && $('cmpMapCard').offsetParent) ? 'cmpMapCard' : 'cmpReport', eyebrow: 'Re-reading one point',
+      title: 'Reading point ' + (idx + 1) + ' of ' + scan.points.length,
+      sub: '\u201c' + (scan.keyword || '') + '\u201d \u00b7 every profile', total: 1
+    });
+    try{ await retryCompareSingle(scan, idx); }
+    finally{
+      cmpMap.closePopup();
+      const r = scan.points[idx];
+      ScanOverlay.finish(ov, {
+        state: (!r.results && r.error) ? 'error' : 'done',
+        title: r.results ? 'Point ' + (idx + 1) + ' updated' : 'Still no reading here',
+        sub: (!r.results && r.error) ? r.error : 'The comparison table has the new figures.'
+      });
+    }
   });
   acts.appendChild(retry);
   const paste = document.createElement('button');
@@ -13890,6 +14936,25 @@ function commitCompareProgress(scan){
 }
 
 async function runCompareScan(scan){
+  const c0 = activeClient();
+  const nProfiles = c0 ? c0.gbps.length : 0;
+  /* The comparison's live output is its report; the map only when it has
+     been opened. The loading card keeps clear of whichever is showing. */
+  const mapCard = $('cmpMapCard');
+  const card = (mapCard && mapCard.offsetParent) ? mapCard : $('cmpReport');
+  if (card && card.scrollIntoView) card.scrollIntoView({block:'nearest'});
+  const ov = ScanOverlay.open({
+    variant: 'dock', avoid: card, eyebrow: 'Comparison scan in progress',
+    title: 'Comparing \u201c' + (scan.keyword || '') + '\u201d',
+    sub: (c0 ? c0.name + ' \u00b7 ' : '') + nProfiles + ' profile' + (nProfiles === 1 ? '' : 's') + ' \u00b7 ' + scan.points.length + ' map points',
+    total: scan.points.length, unit: 'points read',
+    note: 'Every profile in this client is looked for at every point. Each point saves as it is read.',
+    onStop: () => { cmpStop = true; setStatus('cmpStatus', 'Stopping after this point\u2026', 'busy'); }
+  });
+  try{ await runCompareScanInner(scan, ov); }
+  finally{ ScanOverlay.settle(ov); }
+}
+async function runCompareScanInner(scan, ov){
   const c = activeClient(), gbps = c.gbps;
   const region = REGIONS[scan.regionIdx] || REGIONS[0];
   const total = scan.points.length;
@@ -13910,6 +14975,7 @@ async function runCompareScan(scan){
     active.set(i, {lat:p.lat, lng:p.lng});
     renderSonar(cmpSonarLayer, Array.from(active.values()));
     telemetry(TEL_CMP, {index: Math.min(done + active.size, total), total: total, lat:p.lat, lng:p.lng, step:'opening the search\u2026'});
+    ScanOverlay.update(ov, {now: [{main: active.size > 1 ? active.size + ' points at once' : 'Point ' + (i + 1) + ' of ' + total, sub: 'reading every profile\u2026'}]});
     let last = null, ok = false;
     for (let a = 0; a < tries && !ok; a++){
       if (stop()) break;
@@ -13930,6 +14996,10 @@ async function runCompareScan(scan){
     done++;
     setProgress(done, total, 'cmpProgWrap', 'cmpProgBar');
     setStatus('cmpStatus', 'Read ' + done + ' of ' + total + ' points\u2026', 'busy');
+    ScanOverlay.update(ov, {done: done, total: total, stats: [
+      {label:'Points read', value: successes, tone:'good'},
+      {label:'Failed', value: failures, tone: failures ? 'bad' : ''}
+    ]});
     commitCompareProgress(scan);
     if (failures >= 5 && successes === 0) halted = true;
     if (relay) await sleep(1500);
@@ -13943,6 +15013,7 @@ async function runCompareScan(scan){
     if (pending.length){
       setStatus('cmpStatus', 'Second pass \u2014 re-reading ' + pending.length + ' unresolved point(s)\u2026', 'busy');
       done = total - pending.length;
+      ScanOverlay.update(ov, {done: done, title: 'Second pass \u2014 re-reading ' + pending.length + ' point' + (pending.length === 1 ? '' : 's')});
       await runPool(pending.length, lanes, stop, k => readOne(pending[k], 2));
     }
   }
@@ -13968,6 +15039,14 @@ async function runCompareScan(scan){
       ? 'Comparison complete \u2014 ' + total + ' points across ' + gbps.length + ' profile' + (gbps.length === 1 ? '' : 's') + '.'
       : read + ' of ' + total + ' points read. Retry the rest from a dot, or paste them by hand.', read === total ? 'ok' : '');
     if (read === total) toast('Comparison complete', 'ok');
+  }
+  {
+    const bad = scan.points.find(p => p.error);
+    ScanOverlay.finish(ov, {
+      state: (fatal || halted) ? 'error' : (cmpStop ? 'stopped' : 'done'),
+      title: (fatal || halted) ? 'The comparison stopped early' : (cmpStop ? 'Comparison stopped' : 'Comparison complete'),
+      sub: ((fatal || halted) && bad && bad.error ? bad.error + ' \u2014 ' : '') + read + ' of ' + total + ' points read across ' + gbps.length + ' profile' + (gbps.length === 1 ? '' : 's')
+    });
   }
   setTimeout(() => setProgress(0, 0, 'cmpProgWrap', 'cmpProgBar'), 1400);
 }
@@ -15311,6 +16390,10 @@ async function publishGbpView(g){
       gbpName: g.name || g.bizName || 'Location',
       activeKeywordId: g.activeKeywordId || keywordsData[0].id,
       keywords: keywordsData,
+      /* The tracked business itself — name, rating and Google's pin — so
+         the embedded map can draw it. JSON round-trip drops anything
+         undefined, which Firestore would refuse. */
+      business: JSON.parse(JSON.stringify(gbpBizPublish(g))),
       updatedAt: Date.now(),
       updatedBy: fbUid
     });
@@ -15332,7 +16415,10 @@ async function publishAndShare(){
   }
   const url = embedUrlFor(id);
   try{ await navigator.clipboard.writeText(url); }catch(e){ /* clipboard not available — link is still shown below */ }
-  ask('Public embed link (copied)', 'This link updates automatically the next time you expand this profile\u2019s map. Every keyword with a scan is included, so the client can switch between them. Paste it into AgencyAnalytics\u2019 Embed widget, in the URL or iFrame field.', '', url);
+  const exactPin = !!(g.listing && !g.listing.stale && g.listing.lat != null);
+  ask('Public embed link (copied)', 'This link updates automatically the next time you expand this profile\u2019s map. Every keyword with a scan is included, so the client can switch between them, and the business itself is pinned on the map with its name and rating. ' +
+    (exactPin ? '' : 'Tip: confirm the listing on step one so the pin sits on Google\u2019s exact spot \u2014 until then it marks the grid centre. ') +
+    'Paste it into AgencyAnalytics\u2019 Embed widget, in the URL or iFrame field.', '', url);
 }
 
 const expandMapBtnEl = $('expandMapBtn');
@@ -15382,6 +16468,10 @@ function renderEmbedSnapshot(data){
     zoom: (scan && scan.zoom) || 14,
     keywords: keywords, activeKeywordId: activeId
   });
+  /* What the tool published about the business (links made before this
+     existed have none, and the marker falls back to the scan's own record
+     of the listing, then to the grid centre). */
+  g.bizInfo = (data && data.business && typeof data.business === 'object') ? data.business : null;
   state.clients = [{ id:'embed-client', name:g.name, gbps:[g], compareScans:[] }];
   state.activeClientId = 'embed-client';
   state.activeGbpId = g.id;
@@ -16250,29 +17340,89 @@ function seoProgressHide(widgets){
 async function seoScanAndRender(c, pairs){
   pairs = pairs.filter(p => p.loc.label && p.loc.label.trim());
   if (!pairs.length){ toast('Add at least one keyword with a location first', 'err'); return; }
-  if (!c.website || !c.website.trim()){ toast('Add this client\u2019s website on the Dashboard tab first \u2014 rank checks need it.', 'err'); return; }
-  if (!providerReady()){ toast('Configure a search provider first: GBP Locations \u2192 step 4', 'err'); return; }
+  if (!c.website || !c.website.trim()){ toast('Add this client’s website on the Dashboard tab first — rank checks need it.', 'err'); return; }
+  if (!providerReady()){ toast('Configure a search provider first: GBP Locations → step 4', 'err'); return; }
   if (seoScanRunning){ toast('A scan is already running for this client', 'err'); return; }
   seoScanRunning = true;
   seoScanStop = false;
   const widgets = seoProgressWidgets();
   seoProgressShow(widgets, pairs.length);
-  let done = 0;
+  let done = 0, ranking = 0, missing = 0, failed = 0;
   seoDeepestDepth = 0;
+
+  /* The scan-in-progress screen. One keyword or two hundred, it says what
+     is being checked right now, how far through it is, and to wait. */
+  const single = pairs.length === 1;
+  const first = pairs[0];
+  const kwCount = new Set(pairs.map(p => p.k.id)).size;
+  const locCount = new Set(pairs.map(p => (p.loc.label || '').trim().toLowerCase())).size;
+  const inflight = new Map();
+  const ov = ScanOverlay.open({
+    eyebrow: single ? 'Keyword scan in progress' : 'Scan in progress',
+    title: single ? 'Scanning “' + first.k.text + '”' : 'Scanning ' + pairs.length + ' keyword locations',
+    sub: single
+      ? 'in ' + first.loc.label.trim() + ' · ' + (c.name || 'this client')
+      : (c.name || 'This client') + ' · ' + kwCount + ' keyword' + (kwCount === 1 ? '' : 's') +
+        ' across ' + locCount + ' location' + (locCount === 1 ? '' : 's'),
+    total: pairs.length, unit: 'checked',
+    note: 'Sit tight — each result is saved the moment it comes back. Keep this tab open until it finishes.',
+    onStop: () => { seoScanStop = true; }
+  });
+  const paintOverlay = () => ScanOverlay.update(ov, {
+    done, total: pairs.length,
+    now: Array.from(inflight.values()).map(p => ({main: p.k.text, sub: p.loc.label.trim()})),
+    note: seoDeepestDepth > SEO_DEPTH_LADDER[0]
+      ? 'Digging deeper — now reading as far as result ' + seoDeepestDepth + ' for the ones not found yet.'
+      : 'Sit tight — each result is saved the moment it comes back. Keep this tab open until it finishes.',
+    stats: single ? [] : [
+      {label: 'Ranking', value: ranking, tone: 'good'},
+      {label: 'Not found', value: missing},
+      {label: 'Errors', value: failed, tone: failed ? 'bad' : ''}
+    ]
+  });
+  paintOverlay();
   try{
     await runPool(pairs.length, state.settings.concurrency || 6, () => seoScanStop, async (i) => {
-      await seoScanOne(c, pairs[i].k, pairs[i].loc);
+      inflight.set(i, pairs[i]);
+      paintOverlay();
+      try{ await seoScanOne(c, pairs[i].k, pairs[i].loc); }
+      finally{ inflight.delete(i); }
+      const L = pairs[i].loc;
+      if (L.error) failed++;
+      else if (L.rank > 0) ranking++;
+      else if (L.rank === 0) missing++;
       done++;
       seoProgressUpdate(widgets, done, pairs.length,
         seoDeepestDepth > SEO_DEPTH_LADDER[0] ? ('digging to ' + seoDeepestDepth) : '');
+      paintOverlay();
       if (done % 3 === 0){ save(); renderSeoKeywords(); }
     });
   } finally {
     seoScanRunning = false;
     seoProgressHide(widgets);
+    const stopped = seoScanStop;
+    let title, sub, st;
+    if (single && done === 1){
+      const L = first.loc;
+      st = L.error ? 'error' : 'done';
+      title = L.error ? 'Couldn’t read this one'
+            : L.rank > 0 ? '“' + first.k.text + '” ranks #' + L.rank
+            : '“' + first.k.text + '” isn’t in the results';
+      sub = L.error ? L.error : 'in ' + L.label.trim() + ' · saved';
+    } else {
+      st = stopped ? 'stopped' : (failed && failed === done ? 'error' : 'done');
+      title = stopped ? 'Scan stopped' : 'Scan complete';
+      sub = done + ' of ' + pairs.length + ' checked · ' + ranking + ' ranking · ' + missing + ' not found' +
+            (failed ? ' · ' + failed + ' error' + (failed === 1 ? '' : 's') : '');
+    }
+    ScanOverlay.finish(ov, {state: st, title, sub, stats: single ? [] : [
+      {label: 'Ranking', value: ranking, tone: 'good'},
+      {label: 'Not found', value: missing},
+      {label: 'Errors', value: failed, tone: failed ? 'bad' : ''}
+    ]});
   }
   save(); renderSeoKeywords();
-  toast(seoScanStop ? 'Scan stopped' : 'Scan complete \u2014 results saved');
+  toast(seoScanStop ? 'Scan stopped' : 'Scan complete — results saved');
   /* A finished scan never touches a published link by itself unless it was
      asked to. The new positions are saved either way - what's in question is
      only what the client sees. */
@@ -16969,14 +18119,21 @@ function seoLocGroupRow(c, k, loc){
   const top = document.createElement('div');
   top.className = 'seo-lg-top';
 
+  /* Selection is per row — this keyword *at this location* — so a keyword
+     tracked in two places can be picked in one without the other. */
+  const rowKey = seoRowKey(k, loc);
   const check = document.createElement('input');
   check.type = 'checkbox'; check.className = 'seo-kw-check';
-  check.checked = seoSelectedKwIds.has(k.id);
+  check.title = 'Select \u201c' + k.text + '\u201d in ' + (loc.label || 'this location');
+  check.checked = seoSelectedRows.has(rowKey);
   check.addEventListener('click', e => e.stopPropagation());
   check.addEventListener('change', () => {
-    if (check.checked) seoSelectedKwIds.add(k.id); else seoSelectedKwIds.delete(k.id);
+    if (check.checked) seoSelectedRows.add(rowKey); else seoSelectedRows.delete(rowKey);
+    row.classList.toggle('seo-lg-row-selected', check.checked);
     renderSeoBulkBar(c);
+    seoSyncGroupChecks();
   });
+  if (check.checked) row.classList.add('seo-lg-row-selected');
 
   const text = document.createElement('span');
   text.className = 'seo-lg-text';
@@ -17046,11 +18203,12 @@ function seoLocGroupRow(c, k, loc){
   const scanBtn = document.createElement('button');
   scanBtn.type = 'button'; scanBtn.className = 'btn btn-sm seo-loc-scan-btn';
   scanBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><span>Scan</span>';
+  scanBtn.title = 'Scan \u201c' + k.text + '\u201d in ' + (loc.label || 'this location') + ' now';
   scanBtn.addEventListener('click', async () => {
     if (!loc.label.trim()){ toast('Add a location first', 'err'); return; }
     scanBtn.disabled = true; scanBtn.classList.add('is-loading');
-    await seoScanOne(c, k, loc);
-    save(); renderSeoKeywords();
+    try{ await seoScanAndRender(c, [{k, loc}]); }
+    finally{ scanBtn.disabled = false; scanBtn.classList.remove('is-loading'); }
   });
 
   const delBtn = document.createElement('button');
@@ -17059,6 +18217,7 @@ function seoLocGroupRow(c, k, loc){
   delBtn.addEventListener('click', () => {
     tombstone('seoLoc', loc.id);
     k.locations = k.locations.filter(l => l.id !== loc.id);
+    seoSelectedRows.delete(rowKey);
     save(); renderSeoKeywords();
   });
 
@@ -17155,11 +18314,18 @@ function seoLocGroupRow(c, k, loc){
   const labelInput = document.createElement('input');
   labelInput.type = 'text'; labelInput.placeholder = 'Address, city or place name\u2026'; labelInput.value = loc.label || '';
   labelInput.addEventListener('change', () => {
-    const v = labelInput.value.trim();
+    const v = labelInput.value.trim().replace(/\s+/g, ' ');
     if (v !== loc.label){
-      loc.lat = null; loc.lng = null;
-      if (latInput) latInput.value = ''; if (lngInput) lngInput.value = '';
-      setStatus(statusEl, 'Location changed \u2014 it\u2019ll be re-pinned on the next scan.', '');
+      /* Only a real change of place drops the pin. Rewriting the same place
+         — ALBERTA to Alberta, "Red Deer AB" to "Red Deer, AB" — keeps it,
+         along with the ranks already measured there. */
+      if (!seoSamePlaceText(v, loc.label)){
+        loc.lat = null; loc.lng = null;
+        if (latInput) latInput.value = ''; if (lngInput) lngInput.value = '';
+        setStatus(statusEl, 'Location changed \u2014 it\u2019ll be re-pinned on the next scan.', '');
+      } else if (v && !c.locationCache[v.toLowerCase()] && c.locationCache[(loc.label || '').trim().toLowerCase()]){
+        c.locationCache[v.toLowerCase()] = Object.assign({}, c.locationCache[(loc.label || '').trim().toLowerCase()]);
+      }
     }
     loc.label = v; save();
     seoOpenLocGroups.add(v ? v.toLowerCase() : '__unassigned__');
@@ -17298,24 +18464,280 @@ function seoLocGroupRow(c, k, loc){
    can see "how's Red Deer doing" at a glance instead of hunting through
    keywords one at a time. Keywords with no location yet get their own
    card at the top so they're impossible to miss. ---------- */
-let seoSelectedKwIds = new Set();
+let seoSelectedRows = new Set();   // "<keywordId>|<locationId>" — one entry per row, not per keyword
 let seoSelectedForClientId = null;
 let seoOpenLocGroups = new Set();
 let seoOpenLocGroupsForClientId = null;
 let seoEditMode = false;
+let seoRenamingKey = null;          // the location card whose name is being edited, if any
+
+/* ---------- selection is per row ----------
+   A row is one keyword at one location, and its key carries both ids. So a
+   keyword filed under Calgary and under Edmonton is two rows that are ticked
+   separately — ticking it in one place no longer ticks it in the other. A
+   keyword with no location yet is a row of its own with an empty location
+   part. */
+function seoRowKey(k, loc){ return k.id + '|' + (loc ? loc.id : ''); }
+function seoAllRows(c){
+  const rows = [];
+  c.keywords.forEach(k => {
+    let unassigned = !k.locations.length;
+    k.locations.forEach(loc => {
+      if (!(loc.label || '').trim()){ unassigned = true; return; }
+      rows.push({k, loc, key: seoRowKey(k, loc)});
+    });
+    if (unassigned) rows.push({k, loc: null, key: seoRowKey(k, null)});
+  });
+  return rows;
+}
+function seoSelectedRowList(c){ return seoAllRows(c).filter(r => seoSelectedRows.has(r.key)); }
+function seoSelectedKeywordList(c){
+  const seen = new Set(), out = [];
+  seoSelectedRowList(c).forEach(r => { if (!seen.has(r.k.id)){ seen.add(r.k.id); out.push(r.k); } });
+  return out;
+}
+/* Rows come and go (deleted, merged by a rename, given a location) — the
+   selection forgets the ones that no longer exist rather than counting them. */
+function seoPruneSelection(c){
+  const valid = new Set(seoAllRows(c).map(r => r.key));
+  Array.from(seoSelectedRows).forEach(key => { if (!valid.has(key)) seoSelectedRows.delete(key); });
+}
+/* Keeps each location card's own tick-box honest when a single row changes,
+   without redrawing the list (which would close any open row drawer). */
+function seoSyncGroupChecks(){
+  document.querySelectorAll('#seoKeywordList .seo-lg-group-check').forEach(cb => {
+    const keys = cb._rowKeys || [];
+    const n = keys.filter(k => seoSelectedRows.has(k)).length;
+    cb.checked = keys.length > 0 && n === keys.length;
+    cb.indeterminate = n > 0 && n < keys.length;
+  });
+}
+
+/* ---------- how a location is written ----------
+   A location is stored exactly as it was typed, which is right — but it
+   has to be changeable afterwards, on every keyword at once, without losing
+   the pin or the rank history that belong to the place rather than to the
+   spelling. These are the pieces the rename uses. */
+function seoPlaceNorm(s){
+  return String(s || '').toLowerCase().replace(/[.,;:()'’"\-–—\/]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+/* Same letters, different capitals, commas or spacing: the same place. */
+function seoSamePlaceText(a, b){ return seoPlaceNorm(a) === seoPlaceNorm(b); }
+function seoNeedsTidy(s){
+  const t = String(s || '');
+  return /[a-z]/i.test(t) && (t === t.toUpperCase() || t === t.toLowerCase());
+}
+/* Province, state and country codes stay in capitals when they come after
+   the place — "red deer, ab" becomes "Red Deer, AB", not "Red Deer, Ab". */
+const SEO_PLACE_CODES = new Set(('ab bc mb nb nl ns nt nu on pe qc sk yt ' +
+  'al ak az ar ca co ct de fl ga hi id il in ia ks ky la me md ma mi mn ms mo mt ne nv nh nj nm ny nc nd oh ok or pa ri sc sd tn tx ut vt va wa wv wi wy dc ' +
+  'usa us uk uae gb nz nsw qld vic').split(' '));
+const SEO_PLACE_ALWAYS_UPPER = new Set(['usa', 'uk', 'uae', 'nyc', 'nw', 'ne', 'sw', 'se']);
+const SEO_PLACE_SMALL = new Set(['of', 'and', 'the', 'de', 'la', 'le', 'du', 'des', 'upon', 'on', 'in', 'by', 'sur', 'en']);
+function seoTidyPlaceName(raw){
+  const s = String(raw || '').trim().replace(/\s+/g, ' ');
+  if (!s) return s;
+  return s.split(',').map((part, pi) => {
+    const words = part.trim().split(' ').filter(Boolean);
+    return words.map((w, wi) => {
+      const lower = w.toLowerCase();
+      const bare = lower.replace(/[^a-z]/g, '');
+      if (SEO_PLACE_ALWAYS_UPPER.has(bare) && bare === lower) return w.toUpperCase();
+      /* a code standing on its own after a comma, or ending a longer part */
+      if (bare === lower && SEO_PLACE_CODES.has(bare) && ((pi > 0 && words.length === 1) || (words.length > 1 && wi === words.length - 1 && bare.length === 2)))
+        return w.toUpperCase();
+      if (wi > 0 && SEO_PLACE_SMALL.has(lower)) return lower;
+      let out = lower.replace(/(^|[-'’.(\/])([a-zà-ÿ])/g, (m, p, ch) => p + ch.toUpperCase());
+      out = out.replace(/^Mc([a-z])/, (m, ch) => 'Mc' + ch.toUpperCase());
+      return out;
+    }).join(' ');
+  }).join(', ');
+}
+/* When one place was typed several ways, the card shows the most carefully
+   written one — mixed case beats SHOUTING or all-lowercase. */
+function seoPreferredLabel(labels){
+  const clean = labels.map(l => String(l || '').trim().replace(/\s+/g, ' ')).filter(Boolean);
+  return clean.find(l => !seoNeedsTidy(l)) || clean[0] || '';
+}
+function seoLocKeyExists(c, key){
+  return c.keywords.some(k => k.locations.some(l => (l.label || '').trim().toLowerCase() === key));
+}
+/* A reading taken at the old place means nothing at a new one, so "a
+   different place" starts the row over, keeping only which keyword and
+   market it is. */
+function seoResetLocMeasurement(loc){
+  Object.assign(loc, {
+    lat:null, lng:null, rank:null, prevRank:null, matchedTitle:null, matchedDomain:null, sourceUrl:null,
+    checkedAt:null, manual:false, error:null, precision:null, matchedBy:null, readCount:null,
+    topDomains:null, partial:false, history:[], depthRead:null, exhausted:false,
+    mode:null, area:false, radius:null, bounds:null, canonical:'', osm:null
+  });
+}
+/* Two rows for the same keyword at what is now the same place: fold the
+   renamed one into the one already there. Histories are joined, and
+   whichever was read more recently supplies the current position. */
+function seoMergeLocInto(keep, drop){
+  const hist = new Map();
+  (keep.history || []).concat(drop.history || []).forEach(h => {
+    if (h && h.checkedAt != null) hist.set(h.checkedAt + ':' + h.rank, h);
+  });
+  if ((drop.checkedAt || 0) > (keep.checkedAt || 0)){
+    ['rank','prevRank','matchedTitle','matchedDomain','sourceUrl','checkedAt','manual','error','precision',
+     'matchedBy','readCount','topDomains','partial','depthRead','exhausted'].forEach(f => { keep[f] = drop[f]; });
+  }
+  if (keep.lat == null && drop.lat != null){ keep.lat = drop.lat; keep.lng = drop.lng; }
+  keep.history = Array.from(hist.values()).sort((x, y) => (x.checkedAt || 0) - (y.checkedAt || 0)).slice(-60);
+}
+
+/* Renames one location card: every keyword filed under it gets the new
+   wording, and so do the client report and the exports, which read the same
+   field. "Same place" keeps each row's pin, radius and rank history; "a
+   different place" clears them so the next scan looks the new place up. If
+   the new name is already a card of its own, the two become one. */
+function seoRenameLocation(c, oldKey, newLabel, samePlace, opts){
+  const o = opts || {};
+  const label = String(newLabel || '').trim().replace(/\s+/g, ' ');
+  const newKey = label.toLowerCase();
+  if (!label) return {renamed:0, merged:0};
+  let renamed = 0, merged = 0, rows = 0;
+  c.keywords.forEach(k => {
+    k.locations.slice().forEach(loc => {
+      if ((loc.label || '').trim().toLowerCase() !== oldKey) return;
+      rows++;
+      const clash = newKey !== oldKey
+        ? k.locations.find(l => l !== loc && (l.label || '').trim().toLowerCase() === newKey)
+        : null;
+      if (clash){
+        if (samePlace) seoMergeLocInto(clash, loc);
+        k.locations = k.locations.filter(l => l !== loc);
+        tombstone('seoLoc', loc.id);
+        seoSelectedRows.delete(seoRowKey(k, loc));
+        merged++;
+        return;
+      }
+      if (loc.label !== label){ loc.label = label; renamed++; }
+      if (!samePlace) seoResetLocMeasurement(loc);
+    });
+  });
+  if (!c.locationCache || typeof c.locationCache !== 'object') c.locationCache = {};
+  if (newKey !== oldKey){
+    if (samePlace && c.locationCache[oldKey] && !c.locationCache[newKey]){
+      c.locationCache[newKey] = Object.assign({}, c.locationCache[oldKey]);
+    }
+    if (seoOpenLocGroups.has(oldKey)){ seoOpenLocGroups.delete(oldKey); seoOpenLocGroups.add(newKey); }
+    /* The share dialog remembers which cards go in the client report by
+       name, so the new name takes the old one's place there. */
+    if (c.reportOpts && Array.isArray(c.reportOpts.locKeys)){
+      const ks = c.reportOpts.locKeys.map(x => x === oldKey ? newKey : x);
+      c.reportOpts.locKeys = ks.filter((x, i) => ks.indexOf(x) === i);
+    }
+  }
+  if (!o.quiet){
+    save(); renderSeoKeywords();
+    if (renamed || merged){
+      toast('Renamed to “' + label + '” on ' + rows + ' keyword' + (rows === 1 ? '' : 's') +
+        (merged ? ' · merged ' + merged + ' duplicate' + (merged === 1 ? '' : 's') : '') +
+        (samePlace ? '' : ' — it’ll be looked up fresh on the next scan'), 'ok');
+      seoRefreshPublishedReport(c);
+    }
+  }
+  return {renamed, merged, rows};
+}
+/* A client link that follows every scan should follow a rename too, since a
+   corrected name is usually corrected for the client's benefit. A link
+   pinned to an earlier scan, or one set to update by hand, is left alone. */
+function seoRefreshPublishedReport(c){
+  if (!c || !c.reportPublished || !c.reportOpts || !c.reportOpts.autoPublish || c.reportOpts.asOf) return;
+  publishSeoReport(c, c.reportOpts).then(res => {
+    if (res && res.ok) toast('Client link updated with the new name');
+  }).catch(() => {});
+}
+
+/* The inline editor that replaces a card's title while it is being renamed. */
+function seoRenameEditor(c, key, label, entries){
+  const box = document.createElement('div');
+  box.className = 'seo-lg-rn';
+  ['click', 'mousedown', 'keydown', 'keyup'].forEach(ev => box.addEventListener(ev, e => e.stopPropagation()));
+
+  const top = document.createElement('div');
+  top.className = 'seo-lg-rn-top';
+  const input = document.createElement('input');
+  input.type = 'text'; input.value = label; input.maxLength = 120;
+  input.className = 'seo-lg-rn-input';
+  input.setAttribute('aria-label', 'New name for ' + label);
+  input.spellcheck = false;
+  const tidy = document.createElement('button');
+  tidy.type = 'button'; tidy.className = 'seo-lg-rn-tidy';
+  tidy.title = 'Fix the capitals: ALBERTA or alberta becomes Alberta, and red deer, ab becomes Red Deer, AB';
+  tidy.innerHTML = '<b>Aa</b><span>Fix capitals</span>';
+  const saveBtn = document.createElement('button');
+  saveBtn.type = 'button'; saveBtn.className = 'btn btn-sm btn-go'; saveBtn.textContent = 'Save';
+  const cancelBtn = document.createElement('button');
+  cancelBtn.type = 'button'; cancelBtn.className = 'btn btn-sm'; cancelBtn.textContent = 'Cancel';
+  [input, tidy, saveBtn, cancelBtn].forEach(el => top.appendChild(el));
+
+  const choice = document.createElement('div');
+  choice.className = 'seo-lg-rn-choice';
+  const grp = 'seo-rn-' + uid();
+  choice.innerHTML =
+    '<span class="seo-lg-rn-q">That changes more than the capitals. Is it the same place?</span>' +
+    '<label><input type="radio" name="' + grp + '" value="same" checked/><span><b>Same place, written differently</b><small>keeps its pins and rank history</small></span></label>' +
+    '<label><input type="radio" name="' + grp + '" value="new"/><span><b>A different place</b><small>looked up again and tracked fresh from the next scan</small></span></label>';
+  const hint = document.createElement('div');
+  hint.className = 'seo-lg-rn-hint';
+  const n = entries.length;
+  const baseHint = 'Changes it on ' + (n === 1 ? 'its keyword' : 'all ' + n + ' keywords') + ' here, in the client report and in exports. Enter saves, Esc cancels.';
+  [top, choice, hint].forEach(el => box.appendChild(el));
+
+  const paint = () => {
+    const v = input.value.trim().replace(/\s+/g, ' ');
+    choice.style.display = (v && !seoSamePlaceText(v, label)) ? '' : 'none';
+    saveBtn.disabled = !v || v === label;
+    const nk = v.toLowerCase();
+    hint.classList.toggle('warn', !!(v && nk !== key && seoLocKeyExists(c, nk)));
+    hint.textContent = (v && nk !== key && seoLocKeyExists(c, nk))
+      ? '“' + v + '” is already a location for this client — saving merges the two cards into one.'
+      : baseHint;
+  };
+  const close = () => { seoRenamingKey = null; renderSeoKeywords(); };
+  const commit = () => {
+    const v = input.value.trim().replace(/\s+/g, ' ');
+    if (!v || v === label){ close(); return; }
+    const sameRadio = choice.querySelector('input[value="same"]');
+    const samePlace = seoSamePlaceText(v, label) || !!(sameRadio && sameRadio.checked);
+    seoRenamingKey = null;
+    seoRenameLocation(c, key, v, samePlace);
+  };
+  input.addEventListener('input', paint);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter'){ e.preventDefault(); commit(); }
+    else if (e.key === 'Escape'){ e.preventDefault(); close(); }
+  });
+  tidy.addEventListener('click', () => {
+    input.value = seoTidyPlaceName(input.value);
+    paint(); input.focus();
+  });
+  saveBtn.addEventListener('click', commit);
+  cancelBtn.addEventListener('click', close);
+  paint();
+  setTimeout(() => { try{ input.focus(); input.select(); }catch(e){} }, 0);
+  return box;
+}
 
 function seoBuildLocationGroups(c){
   const groups = new Map(); // key -> {label, entries:[{k, loc}]}
   const unassigned = [];
+  const addUnassigned = k => { if (unassigned.indexOf(k) === -1) unassigned.push(k); };
   c.keywords.forEach(k => {
-    if (!k.locations.length){ unassigned.push(k); return; }
+    if (!k.locations.length){ addUnassigned(k); return; }
     k.locations.forEach(loc => {
       const key = (loc.label || '').trim().toLowerCase();
-      if (!key){ unassigned.push(k); return; }
+      if (!key){ addUnassigned(k); return; }
       if (!groups.has(key)) groups.set(key, {key, label: loc.label.trim(), entries: []});
       groups.get(key).entries.push({k, loc});
     });
   });
+  groups.forEach(g => { g.label = seoPreferredLabel(g.entries.map(e => e.loc.label)) || g.label; });
   const sorted = Array.from(groups.values()).sort((a, b) => a.label.localeCompare(b.label));
   return {groups: sorted, unassigned};
 }
@@ -17329,11 +18751,13 @@ function seoGroupFlaggedCount(entries){
   return entries.reduce((n, {loc}) => n + (seoLocFlagged(loc) ? 1 : 0), 0);
 }
 
+const SEO_PENCIL_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>';
+
 function renderSeoKeywords(){
   const c = activeSeoClient(); if (!c) return;
   if (seoSelectedForClientId !== c.id){
-    seoSelectedKwIds = new Set(); seoSelectedForClientId = c.id;
-    seoEditMode = false;
+    seoSelectedRows = new Set(); seoSelectedForClientId = c.id;
+    seoEditMode = false; seoRenamingKey = null;
     $('seoBulkEditControls').style.display = 'none';
     $('seoEditModeBtn').classList.remove('on');
     $('seoEditModeLabel').textContent = 'Edit';
@@ -17346,6 +18770,7 @@ function renderSeoKeywords(){
   if (!c.keywords.length){ renderSeoBulkBar(c); return; }
 
   const {groups, unassigned} = seoBuildLocationGroups(c);
+  if (seoRenamingKey && !groups.some(g => g.key === seoRenamingKey)) seoRenamingKey = null;
 
   // Default which groups start open: everything if there's only a
   // couple, otherwise just the first — keeps a single-location account
@@ -17364,17 +18789,57 @@ function renderSeoKeywords(){
     }
   }
 
-  function buildGroupCard(key, label, badgeHtml, bodyBuilder, extraClass){
+  function buildGroupCard(key, label, badgeHtml, bodyBuilder, extraClass, opts){
+    const o = opts || {};
+    const renaming = !!o.renameable && seoRenamingKey === key;
     const card = document.createElement('div');
     card.className = 'seo-lg-card' + (extraClass ? ' ' + extraClass : '') + (seoOpenLocGroups.has(key) ? ' open' : '');
     const head = document.createElement('div');
-    head.className = 'seo-lg-head';
-    head.innerHTML =
+    head.className = 'seo-lg-head' + (renaming ? ' is-renaming' : '');
+
+    /* Edit mode: one tick-box that takes every row on this card. */
+    if (o.rowKeys){
+      const gc = document.createElement('input');
+      gc.type = 'checkbox'; gc.className = 'seo-kw-check seo-lg-group-check';
+      gc.title = 'Select every keyword in ' + label;
+      gc._rowKeys = o.rowKeys;
+      const picked = o.rowKeys.filter(x => seoSelectedRows.has(x)).length;
+      gc.checked = o.rowKeys.length > 0 && picked === o.rowKeys.length;
+      gc.indeterminate = picked > 0 && picked < o.rowKeys.length;
+      gc.addEventListener('click', e => e.stopPropagation());
+      gc.addEventListener('change', () => {
+        o.rowKeys.forEach(x => { if (gc.checked) seoSelectedRows.add(x); else seoSelectedRows.delete(x); });
+        renderSeoKeywords();
+      });
+      head.appendChild(gc);
+    }
+    head.insertAdjacentHTML('beforeend',
       '<svg class="seo-lg-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>' +
-      '<svg class="seo-lg-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.686-6-10a6 6 0 0 1 12 0c0 4.314-6 10-6 10z"/><circle cx="12" cy="11" r="2.2"/></svg>' +
-      '<span class="seo-lg-label">' + esc(label) + '</span>' +
-      badgeHtml;
+      '<svg class="seo-lg-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.686-6-10a6 6 0 0 1 12 0c0 4.314-6 10-6 10z"/><circle cx="12" cy="11" r="2.2"/></svg>');
+    if (renaming){
+      head.appendChild(seoRenameEditor(c, key, label, o.entries || []));
+    } else {
+      const lab = document.createElement('span');
+      lab.className = 'seo-lg-label' + (o.renameable ? ' seo-lg-label-rn' : '');
+      lab.textContent = label;
+      head.appendChild(lab);
+      if (o.renameable){
+        const rn = document.createElement('button');
+        rn.type = 'button'; rn.className = 'seo-lg-rename';
+        rn.title = 'Rename “' + label + '” — change how it’s written on every keyword';
+        rn.setAttribute('aria-label', 'Rename ' + label);
+        rn.innerHTML = SEO_PENCIL_SVG + '<span>Rename</span>';
+        rn.addEventListener('click', e => {
+          e.stopPropagation();
+          seoRenamingKey = key;
+          renderSeoKeywords();
+        });
+        head.appendChild(rn);
+      }
+      head.insertAdjacentHTML('beforeend', badgeHtml);
+    }
     head.addEventListener('click', () => {
+      if (seoRenamingKey === key) return;
       if (seoOpenLocGroups.has(key)) seoOpenLocGroups.delete(key); else seoOpenLocGroups.add(key);
       renderSeoKeywords();
     });
@@ -17389,19 +18854,21 @@ function renderSeoKeywords(){
   if (unassigned.length){
     buildGroupCard('__unassigned__', 'Not yet assigned a location', '<span class="seo-lg-count seo-lg-count-warn">' + unassigned.length + ' keyword' + (unassigned.length === 1 ? '' : 's') + '</span>', (body) => {
       unassigned.forEach(k => {
+        const rowKey = seoRowKey(k, null);
         const row = document.createElement('div');
         row.className = 'seo-lg-unassigned-row';
         const check = document.createElement('input');
         check.type = 'checkbox'; check.className = 'seo-kw-check';
-        check.checked = seoSelectedKwIds.has(k.id);
+        check.checked = seoSelectedRows.has(rowKey);
         check.addEventListener('change', () => {
-          if (check.checked) seoSelectedKwIds.add(k.id); else seoSelectedKwIds.delete(k.id);
+          if (check.checked) seoSelectedRows.add(rowKey); else seoSelectedRows.delete(rowKey);
           renderSeoBulkBar(c);
+          seoSyncGroupChecks();
         });
         const text = document.createElement('span');
         text.className = 'seo-lg-text'; text.textContent = k.text;
         const locInput = document.createElement('input');
-        locInput.type = 'text'; locInput.placeholder = 'Add a location\u2026'; locInput.className = 'seo-lg-quick-loc';
+        locInput.type = 'text'; locInput.placeholder = 'Add a location…'; locInput.className = 'seo-lg-quick-loc';
         const addBtn = document.createElement('button');
         addBtn.type = 'button'; addBtn.className = 'btn btn-sm'; addBtn.textContent = 'Add';
         const doAdd = async () => {
@@ -17417,7 +18884,7 @@ function renderSeoKeywords(){
         [check, text, locInput, addBtn].forEach(el => row.appendChild(el));
         body.appendChild(row);
       });
-    }, 'seo-lg-card-warn');
+    }, 'seo-lg-card-warn', {rowKeys: unassigned.map(k => seoRowKey(k, null))});
   }
 
   groups.forEach(g => {
@@ -17430,7 +18897,7 @@ function renderSeoKeywords(){
       g.entries
         .sort((a, b) => a.k.text.localeCompare(b.k.text))
         .forEach(({k, loc}) => body.appendChild(seoLocGroupRow(c, k, loc)));
-    });
+    }, '', {renameable: true, entries: g.entries, rowKeys: g.entries.map(e => seoRowKey(e.k, e.loc))});
   });
 
   renderSeoBulkBar(c);
@@ -17439,13 +18906,17 @@ function renderSeoKeywords(){
 
 function renderSeoBulkBar(c){
   c = c || activeSeoClient(); if (!c) return;
-  const n = seoSelectedKwIds.size;
-  $('seoBulkCountLabel').textContent = n + ' selected';
+  seoPruneSelection(c);
+  const rows = seoSelectedRowList(c);
+  const n = rows.length;
+  const kwN = seoSelectedKeywordList(c).length;
+  $('seoBulkCountLabel').textContent = n + ' selected' +
+    (n && kwN !== n ? ' · ' + kwN + ' keyword' + (kwN === 1 ? '' : 's') : '');
   $('seoApplyLocBtn').disabled = n === 0;
   $('seoDeleteSelBtn').disabled = n === 0;
   $('seoRemoveLocBtn').disabled = n === 0;
-  $('seoRescanSelBtn').disabled = n === 0;
-  const total = c.keywords.length;
+  $('seoRescanSelBtn').disabled = !rows.some(r => r.loc);
+  const total = seoAllRows(c).length;
   $('seoSelectAllCheck').checked = total > 0 && n === total;
   $('seoSelectAllCheck').indeterminate = n > 0 && n < total;
 }
@@ -17455,28 +18926,52 @@ $('seoEditModeBtn').addEventListener('click', () => {
   $('seoBulkEditControls').style.display = seoEditMode ? 'flex' : 'none';
   $('seoEditModeBtn').classList.toggle('on', seoEditMode);
   $('seoEditModeLabel').textContent = seoEditMode ? 'Done' : 'Edit';
-  if (!seoEditMode) seoSelectedKwIds.clear();
+  if (!seoEditMode) seoSelectedRows.clear();
   renderSeoKeywords();
 });
 $('seoSelectAllCheck').addEventListener('change', e => {
   const c = activeSeoClient(); if (!c) return;
-  if (e.target.checked) c.keywords.forEach(k => seoSelectedKwIds.add(k.id));
-  else seoSelectedKwIds.clear();
+  if (e.target.checked) seoAllRows(c).forEach(r => seoSelectedRows.add(r.key));
+  else seoSelectedRows.clear();
   renderSeoKeywords();
 });
 $('seoSelectNoLocBtn').addEventListener('click', () => {
   const c = activeSeoClient(); if (!c) return;
-  seoSelectedKwIds = new Set(c.keywords.filter(k => !k.locations.length).map(k => k.id));
+  seoSelectedRows = new Set(seoAllRows(c).filter(r => !r.loc).map(r => r.key));
   seoSelectedForClientId = c.id;
-  if (!seoSelectedKwIds.size){ toast('Every keyword already has at least one location', 'ok'); }
+  if (!seoSelectedRows.size){ toast('Every keyword already has at least one location', 'ok'); }
   renderSeoKeywords();
+});
+/* One pass over every card: a name typed in capitals or all in lowercase is
+   tidied (ALBERTA and alberta both become Alberta), and a place typed
+   several ways is brought to one spelling. Names that already mix upper and
+   lower case are left exactly as written. Pins and history are untouched. */
+const seoTidyLocsBtn = $('seoTidyLocsBtn');
+if (seoTidyLocsBtn) seoTidyLocsBtn.addEventListener('click', () => {
+  const c = activeSeoClient(); if (!c) return;
+  const {groups} = seoBuildLocationGroups(c);
+  let cards = 0, merged = 0;
+  groups.forEach(g => {
+    let target = seoPreferredLabel(g.entries.map(e => e.loc.label));
+    if (seoNeedsTidy(target)) target = seoTidyPlaceName(target);
+    if (!target || g.entries.every(e => e.loc.label === target)) return;
+    const res = seoRenameLocation(c, g.key, target, true, {quiet: true});
+    if (res.renamed || res.merged){ cards++; merged += res.merged; }
+  });
+  if (!cards){ toast('Every location name already looks tidy', 'ok'); return; }
+  save(); renderSeoKeywords();
+  toast('Tidied ' + cards + ' location name' + (cards === 1 ? '' : 's') + (merged ? ' · merged ' + merged + ' duplicate' + (merged === 1 ? '' : 's') : ''), 'ok');
+  seoRefreshPublishedReport(c);
 });
 
 /* ---------- apply a location to every selected keyword at once ---------- */
 $('seoApplyLocBtn').addEventListener('click', () => {
   const c = activeSeoClient(); if (!c) return;
-  if (!seoSelectedKwIds.size) return;
-  $('seoApplyLocCount').textContent = 'Applies to ' + seoSelectedKwIds.size + ' selected keyword' + (seoSelectedKwIds.size === 1 ? '' : 's') + '.';
+  const kws = seoSelectedKeywordList(c);
+  if (!kws.length) return;
+  $('seoApplyLocCount').textContent = 'Adds it to ' + (kws.length === 1
+    ? 'the selected keyword, \u201c' + kws[0].text + '\u201d.'
+    : 'the ' + kws.length + ' keywords in your selection.') + ' Keywords already tracked there are skipped.';
   $('seoApplyLocInput').value = '';
   $('seoApplyLocLat').value = ''; $('seoApplyLocLng').value = '';
   setStatus($('seoApplyLocStatus'), '', '');
@@ -17563,9 +19058,10 @@ $('seoApplyLocOk').addEventListener('click', async () => {
   const pinnedLng = isNaN(lngVal) ? null : lngVal;
   if (!label){ toast('Type a location first', 'err'); return; }
   const pairs = [];
+  const chosen = new Set(seoSelectedKeywordList(c).map(k => k.id));
   c.keywords.forEach(k => {
-    if (!seoSelectedKwIds.has(k.id)) return;
-    if (k.locations.some(l => l.label.toLowerCase() === label.toLowerCase())) return;
+    if (!chosen.has(k.id)) return;
+    if (k.locations.some(l => (l.label || '').trim().toLowerCase() === label.toLowerCase())) return;
     const loc = blankSeoLocation(label, regionIdx);
     if (pinnedLat != null && pinnedLng != null){ loc.lat = pinnedLat; loc.lng = pinnedLng; }
     k.locations.push(loc);
@@ -17579,45 +19075,64 @@ $('seoApplyLocOk').addEventListener('click', async () => {
   await seoScanAndRender(c, pairs);
 });
 
+/* Deletes exactly the rows that are ticked: a keyword ticked under Calgary
+   comes out of Calgary and stays wherever else it is tracked. A keyword whose
+   every location was ticked (or that had none) goes altogether, rather than
+   being left behind in "Not yet assigned". */
 $('seoDeleteSelBtn').addEventListener('click', () => {
   const c = activeSeoClient(); if (!c) return;
-  const n = seoSelectedKwIds.size;
+  const rows = seoSelectedRowList(c);
+  const n = rows.length;
   if (!n) return;
-  const names = c.keywords.filter(k => seoSelectedKwIds.has(k.id)).map(k => k.text);
-  const preview = names.slice(0, 3).join(', ') + (names.length > 3 ? ', +' + (names.length - 3) + ' more' : '');
-  if (!confirm('Delete ' + n + ' keyword' + (n === 1 ? '' : 's') + ' and all of their tracked locations?\n\n' + preview + '\n\nThis can\u2019t be undone.')) return;
-  c.keywords.forEach(dk => {
-    if (!seoSelectedKwIds.has(dk.id)) return;
-    tombstone('seoKw', dk.id);
-    (dk.locations || []).forEach(dl => tombstone('seoLoc', dl.id));
+  const pickedLocIds = new Set(rows.filter(r => r.loc).map(r => r.loc.id));
+  const unassignedKw = new Set(rows.filter(r => !r.loc).map(r => r.k.id));
+  const vanish = new Set();
+  c.keywords.forEach(k => {
+    if (unassignedKw.has(k.id)){ vanish.add(k.id); return; }
+    const labelled = k.locations.filter(l => (l.label || '').trim());
+    if (labelled.length && labelled.every(l => pickedLocIds.has(l.id)) && labelled.length === k.locations.length) vanish.add(k.id);
   });
-  c.keywords = c.keywords.filter(k => !seoSelectedKwIds.has(k.id));
-  seoSelectedKwIds.clear();
+  const names = rows.map(r => r.k.text + (r.loc ? ' (' + r.loc.label.trim() + ')' : ''));
+  const preview = names.slice(0, 4).join(', ') + (names.length > 4 ? ', +' + (names.length - 4) + ' more' : '');
+  const tail = vanish.size
+    ? (vanish.size === 1 ? 'One keyword isn\u2019t tracked anywhere else, so it will be deleted completely.'
+                         : vanish.size + ' keywords aren\u2019t tracked anywhere else, so they will be deleted completely.')
+    : 'Each keyword stays tracked in its other locations.';
+  if (!confirm('Remove ' + n + ' selected row' + (n === 1 ? '' : 's') + '?\n\n' + preview + '\n\n' + tail + '\n\nThis can\u2019t be undone.')) return;
+  c.keywords.forEach(k => {
+    if (vanish.has(k.id)){
+      tombstone('seoKw', k.id);
+      (k.locations || []).forEach(dl => tombstone('seoLoc', dl.id));
+      return;
+    }
+    k.locations.forEach(dl => { if (pickedLocIds.has(dl.id)) tombstone('seoLoc', dl.id); });
+    k.locations = k.locations.filter(l => !pickedLocIds.has(l.id));
+  });
+  c.keywords = c.keywords.filter(k => !vanish.has(k.id));
+  seoSelectedRows.clear();
   save(); renderSeoKeywords();
-  toast(n + ' keyword' + (n === 1 ? '' : 's') + ' deleted');
+  toast('Removed ' + n + ' row' + (n === 1 ? '' : 's') +
+    (vanish.size ? ' \u00b7 ' + vanish.size + ' keyword' + (vanish.size === 1 ? '' : 's') + ' deleted' : ''));
 });
 
-/* ---------- rescan only the selected keywords, across all of their
-   locations — same accurate engine and progress bar as "Scan all
-   keywords", just scoped to the current selection. ---------- */
+/* ---------- rescan only the selected rows — each keyword at the location
+   it was ticked under, nowhere else. Same engine and loading screen as
+   "Scan all keywords", just scoped to the current selection. ---------- */
 $('seoRescanSelBtn').addEventListener('click', () => {
   const c = activeSeoClient(); if (!c) return;
-  if (!seoSelectedKwIds.size) return;
-  const pairs = [];
-  c.keywords.forEach(k => {
-    if (!seoSelectedKwIds.has(k.id)) return;
-    k.locations.forEach(loc => pairs.push({k, loc}));
-  });
+  const pairs = seoSelectedRowList(c).filter(r => r.loc).map(r => ({k: r.k, loc: r.loc}));
+  if (!pairs.length){ toast('Tick at least one keyword that has a location', 'err'); return; }
   seoScanAndRender(c, pairs);
 });
 
 /* ---------- remove a location from every selected keyword ---------- */
 $('seoRemoveLocBtn').addEventListener('click', () => {
   const c = activeSeoClient(); if (!c) return;
-  if (!seoSelectedKwIds.size) return;
+  const chosen = new Set(seoSelectedKeywordList(c).map(k => k.id));
+  if (!chosen.size) return;
   const counts = new Map(); // lowercased label -> {label, count}
   c.keywords.forEach(k => {
-    if (!seoSelectedKwIds.has(k.id)) return;
+    if (!chosen.has(k.id)) return;
     k.locations.forEach(l => {
       const key = (l.label || '').toLowerCase();
       if (!key) return;
@@ -17637,7 +19152,7 @@ $('seoRemoveLocBtn').addEventListener('click', () => {
       .sort((a, b) => b.count - a.count)
       .forEach(entry => sel.appendChild(new Option(entry.label + ' (' + entry.count + ' keyword' + (entry.count === 1 ? '' : 's') + ')', entry.label)));
   }
-  $('seoRemoveLocCount').textContent = 'Across the ' + seoSelectedKwIds.size + ' selected keyword' + (seoSelectedKwIds.size === 1 ? '' : 's') + ':';
+  $('seoRemoveLocCount').textContent = 'Across the ' + chosen.size + ' keyword' + (chosen.size === 1 ? '' : 's') + ' in your selection:';
   $('seoRemoveLocBackdrop').classList.add('on');
 });
 $('seoRemoveLocCancel').addEventListener('click', () => $('seoRemoveLocBackdrop').classList.remove('on'));
@@ -17647,8 +19162,9 @@ $('seoRemoveLocOk').addEventListener('click', () => {
   const label = $('seoRemoveLocSelect').value;
   if (!label){ $('seoRemoveLocBackdrop').classList.remove('on'); return; }
   let removed = 0;
+  const chosen = new Set(seoSelectedKeywordList(c).map(k => k.id));
   c.keywords.forEach(k => {
-    if (!seoSelectedKwIds.has(k.id)) return;
+    if (!chosen.has(k.id)) return;
     const before = k.locations.length;
     k.locations.forEach(dl => {
       if ((dl.label || '').toLowerCase() === label.toLowerCase()) tombstone('seoLoc', dl.id);

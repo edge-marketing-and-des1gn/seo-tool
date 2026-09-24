@@ -4213,17 +4213,24 @@ body.so-locked{overflow:hidden;}
    SEO CLIENTS — renaming a location, per-location selection
    ========================================================================== */
 .seo-lg-label.seo-lg-label-rn{flex:0 1 auto;}
-.seo-lg-rename{
-  flex:none; margin-right:auto; display:inline-flex; align-items:center; gap:5px;
+.seo-lg-acts{flex:none; margin-right:auto; display:inline-flex; align-items:center; gap:2px;}
+.seo-lg-rename, .seo-lg-del{
+  flex:none; display:inline-flex; align-items:center; gap:5px;
   border:1px solid transparent; background:transparent; color:var(--ink-3);
   font:600 11px/1 var(--ui); padding:5px 9px; border-radius:8px; cursor:pointer;
   opacity:0; transition:opacity .15s var(--ease), background .15s var(--ease), color .15s var(--ease), border-color .15s var(--ease);
 }
-.seo-lg-rename svg{width:12px; height:12px; flex:none;}
+.seo-lg-rename svg, .seo-lg-del svg{width:12px; height:12px; flex:none;}
 .seo-lg-head:hover .seo-lg-rename, .seo-lg-rename:focus-visible,
-#seoKeywordList.seo-edit-mode .seo-lg-rename{opacity:1;}
+.seo-lg-head:hover .seo-lg-del, .seo-lg-del:focus-visible,
+#seoKeywordList.seo-edit-mode .seo-lg-rename,
+#seoKeywordList.seo-edit-mode .seo-lg-del{opacity:1;}
 .seo-lg-rename:hover{background:var(--card); border-color:var(--line); color:var(--brand-deep);}
-@media (hover:none){ .seo-lg-rename{opacity:1;} .seo-lg-rename span{display:none;} }
+.seo-lg-del:hover{background:#fbe9e6; border-color:#f1c6bf; color:var(--alert);}
+@media (hover:none){
+  .seo-lg-rename, .seo-lg-del{opacity:1;}
+  .seo-lg-rename span, .seo-lg-del span{display:none;}
+}
 
 .seo-lg-head.is-renaming{cursor:default; flex-wrap:wrap; align-items:flex-start;}
 .seo-lg-head.is-renaming:hover{background:none;}
@@ -18643,14 +18650,72 @@ function seoRenameLocation(c, oldKey, newLabel, samePlace, opts){
   }
   return {renamed, merged, rows};
 }
-/* A client link that follows every scan should follow a rename too, since a
-   corrected name is usually corrected for the client's benefit. A link
-   pinned to an earlier scan, or one set to update by hand, is left alone. */
-function seoRefreshPublishedReport(c){
+/* A client link that follows every scan should follow a rename (or a
+   deleted location) too, since the change is usually made for the client's
+   benefit. A link pinned to an earlier scan, or one set to update by hand,
+   is left alone. */
+function seoRefreshPublishedReport(c, said){
   if (!c || !c.reportPublished || !c.reportOpts || !c.reportOpts.autoPublish || c.reportOpts.asOf) return;
   publishSeoReport(c, c.reportOpts).then(res => {
-    if (res && res.ok) toast('Client link updated with the new name');
+    if (res && res.ok) toast(said || 'Client link updated with the new name');
   }).catch(() => {});
+}
+
+/* Deletes a whole location card: every keyword filed under it. A keyword
+   that is also tracked somewhere else only loses this location and stays
+   on its other cards; a keyword tracked nowhere else is deleted altogether,
+   rather than being left behind in "Not yet assigned". The rank history
+   measured at this location goes with it. Asks first, with the numbers. */
+function seoDeleteLocation(c, key, label){
+  const entries = [];
+  c.keywords.forEach(k => k.locations.forEach(loc => {
+    if ((loc.label || '').trim().toLowerCase() === key) entries.push({k, loc});
+  }));
+  if (!entries.length) return;
+  const kwIds = new Set(entries.map(e => e.k.id));
+  const onlyHere = c.keywords.filter(k => kwIds.has(k.id) &&
+    k.locations.every(l => (l.label || '').trim().toLowerCase() === key));
+  const onlyIds = new Set(onlyHere.map(k => k.id));
+  const n = kwIds.size, stay = n - onlyHere.length, gone = onlyHere.length;
+
+  const names = entries.map(e => e.k.text).sort((a, b) => a.localeCompare(b));
+  const preview = names.slice(0, 6).join(', ') + (names.length > 6 ? ', +' + (names.length - 6) + ' more' : '');
+  let what;
+  if (!stay) what = n === 1 ? 'It isn\u2019t tracked anywhere else, so it will be deleted completely.'
+                            : 'None of them are tracked anywhere else, so all ' + n + ' will be deleted completely.';
+  else if (!gone) what = n === 1 ? 'It\u2019s also tracked in another location and stays there.'
+                                 : 'Each one is also tracked in another location and stays there.';
+  else what = stay + ' also tracked elsewhere will stay in ' + (stay === 1 ? 'its' : 'their') + ' other location' + (stay === 1 ? '' : 's') +
+              '; the other ' + gone + ' ' + (gone === 1 ? 'is' : 'are') + ' tracked only here and will be deleted completely.';
+  if (!confirm('Delete \u201c' + label + '\u201d and the ' + (n === 1 ? 'keyword' : n + ' keywords') + ' tracked there?\n\n' +
+               preview + '\n\n' + what + (n === 1 ? ' Its' : ' Their') + ' rank history for this location goes too.\n\nThis can\u2019t be undone.')) return;
+
+  entries.forEach(e => {
+    tombstone('seoLoc', e.loc.id);
+    seoSelectedRows.delete(seoRowKey(e.k, e.loc));
+  });
+  c.keywords.forEach(k => {
+    if (!kwIds.has(k.id) || onlyIds.has(k.id)) return;
+    k.locations = k.locations.filter(l => (l.label || '').trim().toLowerCase() !== key);
+  });
+  onlyHere.forEach(k => {
+    tombstone('seoKw', k.id);
+    seoSelectedRows.delete(seoRowKey(k, null));
+  });
+  c.keywords = c.keywords.filter(k => !onlyIds.has(k.id));
+  seoOpenLocGroups.delete(key);
+  if (seoRenamingKey === key) seoRenamingKey = null;
+  /* The share dialog remembers which cards go in the client report by name;
+     this one no longer exists. */
+  if (c.reportOpts && Array.isArray(c.reportOpts.locKeys)){
+    c.reportOpts.locKeys = c.reportOpts.locKeys.filter(x => x !== key);
+  }
+  save(); renderSeoKeywords();
+  renderSeoTree();
+  renderSeoStats(c);
+  toast('Deleted \u201c' + label + '\u201d \u2014 ' + entries.length + ' keyword' + (entries.length === 1 ? '' : 's') + ' removed' +
+        (gone && stay ? ' (' + gone + ' deleted completely)' : (gone ? '' : ', still tracked elsewhere')), 'ok');
+  seoRefreshPublishedReport(c, 'Client link updated \u2014 \u201c' + label + '\u201d removed');
 }
 
 /* The inline editor that replaces a card's title while it is being renamed. */
@@ -18751,6 +18816,7 @@ function seoGroupFlaggedCount(entries){
   return entries.reduce((n, {loc}) => n + (seoLocFlagged(loc) ? 1 : 0), 0);
 }
 
+const SEO_TRASH_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/><path d="M10 11v6M14 11v6"/></svg>';
 const SEO_PENCIL_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>';
 
 function renderSeoKeywords(){
@@ -18834,7 +18900,20 @@ function renderSeoKeywords(){
           seoRenamingKey = key;
           renderSeoKeywords();
         });
-        head.appendChild(rn);
+        const del = document.createElement('button');
+        del.type = 'button'; del.className = 'seo-lg-del';
+        del.title = 'Delete \u201c' + label + '\u201d and every keyword tracked there';
+        del.setAttribute('aria-label', 'Delete ' + label + ' and its keywords');
+        del.innerHTML = SEO_TRASH_SVG + '<span>Delete</span>';
+        del.addEventListener('click', e => {
+          e.stopPropagation();
+          seoDeleteLocation(c, key, label);
+        });
+        const acts = document.createElement('span');
+        acts.className = 'seo-lg-acts';
+        acts.appendChild(rn);
+        acts.appendChild(del);
+        head.appendChild(acts);
       }
       head.insertAdjacentHTML('beforeend', badgeHtml);
     }

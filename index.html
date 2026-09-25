@@ -4272,6 +4272,123 @@ body.so-locked{overflow:hidden;}
 .seo-lg-unassigned-row .seo-lg-quick-loc{flex:0 1 260px; width:260px; min-width:140px;}
 .seo-lg-unassigned-row .btn{flex:none;}
 @media (max-width:900px){ .seo-lg-unassigned-row .seo-lg-quick-loc{flex:1 1 100%; width:100%;} }
+
+/* ==========================================================================
+   WHO IS WORKING WHERE — teammates' avatars, the "here too" chip, the panel
+   ========================================================================== */
+.pav{
+  --pav-h:24;
+  position:relative; display:inline-grid; place-items:center; flex:none;
+  width:24px; height:24px; border-radius:50%;
+  background:hsl(var(--pav-h) 44% 42%); color:#fff;
+  font:700 9.5px/1 var(--ui); font-style:normal; letter-spacing:.02em;
+  box-shadow:0 0 0 2px var(--console);
+  cursor:default; user-select:none;
+}
+.pav.is-away{opacity:.55;}
+.pav.is-me{background:#3a4552; color:#cbd6e0;}
+.pav-more{background:#3a4552; color:#cbd6e0;}
+.pav.is-scan::after{
+  content:""; position:absolute; inset:-3px; border-radius:50%;
+  border:2px solid var(--brand); border-right-color:transparent;
+  animation:pavSpin 1.1s linear infinite;
+}
+@keyframes pavSpin{to{transform:rotate(360deg);}}
+.pav-xs{width:17px; height:17px; font-size:7.5px; box-shadow:0 0 0 1.5px var(--console);}
+.pav-xs.is-scan::after{inset:-2.5px; border-width:1.5px;}
+
+/* rail rows */
+.pres-slot{display:inline-flex; align-items:center; flex:none; margin:0 2px 0 4px;}
+.pres-slot:empty{display:none;}
+.pres-slot .pav + .pav{margin-left:-5px;}
+
+/* top bar and hub: who is online */
+.tn-team{
+  display:flex; align-items:center; gap:9px; flex:none; cursor:pointer;
+  background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.1);
+  color:#b6c3cf; border-radius:999px; padding:4px 13px 4px 5px;
+  font:600 11.5px/1 var(--ui); white-space:nowrap;
+  transition:background .16s var(--ease), border-color .16s var(--ease), color .16s var(--ease);
+}
+.tn-team:hover, .tn-team[aria-expanded="true"]{background:rgba(255,255,255,.09); color:#fff; border-color:rgba(255,255,255,.2);}
+.tn-team[hidden]{display:none !important;}
+.tn-team.has-scan{border-color:rgba(232,119,34,.45);}
+.tt-stack{display:inline-flex; align-items:center;}
+.tt-stack .pav{box-shadow:0 0 0 2px #171d24; cursor:pointer;}
+.tt-stack .pav + .pav{margin-left:-4px;}
+.hub-team .tt-stack .pav{box-shadow:0 0 0 2px #151a20;}
+@media (max-width:880px){ .tt-label{display:none;} .tn-team{padding:4px;} }
+
+/* the "a teammate is here too" chip in each tool's header */
+.pres-here{display:flex; align-items:center; flex:none; min-width:0;}
+.pres-here:empty{display:none;}
+.ph-chip{
+  display:inline-flex; align-items:center; gap:8px; height:30px; max-width:340px;
+  padding:0 12px 0 4px; border-radius:999px; cursor:pointer; white-space:nowrap;
+  border:1px solid #f3d9c1; background:var(--brand-wash); color:var(--brand-deep);
+  font:600 11.5px/1 var(--ui); box-shadow:var(--sh-1);
+  transition:border-color .16s var(--ease), box-shadow .16s var(--ease);
+}
+.ph-chip:hover{border-color:#ebbd92; box-shadow:var(--sh-2);}
+.ph-stack{display:inline-flex; align-items:center; flex:none;}
+.ph-chip .pav{width:22px; height:22px; font-size:8.5px; box-shadow:0 0 0 2px var(--brand-wash); cursor:pointer;}
+.ph-chip .pav + .pav{margin-left:-7px;}
+.ph-text{overflow:hidden; text-overflow:ellipsis;}
+.ph-text em{font-style:normal; font-family:var(--mono); font-size:10.5px; font-weight:500; margin-left:4px; color:var(--ink-2);}
+@media (max-width:1100px){ .ph-text{display:none;} .ph-chip{padding:0 4px;} }
+
+/* the panel: everyone signed in, where they are, what they are scanning */
+.pres-panel{
+  position:fixed; z-index:8700; width:min(360px, calc(100vw - 24px)); max-height:min(72vh, 580px);
+  display:flex; flex-direction:column; overflow:hidden;
+  background:var(--console); color:var(--console-ink);
+  border:1px solid var(--console-line); border-radius:var(--r-lg);
+  box-shadow:0 26px 60px -22px rgba(0,0,0,.8), inset 0 1px 0 rgba(255,255,255,.04);
+  font-family:var(--ui);
+  animation:pop .16s var(--ease);
+}
+.pres-panel[hidden]{display:none;}
+.pp-head{display:flex; align-items:center; justify-content:space-between; padding:12px 12px 10px 16px; border-bottom:1px solid var(--console-line);}
+.pp-head b{font-size:13px; font-weight:650; color:#fff;}
+.pp-x{background:none; border:none; color:var(--console-ink-2); font-size:19px; line-height:1; cursor:pointer; padding:3px 7px; border-radius:7px;}
+.pp-x:hover{color:#fff; background:rgba(255,255,255,.07);}
+.pp-list{overflow-y:auto; padding:4px 6px;}
+.pp-row{display:flex; align-items:flex-start; gap:11px; padding:11px 10px;}
+.pp-row + .pp-row{border-top:1px solid rgba(255,255,255,.055);}
+.pp-row > .pav{width:30px; height:30px; font-size:11px; margin-top:1px; box-shadow:0 0 0 2px var(--console);}
+.pp-body{flex:1; min-width:0;}
+.pp-who{font-size:12.5px; font-weight:600; color:#fff; line-height:1.35;}
+.pp-who small{font-size:11px; font-weight:500; color:var(--console-ink-2); margin-left:6px;}
+.pp-where{font-size:11.5px; color:var(--console-ink-2); margin-top:3px; line-height:1.45; overflow-wrap:anywhere;}
+.pp-scan{margin-top:8px; padding:8px 10px 9px; border-radius:var(--r-sm); background:rgba(232,119,34,.09); border:1px solid rgba(232,119,34,.26);}
+.pp-scan-t{font-size:11.5px; font-weight:600; color:#f9d2ae; line-height:1.4;}
+.pp-scan-s{font-size:11px; color:var(--console-ink-2); margin-top:2px; line-height:1.4;}
+.pp-bar{height:4px; border-radius:4px; background:rgba(255,255,255,.08); margin-top:8px; overflow:hidden;}
+.pp-bar i{display:block; height:100%; border-radius:4px; background:var(--brand); transition:width .4s var(--ease);}
+.pp-bar.indet i{animation:ppIndet 1.4s var(--ease) infinite;}
+@keyframes ppIndet{0%{transform:translateX(-110%);}100%{transform:translateX(260%);}}
+.pp-scan-n{font-family:var(--mono); font-size:10.5px; color:var(--console-ink-2); margin-top:6px;}
+.pp-go{
+  flex:none; align-self:center; cursor:pointer;
+  background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.13); color:#dfe7ee;
+  border-radius:8px; padding:7px 10px; font:600 11px/1 var(--ui);
+  transition:background .16s var(--ease), border-color .16s var(--ease), color .16s var(--ease);
+}
+.pp-go:hover{background:var(--brand); border-color:var(--brand); color:#fff;}
+.pp-empty{font-size:11.5px; color:var(--console-ink-2); line-height:1.55; padding:4px 10px 12px 51px;}
+.pp-foot{border-top:1px solid var(--console-line); padding:11px 16px 13px; display:flex; flex-direction:column; align-items:flex-start; gap:6px;}
+.pp-foot span{font-size:11px; color:var(--console-ink-2); line-height:1.5;}
+.pp-name{background:none; border:none; padding:0; cursor:pointer; color:var(--brand-hi); font:600 11.5px/1.4 var(--ui);}
+.pp-name:hover{text-decoration:underline;}
+.tn-team:focus-visible, .ph-chip:focus-visible, .pp-go:focus-visible, .pp-x:focus-visible, .pp-name:focus-visible{outline:2px solid var(--brand); outline-offset:2px;}
+/* the name prompt can be opened from the hub, which sits above the modal layer */
+.backdrop.pres-top{z-index:8750;}
+@media (prefers-reduced-motion:reduce){
+  .pav.is-scan::after{animation:none; border-right-color:var(--brand);}
+  .pres-panel{animation:none;}
+  .pp-bar.indet i{animation:none;}
+  .pp-bar i{transition:none;}
+}
 </style>
 </head>
 <body>
@@ -4316,6 +4433,7 @@ body.so-locked{overflow:hidden;}
         </div>
       </div>
       <div class="hub-user">
+        <button class="tn-team hub-team" id="hubTeam" type="button" hidden aria-haspopup="dialog" aria-expanded="false"></button>
         <span class="hub-mail" id="hubMail"></span>
         <button class="hub-ghost" id="hubSignOutBtn">Sign out</button>
       </div>
@@ -4403,6 +4521,7 @@ body.so-locked{overflow:hidden;}
     </div>
 
     <div class="tn-right">
+      <button class="tn-team" id="tnTeam" type="button" hidden aria-haspopup="dialog" aria-expanded="false"></button>
       <span class="tn-mail" id="tnMail"></span>
       <button class="tn-btn" id="tnSignOut" type="button">Sign out</button>
     </div>
@@ -4461,6 +4580,7 @@ body.so-locked{overflow:hidden;}
   <main class="stage" id="gbpStage">
     <header class="topbar">
       <div class="crumbs" id="crumbs"><span class="c-main">No client selected</span></div>
+      <div class="pres-here" id="gbpHere"></div>
       <nav class="modes" id="gbpModes">
         <button class="gmode on" data-gview="focus" type="button">Rank grid</button>
         <button class="gmode" data-gview="overview" type="button">Compare profiles</button>
@@ -5315,6 +5435,7 @@ body.so-locked{overflow:hidden;}
   <main class="stage" id="seoStage" style="display:none">
     <header class="topbar">
       <div class="crumbs" id="seoCrumbs"><span class="c-main">No client selected</span></div>
+      <div class="pres-here" id="seoHere"></div>
       <nav class="modes" id="seoModes">
         <button class="seo-mode on" data-seoview="dashboard">Dashboard</button>
         <button class="seo-mode" data-seoview="keywords">Keywords</button>
@@ -8879,10 +9000,9 @@ async function refreshWorkspace(){
     if (fbReady && fbDb && fbUid){
       const res = await cloudLoadState();
       if (res.status === 'ok' && res.data && Array.isArray(res.data.clients)){
-        state = mergeStates(state, adoptRemote(res.data));
-        state.owner = fbUid;
-        try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(err){}
-        cloudBaseStamp = res.stamp || cloudBaseStamp;
+        /* merged in place and stamped first, like a live update; if this
+           browser held something the cloud lacked, it goes back up */
+        if (mergeRemoteIntoState(res)) queueCloud();
         said = 'Refreshed from the cloud';
       }
     }
@@ -9172,21 +9292,226 @@ window.EDGE_restoreBackup = function(index){
   return 'Restored \u2014 reloading\u2026';
 };
 
-/* ---- merging two copies of the workspace --------------------------------- */
+/* ---- merging two copies of the workspace ---------------------------------
+   Several people work in this workspace at the same time, each browser with
+   its own full copy. Three rules keep those copies agreeing without anyone's
+   work being lost:
+
+   1. Every record carries its own change stamp (_mt). When two copies
+      disagree about a record, the one changed most recently wins that record
+      and only that record. The old rule compared the stamp of the WHOLE
+      workspace, so a colleague saving any client at all could roll back the
+      profile you had just edited on a different client.
+   2. A merge updates this browser's records in place rather than building
+      new ones. A running scan holds on to the objects it is filling in, and
+      swapping them out mid-scan is how points and positions used to vanish
+      when a teammate's save arrived.
+   3. What you are looking at (the selected client, profile, keyword, tool,
+      and which folders are open) belongs to you. It still travels in the
+      saved record, but a merge never lets somebody else's selection move
+      your screen.
+   --------------------------------------------------------------------------- */
+const SYNC_CHILD = {
+  client:['gbps', 'compareScans'], gbp:['keywords'], kw:['scans'],
+  seoClient:['keywords', 'dashboards', 'locationCache'], seoKw:['locations'], seoLoc:['history'],
+  seoDash:[], seoFolder:[]
+};
+const SYNC_LOCAL = {
+  gbp:['activeKeywordId'], seoClient:['activeKeywordId', 'activeDashboardId'], seoFolder:['collapsed']
+};
+
+/* A logical clock: never behind the wall clock and never behind any stamp
+   seen from another computer, so two machines whose clocks disagree by a few
+   minutes still put their edits in the right order. */
+let syncClock = 0;
+function syncTick(){ const t = Math.max(Date.now(), syncClock + 1); syncClock = t; return t; }
+function syncSeen(t){ if (typeof t === 'number' && isFinite(t) && t > syncClock) syncClock = t; }
+
+const syncSig = new Map();
+function syncSkips(kind, k){
+  return k === '_mt' || (SYNC_CHILD[kind] || []).indexOf(k) !== -1 || (SYNC_LOCAL[kind] || []).indexOf(k) !== -1;
+}
+/* A record's own content, without its child lists or the view fields. */
+function recSig(kind, r){
+  const o = {};
+  Object.keys(r).forEach(k => { if (!syncSkips(kind, k)) o[k] = r[k]; });
+  try{ return JSON.stringify(o); }catch(e){ return ''; }
+}
+function scanKey(s){ return s.id || ('ts:' + s.ts); }
+/* A cheap fingerprint of what a scan has read: position, ad slot, match
+   strength and failure on each point, plus every profile's position on a
+   comparison point. Numbers only, so taking it costs next to nothing. */
+function syncCode(v){
+  if (v == null) return -1;
+  if (typeof v === 'number') return isFinite(v) ? v + 2 : -2;
+  const s = String(v);
+  let h = s.length;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return h;
+}
+function scanHash(s){
+  const pts = (s && Array.isArray(s.points)) ? s.points : [];
+  let h = 7;
+  for (let i = 0; i < pts.length; i++){
+    const p = pts[i];
+    if (!p){ h = (h * 31 + 1) | 0; continue; }
+    h = (h * 31 + syncCode(p.rank)) | 0;
+    h = (h * 31 + syncCode(p.adRank)) | 0;
+    h = (h * 31 + syncCode(p.matchConfidence)) | 0;
+    h = (h * 31 + (p.error ? 3 : 5) + (p.sparse ? 7 : 0)) | 0;
+    if (p.results && typeof p.results === 'object'){
+      for (const k in p.results){
+        const r = p.results[k];
+        h = (h * 31 + syncCode(k)) | 0;
+        h = (h * 31 + syncCode(r ? r.rank : null)) | 0;
+        h = (h * 31 + syncCode(r ? r.adRank : null)) | 0;
+      }
+    }
+  }
+  return pts.length + ':' + h;
+}
+function syncWalk(st, onRec, onScan){
+  const rec = (kind, r) => { if (r && typeof r === 'object' && r.id) onRec(kind, r); };
+  const scans = list => (Array.isArray(list) ? list : []).forEach(s => { if (s && typeof s === 'object') onScan(s); });
+  (st.clients || []).forEach(c => {
+    if (!c) return;
+    rec('client', c);
+    (c.gbps || []).forEach(g => {
+      if (!g) return;
+      rec('gbp', g);
+      (g.keywords || []).forEach(k => { if (!k) return; rec('kw', k); scans(k.scans); });
+    });
+    scans(c.compareScans);
+  });
+  (st.seoClients || []).forEach(c => {
+    if (!c) return;
+    rec('seoClient', c);
+    (c.keywords || []).forEach(k => {
+      if (!k) return;
+      rec('seoKw', k);
+      (k.locations || []).forEach(l => rec('seoLoc', l));
+    });
+    (c.dashboards || []).forEach(d => rec('seoDash', d));
+  });
+  (st.seoFolders || []).forEach(f => rec('seoFolder', f));
+}
+/* Stamp whatever has changed in this browser since the last look. Runs just
+   before anything goes up to the cloud and just before anything is merged
+   in from it, so every local edit carries its stamp by the time it could
+   collide with someone else's. */
+function stampChanges(){
+  let n = 0;
+  syncWalk(state, (kind, r) => {
+    const key = kind + ':' + r.id, sig = recSig(kind, r);
+    if (syncSig.get(key) !== sig){ syncSig.set(key, sig); r._mt = syncTick(); n++; }
+  }, s => {
+    const key = 'scan:' + scanKey(s), h = scanHash(s);
+    if (syncSig.get(key) !== h){ syncSig.set(key, h); s._mt = syncTick(); n++; }
+  });
+  return n;
+}
+/* Take note of the workspace as it stands without stamping anything. Used
+   after loading and after every merge, so what just arrived from the cloud
+   is not mistaken for something edited here. */
+function seedSigs(){
+  syncSig.clear();
+  syncWalk(state, (kind, r) => {
+    syncSig.set(kind + ':' + r.id, recSig(kind, r));
+    syncSeen(r._mt);
+  }, s => {
+    syncSig.set('scan:' + scanKey(s), scanHash(s));
+    syncSeen(s._mt);
+  });
+}
+function persistLocalQuiet(json){
+  if (isPublicView()) return false;
+  memoryStore = state;
+  try{ localStorage.setItem(STORE_KEY, json || JSON.stringify(state)); return true; }catch(e){ return false; }
+}
+
+/* A scan this browser is running right now is never overwritten by a copy
+   from somewhere else: its points are being filled in while the merge runs.
+   The list is kept by the scan screen wrapper further down. */
+let syncHotScans = [];
+function syncIsHot(s){
+  try{ return syncHotScans.indexOf(s) !== -1 && ScanOverlay.isOpen(); }catch(e){ return false; }
+}
+
+/* Set by a merge whenever this browser holds something the other copy did
+   not, which means the merged result has to go back up to the cloud. */
+let mergeAhead = false;
+
 function scanWeight(s){
   if (!s || !Array.isArray(s.points)) return 0;
   return s.points.filter(p => p && (p.rank != null || p.results)).length;
 }
+function scanRemoteWins(l, r){
+  if (syncIsHot(l)) return false;
+  const lm = +l._mt || 0, rm = +r._mt || 0;
+  if (lm && rm && lm !== rm) return rm > lm;
+  /* same scan on both sides, not both stamped: keep whichever has more
+     points actually read, and settle a tie the same way on every computer */
+  const lw = scanWeight(l), rw = scanWeight(r);
+  if (lw !== rw) return rw > lw;
+  if (lm !== rm) return rm > lm;
+  const lh = scanHash(l), rh = scanHash(r);
+  return lh !== rh && rh > lh;
+}
+function adoptScanInto(l, r){
+  Object.keys(l).forEach(k => { if (!(k in r)) delete l[k]; });
+  Object.assign(l, r);
+}
 function mergeScanLists(a, b){
-  const map = new Map();
-  (a || []).concat(b || []).forEach(s => {
-    if (!s) return;
-    const key = s.id || ('ts:' + s.ts);
-    const cur = map.get(key);
-    /* same scan on both sides: keep whichever has more points actually read */
-    if (!cur || scanWeight(s) > scanWeight(cur)) map.set(key, s);
+  const rMap = new Map();
+  (b || []).forEach(s => { if (s) rMap.set(scanKey(s), s); });
+  const out = [], seen = new Set();
+  (a || []).forEach(l => {
+    if (!l) return;
+    const key = scanKey(l);
+    if (seen.has(key)) return;
+    seen.add(key);
+    const r = rMap.get(key);
+    if (!r){ out.push(l); mergeAhead = true; return; }
+    if (r !== l){
+      if (scanRemoteWins(l, r)) adoptScanInto(l, r);
+      else if ((+l._mt || 0) !== (+r._mt || 0) || scanWeight(l) !== scanWeight(r) || scanHash(l) !== scanHash(r)) mergeAhead = true;
+    }
+    out.push(l);
   });
-  return Array.from(map.values()).sort((x, y) => (x.ts || 0) - (y.ts || 0));
+  (b || []).forEach(r => {
+    if (!r) return;
+    const key = scanKey(r);
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push(r);
+  });
+  return out.sort((x, y) => (x.ts || 0) - (y.ts || 0));
+}
+/* The newer stamp wins the record. With no stamps to go on (records saved
+   before stamps existed) the newer copy of the workspace wins, as before. */
+function recRemoteWins(l, r, preferRemote){
+  const lm = +l._mt || 0, rm = +r._mt || 0;
+  return lm !== rm ? rm > lm : !!preferRemote;
+}
+function mergeScalars(kind, l, r, preferRemote){
+  const remoteWins = recRemoteWins(l, r, preferRemote);
+  Object.keys(r).forEach(k => {
+    if (k !== '_mt' && syncSkips(kind, k)) return;
+    if (remoteWins || !(k in l)) l[k] = r[k];
+  });
+  if (!remoteWins){
+    const lm = +l._mt || 0, rm = +r._mt || 0;
+    if (lm !== rm || (!lm && recSig(kind, l) !== recSig(kind, r))) mergeAhead = true;
+  }
+  (SYNC_LOCAL[kind] || []).forEach(k => { if (l[k] === undefined && r[k] !== undefined) l[k] = r[k]; });
+  return l;
+}
+/* A selection only follows the other copy when this browser's own choice
+   no longer points at anything. */
+function keepRef(localVal, remoteVal, list){
+  const has = id => id != null && (list || []).some(x => x && x.id === id);
+  if (localVal == null || has(localVal)) return localVal;
+  return has(remoteVal) ? remoteVal : null;
 }
 function mergeList(localArr, remoteArr, kind, reg, mergeOne, preferRemote){
   const rMap = new Map();
@@ -9196,7 +9521,8 @@ function mergeList(localArr, remoteArr, kind, reg, mergeOne, preferRemote){
     if (!l || !l.id || seen.has(l.id) || wasDeleted(reg, kind, l.id)) return;
     seen.add(l.id);
     const r = rMap.get(l.id);
-    out.push(r ? mergeOne(l, r, reg, preferRemote) : l);
+    if (r && r !== l) out.push(mergeOne(l, r, reg, preferRemote, kind));
+    else { out.push(l); if (!r) mergeAhead = true; }
   });
   (remoteArr || []).forEach(r => {
     if (!r || !r.id || seen.has(r.id) || wasDeleted(reg, kind, r.id)) return;
@@ -9206,62 +9532,97 @@ function mergeList(localArr, remoteArr, kind, reg, mergeOne, preferRemote){
   return out;
 }
 function mergeKeyword(l, r, reg, preferRemote){
-  const out = Object.assign({}, preferRemote ? l : r, preferRemote ? r : l);
-  out.scans = mergeScanLists(l.scans, r.scans);
-  return out;
+  mergeScalars('kw', l, r, preferRemote);
+  l.scans = mergeScanLists(l.scans, r.scans);
+  return l;
 }
 function mergeGbp(l, r, reg, preferRemote){
-  const out = Object.assign({}, preferRemote ? l : r, preferRemote ? r : l);
-  out.keywords = mergeList(l.keywords, r.keywords, 'kw', reg, mergeKeyword, preferRemote);
-  return out;
+  mergeScalars('gbp', l, r, preferRemote);
+  l.keywords = mergeList(l.keywords, r.keywords, 'kw', reg, mergeKeyword, preferRemote);
+  l.activeKeywordId = keepRef(l.activeKeywordId, r.activeKeywordId, l.keywords);
+  return l;
 }
 function mergeClientRec(l, r, reg, preferRemote){
-  const out = Object.assign({}, preferRemote ? l : r, preferRemote ? r : l);
-  out.gbps = mergeList(l.gbps, r.gbps, 'gbp', reg, mergeGbp, preferRemote);
-  out.compareScans = mergeScanLists(l.compareScans, r.compareScans);
-  return out;
+  mergeScalars('client', l, r, preferRemote);
+  l.gbps = mergeList(l.gbps, r.gbps, 'gbp', reg, mergeGbp, preferRemote);
+  l.compareScans = mergeScanLists(l.compareScans, r.compareScans);
+  return l;
 }
 function mergeSeoLocation(l, r, reg, preferRemote){
-  const out = Object.assign({}, preferRemote ? l : r, preferRemote ? r : l);
+  mergeScalars('seoLoc', l, r, preferRemote);
   const hist = new Map();
   (l.history || []).concat(r.history || []).forEach(h => {
     if (h && h.checkedAt != null) hist.set(h.checkedAt + ':' + h.rank, h);
   });
-  out.history = Array.from(hist.values())
+  const merged = Array.from(hist.values())
     .sort((x, y) => (x.checkedAt || 0) - (y.checkedAt || 0)).slice(-60);
-  return out;
+  const rh = r.history || [];
+  if (merged.length !== rh.length ||
+      (merged.length && (merged[0].checkedAt !== (rh[0] || {}).checkedAt ||
+                         merged[merged.length - 1].checkedAt !== (rh[rh.length - 1] || {}).checkedAt))) mergeAhead = true;
+  l.history = merged;
+  return l;
 }
 function mergeSeoKeyword(l, r, reg, preferRemote){
-  const out = Object.assign({}, preferRemote ? l : r, preferRemote ? r : l);
-  out.locations = mergeList(l.locations, r.locations, 'seoLoc', reg, mergeSeoLocation, preferRemote);
-  return out;
+  mergeScalars('seoKw', l, r, preferRemote);
+  l.locations = mergeList(l.locations, r.locations, 'seoLoc', reg, mergeSeoLocation, preferRemote);
+  return l;
 }
-function mergeFlatRec(l, r, reg, preferRemote){
-  return Object.assign({}, preferRemote ? l : r, preferRemote ? r : l);
+function mergeFlatRec(l, r, reg, preferRemote, kind){
+  return mergeScalars(kind || 'seoDash', l, r, preferRemote);
 }
 function mergeSeoClientRec(l, r, reg, preferRemote){
-  const out = Object.assign({}, preferRemote ? l : r, preferRemote ? r : l);
-  out.keywords = mergeList(l.keywords, r.keywords, 'seoKw', reg, mergeSeoKeyword, preferRemote);
+  mergeScalars('seoClient', l, r, preferRemote);
+  l.keywords = mergeList(l.keywords, r.keywords, 'seoKw', reg, mergeSeoKeyword, preferRemote);
   /* A dashboard pinned on one computer shouldn't vanish because the other
      one saved a moment later. */
-  out.dashboards = mergeList(l.dashboards, r.dashboards, 'seoDash', reg, mergeFlatRec, preferRemote);
-  out.locationCache = Object.assign({}, l.locationCache || {}, r.locationCache || {});
-  return out;
+  l.dashboards = mergeList(l.dashboards, r.dashboards, 'seoDash', reg, mergeFlatRec, preferRemote);
+  const rc = r.locationCache || {};
+  const cache = Object.assign({}, l.locationCache || {}, rc);
+  if (Object.keys(cache).length !== Object.keys(rc).length) mergeAhead = true;
+  l.locationCache = cache;
+  l.activeKeywordId = keepRef(l.activeKeywordId, r.activeKeywordId, l.keywords);
+  l.activeDashboardId = keepRef(l.activeDashboardId, r.activeDashboardId, l.dashboards);
+  return l;
+}
+function recentKey(rec){
+  return (rec.q || '').toLowerCase() + '|' + (rec.lat || '') + '|' + (rec.lng || '');
 }
 function mergeRecents(a, b){
   const map = new Map();
   (a || []).concat(b || []).forEach(rec => {
     if (!rec) return;
-    const key = (rec.q || '').toLowerCase() + '|' + (rec.lat || '') + '|' + (rec.lng || '');
+    const key = recentKey(rec);
     const cur = map.get(key);
     if (!cur || (rec.at || 0) > (cur.at || 0)) map.set(key, rec);
   });
   return Array.from(map.values()).sort((x, y) => (y.at || 0) - (x.at || 0)).slice(0, 14);
 }
+/* The screen belongs to whoever is looking at it: this browser's own
+   selection stands whenever it still points at something that exists. */
+function keepLocalView(merged, local, remote){
+  const has = (list, id) => id != null && Array.isArray(list) && list.some(x => x && x.id === id);
+  if (has(merged.clients, local.activeClientId)) merged.activeClientId = local.activeClientId;
+  else if (has(merged.clients, remote.activeClientId)) merged.activeClientId = remote.activeClientId;
+  const ac = (merged.clients || []).find(c => c && c.id === merged.activeClientId);
+  if (ac){
+    if (has(ac.gbps, local.activeGbpId)) merged.activeGbpId = local.activeGbpId;
+    else if (has(ac.gbps, remote.activeGbpId)) merged.activeGbpId = remote.activeGbpId;
+    else if (!has(ac.gbps, merged.activeGbpId)) merged.activeGbpId = (ac.gbps && ac.gbps[0]) ? ac.gbps[0].id : null;
+  }
+  if (has(merged.seoClients, local.activeSeoClientId)) merged.activeSeoClientId = local.activeSeoClientId;
+  else if (has(merged.seoClients, remote.activeSeoClientId)) merged.activeSeoClientId = remote.activeSeoClientId;
+  ['view', 'seoModule', 'serpView'].forEach(k => {
+    if (local[k] !== undefined && local[k] !== null) merged[k] = local[k];
+  });
+}
 function mergeStates(localState, remoteState){
-  const reg = Object.assign({}, remoteState.deleted || {}, localState.deleted || {});
-  /* Scalar fields (names, notes, which client is selected) can't be merged, so
-     the newer copy wins those. Every list below is a union regardless. */
+  mergeAhead = false;
+  const lreg = localState.deleted || {}, rreg = remoteState.deleted || {};
+  const reg = Object.assign({}, rreg, lreg);
+  if (Object.keys(lreg).some(k => !(k in rreg))) mergeAhead = true;
+  /* Records settle their own conflicts by their stamps. This whole-copy
+     comparison only decides the few things that carry no stamp. */
   const preferRemote = (remoteState.updatedAt || 0) >= (localState.updatedAt || 0);
   const base  = preferRemote ? remoteState : localState;
   const other = preferRemote ? localState  : remoteState;
@@ -9273,6 +9634,8 @@ function mergeStates(localState, remoteState){
     const v = base.settings[k];
     if (v !== '' && v !== null && v !== undefined) merged.settings[k] = v;
   });
+  const rs = remoteState.settings || {};
+  if (Object.keys(merged.settings).some(k => JSON.stringify(merged.settings[k]) !== JSON.stringify(rs[k]))) mergeAhead = true;
   merged.deleted     = reg;
   merged.clients     = mergeList(localState.clients, remoteState.clients, 'client', reg, mergeClientRec, preferRemote);
   merged.seoClients  = mergeList(localState.seoClients, remoteState.seoClients, 'seoClient', reg, mergeSeoClientRec, preferRemote);
@@ -9280,7 +9643,10 @@ function mergeStates(localState, remoteState){
      merge - a folder made on the laptop survives a sync from the desktop. */
   merged.seoFolders  = mergeList(localState.seoFolders, remoteState.seoFolders, 'seoFolder', reg, mergeFlatRec, preferRemote);
   merged.serpRecents = mergeRecents(localState.serpRecents, remoteState.serpRecents);
+  const rk = new Set((remoteState.serpRecents || []).filter(Boolean).map(x => recentKey(x) + '|' + (x.at || 0)));
+  if (merged.serpRecents.some(x => !rk.has(recentKey(x) + '|' + (x.at || 0)))) mergeAhead = true;
   merged.updatedAt   = Math.max(localState.updatedAt || 0, remoteState.updatedAt || 0);
+  keepLocalView(merged, localState, remoteState);
   return merged;
 }
 function adoptRemote(remote){
@@ -9288,6 +9654,7 @@ function adoptRemote(remote){
   (remote.clients || []).forEach(migrateClient);
   return remote;
 }
+seedSigs();
 
 function pill(mode){
   /* Two headers show this same state — the GBP one and the SEO one. The SEO
@@ -9331,17 +9698,28 @@ function save(){
   clearTimeout(pillTimer);
   pillTimer = setTimeout(() => pill('saved'), 420);
   queueCloud();
+  try{ presNudge(); }catch(e){}
 }
+/* Waits for a pause in typing, but never longer than 2.5 seconds. A scan
+   saves every half second, and a plain 0.9 s debounce kept restarting until
+   the scan was over, so nobody else saw a scan until it had finished. */
+let fbQueuedAt = 0;
 function queueCloud(){
   if (!fbReady || !fbDb) return;
+  const now = Date.now();
+  if (!fbTimer) fbQueuedAt = now;
   clearTimeout(fbTimer);
-  fbTimer = setTimeout(cloudSave, 900);
+  const wait = Math.max(0, Math.min(900, 2500 - (now - fbQueuedAt)));
+  fbTimer = setTimeout(() => { fbTimer = null; cloudSave(); }, wait);
 }
 /* Closing the tab a second after adding a keyword used to lose it, because
    the mirror to Firestore is debounced. Push whatever is pending first. */
 function flushCloud(){
   if (!fbReady || !fbDb) return;
-  clearTimeout(fbTimer);
+  clearTimeout(fbTimer); fbTimer = null;
+  /* Stamp the edits and keep the stamps in this browser right now: the cloud
+     write below is asynchronous and may not finish before the tab is gone. */
+  try{ if (!isPublicView() && stampChanges()) persistLocalQuiet(); }catch(e){}
   cloudSave();
 }
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushCloud(); });
@@ -9374,7 +9752,7 @@ async function saveNow(btn){
       toast('Saved in this browser. The cloud copy couldn\u2019t be read this session, so it is being left untouched \u2014 reload to try again.', 'err');
     } else if (fbReady && fbDb && fbUid){
       clearTimeout(fbTimer);                  /* don't wait out the debounce we just started */
-      for (let i = 0; i < 60 && cloudBusy; i++) await new Promise(r => setTimeout(r, 100));
+      for (let i = 0; i < 60 && (cloudBusy || livePulling); i++) await new Promise(r => setTimeout(r, 100));
       await cloudSave();
       /* cloudSave() handles its own errors and raises this flag instead, so
          the flag — not the absence of a throw — is what decides the message. */
@@ -9419,6 +9797,28 @@ function chunkState(json){
   if (!chunks.length) chunks.push('');
   return chunks;
 }
+/* Which save of the cloud copy this browser last read or wrote. Every save
+   gets a unique tag, so "has somebody else saved since?" no longer depends
+   on two computers' clocks agreeing. Older saves without a tag fall back to
+   their stamp and chunk count. */
+function revOf(head){
+  if (!head) return null;
+  return head.rev || ('t' + (head.updatedAt || 0) + ':' + (head.chunks || 0));
+}
+let cloudBaseRev = null, cloudWriteSeq = 0;
+const SESSION_ID = 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+
+function syncClockText(){
+  return new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+}
+let syncLastBy = '';
+function liveSyncText(kind){
+  if (kind === 'pulled'){
+    return 'Updated with ' + (syncLastBy ? syncLastBy + '\u2019s' : 'a teammate\u2019s') + ' changes \u00b7 ' + syncClockText();
+  }
+  return 'Synced to cloud \u00b7 ' + syncClockText();
+}
+
 async function cloudSave(){
   if (!fbUid || !fbDb || isPublicView()) return;
   /* Rule 2: a failed read is not evidence that the cloud is empty. Until this
@@ -9428,64 +9828,112 @@ async function cloudSave(){
     return;
   }
   /* Chunk writes must not interleave, or two saves could leave half of one
-     copy and half of another in the database. */
-  if (cloudBusy){ cloudDirty = true; return; }
+     copy and half of another in the database. A live pull in progress is
+     given the same courtesy: this save runs again as soon as it lands. */
+  if (cloudBusy || livePulling){ cloudDirty = true; return; }
   cloudBusy = true;
+  let stamped = 0, persisted = false;
   try{
+    stamped = stampChanges();
     const col = fbDb.collection('users').doc(fbUid).collection('data');
-
-    /* Somebody at another desk may have saved since this browser last read the
-       cloud. Writing straight over the top is what made one computer's work
-       disappear from another's, so their copy is pulled down and merged into
-       this one first. Neither side loses anything. */
-    let headSnap;
-    try{ headSnap = await col.doc(STATE_DOC).get(); }
-    catch(err){
-      setSync('Couldn\u2019t check the cloud copy \u2014 skipping this save', 'err');
-      return;
-    }
-    const liveStamp = headSnap.exists ? ((headSnap.data() || {}).updatedAt || 0) : 0;
-    if (liveStamp > cloudBaseStamp){
-      const pulled = await cloudLoadState();
-      if (pulled.status === 'torn'){
-        setSync('Cloud copy is mid-write \u2014 leaving it alone for now', 'err');
+    const headRef = col.doc(STATE_DOC);
+    let wrote = false;
+    for (let attempt = 0; attempt < 5 && !wrote; attempt++){
+      /* Somebody at another desk may have saved since this browser last read
+         the cloud. Their copy is pulled down and merged into this one first,
+         so neither side loses anything. */
+      let headSnap;
+      try{ headSnap = await headRef.get(); }
+      catch(err){
+        setSync('Couldn\u2019t check the cloud copy \u2014 skipping this save', 'err');
         return;
       }
-      if (pulled.status === 'ok' && pulled.data && Array.isArray(pulled.data.clients)){
-        state = mergeStates(state, adoptRemote(pulled.data));
-        state.updatedAt = Date.now();
-        try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){}
-        try{ hydrateSettings(); renderAll(); }catch(e){}
-        toast('Pulled in changes saved from another computer');
+      const liveHead = headSnap.exists ? (headSnap.data() || {}) : null;
+      const liveStamp = liveHead ? (liveHead.updatedAt || 0) : 0;
+      if (revOf(liveHead) !== cloudBaseRev){
+        if (liveHead){
+          const pulled = await cloudLoadState();
+          if (pulled.status === 'torn'){
+            setSync('Cloud copy is mid-write \u2014 trying again in a moment', 'err');
+            cloudDirty = true;
+            return;
+          }
+          if (pulled.status === 'ok' && pulled.data && Array.isArray(pulled.data.clients)){
+            applyRemoteState(pulled);
+          } else {
+            cloudBaseRev = pulled.rev || revOf(liveHead);
+            cloudBaseStamp = pulled.stamp || liveStamp;
+          }
+        } else {
+          cloudBaseRev = null;
+        }
       }
+      const expected = cloudBaseRev;
+      const stamp = Math.max(Date.now(), liveStamp + 1, (cloudBaseStamp || 0) + 1, state.updatedAt || 0);
+      state.updatedAt = stamp;
+      const rev = SESSION_ID + ':' + (++cloudWriteSeq);
+      const json = JSON.stringify(state);
+      persisted = persistLocalQuiet(json) || persisted;
+      const chunks = chunkState(json);
+      const head = {
+        format: 'chunked-json-v1',
+        chunks: chunks.length,
+        updatedAt: stamp,
+        updatedBy: fbUid,
+        rev: rev,
+        session: SESSION_ID,
+        by: presName()
+      };
+      if (chunks.length <= CLOUD_BATCH_MAX){
+        /* One atomic commit, made only if the cloud is still the copy this
+           browser just merged with. If a teammate saved in the meantime the
+           commit is refused, their copy is pulled in, and it goes again, so
+           two people saving in the same second can no longer erase each
+           other. The header can never point at a half-written set. */
+        try{
+          await fbDb.runTransaction(async tx => {
+            const cur = await tx.get(headRef);
+            const curRev = cur.exists ? revOf(cur.data() || {}) : null;
+            if (curRev !== expected){
+              const e = new Error('The cloud copy changed while saving');
+              e.syncStale = true;
+              throw e;
+            }
+            chunks.forEach((part, i) => tx.set(col.doc(STATE_CHUNK_PREFIX + i), {part}));
+            tx.set(headRef, head);
+          });
+        }catch(err){
+          if (err && (err.syncStale || err.code === 'aborted' || err.code === 'failed-precondition')) continue;
+          throw err;
+        }
+      } else {
+        /* Enormous workspaces: write the parts first, the header last, so a
+           failure part-way through never advertises a chunk count that isn't
+           there. A torn copy fails JSON.parse on read and is ignored. */
+        const again = await headRef.get();
+        if (revOf(again.exists ? (again.data() || {}) : null) !== expected) continue;
+        for (let i = 0; i < chunks.length; i++) await col.doc(STATE_CHUNK_PREFIX + i).set({part: chunks[i]});
+        await headRef.set(head);
+      }
+      cloudBaseStamp = stamp;
+      cloudBaseRev = rev;
+      wrote = true;
     }
-
-    const stamp = state.updatedAt || Date.now();
-    const chunks = chunkState(JSON.stringify(state));
-    const head = {
-      format: 'chunked-json-v1',
-      chunks: chunks.length,
-      updatedAt: stamp,
-      updatedBy: fbUid
-    };
-    if (chunks.length <= CLOUD_BATCH_MAX){
-      /* One atomic commit: the header can never point at a half-written set. */
-      const batch = fbDb.batch();
-      chunks.forEach((part, i) => batch.set(col.doc(STATE_CHUNK_PREFIX + i), {part}));
-      batch.set(col.doc(STATE_DOC), head);
-      await batch.commit();
-    } else {
-      /* Enormous workspaces: write the parts first, the header last, so a
-         failure part-way through never advertises a chunk count that isn't
-         there. A torn copy fails JSON.parse on read and is ignored. */
-      for (let i = 0; i < chunks.length; i++) await col.doc(STATE_CHUNK_PREFIX + i).set({part: chunks[i]});
-      await col.doc(STATE_DOC).set(head);
+    if (!wrote){
+      cloudDirty = true;
+      setSync('Teammates are saving at the same moment \u2014 retrying', '');
+      return;
     }
-    cloudBaseStamp = stamp;
     cloudSaveFailed = false;
-    setSync('Synced to cloud \u00b7 ' + new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), 'ok');
+    setSync(liveSyncText('saved'), 'ok');
   }catch(err){
     const msg = (err && err.message) ? err.message : 'unknown error';
+    if (err && err.code === 'unavailable'){
+      /* Offline. Nothing is lost: it goes up when the connection is back. */
+      cloudSaveFailed = true;
+      setSync('Offline \u2014 your work is safe in this browser and goes up when the connection is back', 'err');
+      return;
+    }
     setSync('Cloud save failed \u2014 ' + msg, 'err');
     /* This used to be a quiet line in the sidebar footer, which is how a
        failing save went unnoticed for so long. Say it out loud, once. */
@@ -9495,7 +9943,9 @@ async function cloudSave(){
     }
   }finally{
     cloudBusy = false;
+    if (stamped && !persisted) persistLocalQuiet();
     if (cloudDirty){ cloudDirty = false; queueCloud(); }
+    liveCatchUp();
   }
 }
 /* Reads either format: the chunked JSON written above, or the single
@@ -9506,27 +9956,842 @@ async function cloudLoadState(){
   const headSnap = await col.doc(STATE_DOC).get();
   if (!headSnap.exists) return {status:'empty'};
   const head = headSnap.data() || {};
+  const meta = {rev: revOf(head), by: head.by || '', session: head.session || ''};
   if (head.format !== 'chunked-json-v1'){
-    return {status:'ok', data:head, stamp:(head.updatedAt || 0)};   /* legacy structured copy */
+    return Object.assign({status:'ok', data:head, stamp:(head.updatedAt || 0)}, meta);   /* legacy structured copy */
   }
   const n = head.chunks || 0;
-  if (!n) return {status:'empty'};
+  if (!n) return Object.assign({status:'empty'}, meta);
   const snaps = await Promise.all(
     Array.from({length: n}, (_, i) => col.doc(STATE_CHUNK_PREFIX + i).get())
   );
   let json = '';
   for (const s of snaps){
-    if (!s.exists) return {status:'torn'};              /* incomplete set — do not write over it */
+    if (!s.exists) return Object.assign({status:'torn'}, meta);   /* incomplete set — do not write over it */
     json += (s.data() && s.data().part) || '';
   }
   try{
     const parsed = JSON.parse(json);
     if (parsed && typeof parsed.updatedAt !== 'number' && head.updatedAt) parsed.updatedAt = head.updatedAt;
-    return {status:'ok', data:parsed, stamp:(head.updatedAt || (parsed && parsed.updatedAt) || 0)};
+    return Object.assign({status:'ok', data:parsed, stamp:(head.updatedAt || (parsed && parsed.updatedAt) || 0)}, meta);
   }catch(e){
-    return {status:'torn'};
+    return Object.assign({status:'torn'}, meta);
   }
 }
+
+/* ==========================================================================
+   LIVE SYNC
+   ==========================================================================
+   The cloud copy used to be read at sign-in and just before this browser
+   wrote to it, so a teammate's work showed up whenever you next happened to
+   save, and never if you were only watching. This browser now listens to the
+   cloud copy's header. The moment anyone else saves, their copy is pulled,
+   merged in (see the merge rules above), and whatever is on screen is
+   redrawn without taking your place, your typing or your map away.
+   ========================================================================== */
+let liveUnsub = null, liveTimer = null, livePulling = false, livePullAgain = false;
+let liveTorn = 0, liveFails = 0, liveSeenRev = null, liveSeenSession = null;
+
+function liveEnsureSeo(){
+  try{ if (window.EDGE_live && window.EDGE_live.ensureSeo) window.EDGE_live.ensureSeo(); }catch(e){}
+}
+/* Merge a copy read from the cloud into this browser's, in place. Returns
+   true when this browser was holding something the cloud copy lacked, which
+   means the result should be written back up. */
+function mergeRemoteIntoState(res){
+  stampChanges();
+  const merged = mergeStates(state, adoptRemote(res.data));
+  const ahead = mergeAhead;
+  state = merged;
+  if (fbUid) state.owner = fbUid;
+  liveEnsureSeo();
+  seedSigs();
+  cloudBaseStamp = res.stamp || cloudBaseStamp;
+  if (res.rev) cloudBaseRev = res.rev;
+  persistLocalQuiet();
+  try{ claudeSyncTouch(); }catch(e){}
+  if (res.by && res.session !== SESSION_ID) syncLastBy = res.by;
+  return ahead;
+}
+function applyRemoteState(res){
+  const before = liveFingerprint();
+  const ahead = mergeRemoteIntoState(res);
+  liveRender(before);
+  return ahead;
+}
+function startLiveSync(){
+  stopLiveSync();
+  if (!fbDb || !fbUid || isPublicView()) return;
+  const ref = fbDb.collection('users').doc(fbUid).collection('data').doc(STATE_DOC);
+  liveUnsub = ref.onSnapshot(snap => {
+    if (snap.metadata && snap.metadata.hasPendingWrites) return;
+    if (!snap.exists) return;
+    const h = snap.data() || {};
+    liveSeenRev = revOf(h);
+    liveSeenSession = h.session || null;
+    if (h.session && h.session === SESSION_ID) return;   /* this tab's own save coming back */
+    if (liveSeenRev === cloudBaseRev) return;            /* already have it */
+    liveSchedule(120);
+  }, err => {
+    liveUnsub = null;
+    setSync('Live updates paused \u2014 ' + ((err && err.message) || 'connection lost') + '. Retrying\u2026', 'err');
+    setTimeout(() => { if (fbUid && fbReady && !liveUnsub) startLiveSync(); }, 8000);
+  });
+}
+function stopLiveSync(){
+  if (liveUnsub){ try{ liveUnsub(); }catch(e){} }
+  liveUnsub = null;
+  clearTimeout(liveTimer); liveTimer = null;
+  liveSeenRev = null; liveSeenSession = null;
+}
+function liveSchedule(ms){
+  clearTimeout(liveTimer);
+  liveTimer = setTimeout(livePull, ms == null ? 120 : ms);
+}
+async function livePull(){
+  liveTimer = null;
+  if (!fbReady || !cloudLoadedOk || !fbUid || !fbDb || isPublicView()) return;
+  /* a save in flight pulls and merges anything newer itself */
+  if (livePulling || cloudBusy){ livePullAgain = true; return; }
+  livePulling = true;
+  let retry = false;
+  try{
+    const res = await cloudLoadState();
+    liveFails = 0;
+    if (res.status === 'ok' && res.data && Array.isArray(res.data.clients)){
+      liveTorn = 0;
+      if (!(res.rev && res.rev === cloudBaseRev)){
+        const ahead = applyRemoteState(res);
+        setSync(liveSyncText('pulled'), 'ok');
+        if (ahead) queueCloud();
+      }
+    } else if (res.status === 'torn'){
+      /* caught between the parts of a very large save: look again shortly */
+      if (++liveTorn <= 8) retry = true;
+    }
+  }catch(err){
+    liveFails++;
+    retry = liveFails <= 8;
+  }finally{
+    livePulling = false;
+    if (cloudDirty && !cloudBusy){ cloudDirty = false; queueCloud(); }
+    if (retry || livePullAgain){
+      livePullAgain = false;
+      liveSchedule(Math.min(30000, 600 * Math.pow(2, Math.max(liveFails, liveTorn ? 1 : 0))));
+    }
+  }
+}
+/* After a save lands: if the listener saw somebody else's newer save while
+   this one was on its way, fetch it now rather than waiting for the next. */
+function liveCatchUp(){
+  if (!liveUnsub) return;
+  if ((liveSeenRev && liveSeenRev !== cloudBaseRev && liveSeenSession !== SESSION_ID) || livePullAgain){
+    livePullAgain = false;
+    liveSchedule(150);
+  }
+}
+window.addEventListener('online', () => {
+  if (!fbReady || !cloudLoadedOk || !fbUid) return;
+  queueCloud();
+  liveSchedule(400);
+});
+
+/* ---- redrawing without getting in the way --------------------------------
+   A teammate's save must never cost you what you were in the middle of. So a
+   remote change always updates the rails (client names, counts, who is
+   where), but the main panel is only redrawn when what it shows actually
+   changed, and then only once you are not typing in a field, holding the
+   mouse button down, answering a prompt, dragging a client, or watching a
+   scan of your own on that same screen. A teammate's scan filling in on the
+   profile you have open repaints the map dots in place, without moving the
+   map or resetting the history you have picked. */
+let livePointerDown = false;
+document.addEventListener('pointerdown', () => { livePointerDown = true; }, true);
+['pointerup', 'pointercancel'].forEach(t => document.addEventListener(t, () => {
+  setTimeout(() => { livePointerDown = false; }, 60);
+}, true));
+window.addEventListener('blur', () => { livePointerDown = false; });
+
+function liveModule(){
+  if (document.body.classList.contains('embed-mode')) return 'none';
+  const hub = $('hubScreen');
+  if (hub && hub.classList.contains('on')) return 'hub';
+  const shell = $('appShell');
+  if (!shell || shell.classList.contains('hidden')) return 'none';
+  return state.seoModule || 'gbp';
+}
+function liveLastScanTag(list){
+  const s = Array.isArray(list) && list.length ? list[list.length - 1] : null;
+  return s ? scanKey(s) + '|' + scanWeight(s) + '|' + scanHash(s) : '';
+}
+function liveFingerprint(){
+  const fp = {m: liveModule(), main:'', scan:'', settings:'', rail:'', seoRail:'', recents:'', viewingLatest:true};
+  try{
+    fp.settings = JSON.stringify(state.settings || {});
+    fp.rail = JSON.stringify([state.activeClientId, state.activeGbpId, state.view,
+      (state.clients || []).map(c => [c.id, c.name, (c.gbps || []).map(g => [g.id, g.name, g.bizName])])]);
+    fp.seoRail = JSON.stringify([state.activeSeoClientId,
+      (state.seoFolders || []).map(f => f ? [f.id, f.name, f.collapsed] : null),
+      (state.seoClients || []).map(c => c ? [c.id, c.name, c.status, c.folderId, !!(c.autoScan && c.autoScan.enabled),
+        (c.keywords || []).map(k => (k.locations || []).map(l => l ? [l.rank, l.prevRank, l.checkedAt] : null))] : null)]);
+    fp.recents = JSON.stringify(state.serpRecents || []);
+    if (fp.m === 'gbp'){
+      const c = activeClient();
+      if (c){
+        const kwTag = k => k.id + '|' + recSig('kw', k) + '|' + (k.scans || []).length;
+        if (state.view === 'overview'){
+          fp.main = [c.id, 'overview', recSig('client', c),
+            (c.gbps || []).map(g => g.id + '|' + recSig('gbp', g) + '|' + (g.keywords || []).map(kwTag).join(';')).join(','),
+            (c.compareScans || []).length].join('#');
+          fp.scan = liveLastScanTag(c.compareScans) + '#' +
+            (c.gbps || []).map(g => (g.keywords || []).map(k => liveLastScanTag(k.scans)).join(';')).join(',');
+          const cs = c.compareScans || [];
+          const latest = cs.length ? cs[cs.length - 1] : null;
+          fp.viewingLatest = !currentCompareScan || !!(latest && scanKey(currentCompareScan) === scanKey(latest));
+        } else {
+          const g = activeGbp(), kw = activeKeyword();
+          fp.main = [c.id, 'focus', c.name,
+            (c.gbps || []).map(x => x.id + '|' + (x.name || '') + '|' + (x.bizName || '')).join(','),
+            g ? g.id + '|' + recSig('gbp', g) + '|' + (g.activeKeywordId || '') : '',
+            g ? (g.keywords || []).map(kwTag).join(';') : ''].join('#');
+          fp.scan = kw ? liveLastScanTag(kw.scans) : '';
+          const latest = kw && kw.scans && kw.scans.length ? kw.scans[kw.scans.length - 1] : null;
+          fp.viewingLatest = !currentScan || !!(latest && scanKey(currentScan) === scanKey(latest));
+        }
+      }
+    } else if (fp.m === 'seo'){
+      const c = (state.seoClients || []).find(x => x && x.id === state.activeSeoClientId);
+      fp.main = c ? JSON.stringify(c) : '';
+    }
+  }catch(e){}
+  return fp;
+}
+function liveEditing(){
+  const a = document.activeElement;
+  if (!a || a === document.body || a === document.documentElement) return false;
+  const tag = a.tagName;
+  if (tag === 'INPUT') return !/^(button|checkbox|radio|range|color|file|submit|reset|image)$/i.test(a.type || 'text');
+  return tag === 'TEXTAREA' || tag === 'SELECT' || !!a.isContentEditable;
+}
+function liveUserBusy(m, mode){
+  if (livePointerDown) return true;
+  const bd = $('backdrop');
+  if (bd && bd.classList.contains('on')) return true;
+  if (document.body.classList.contains('seo-dragging')) return true;
+  try{ if (ScanOverlay.isOpen() && (!presScan || presScan.module === m)) return true; }catch(e){}
+  if (mode === 'scan'){
+    const a = document.activeElement;
+    return !!(a && a.tagName === 'SELECT');
+  }
+  return liveEditing();
+}
+let livePending = null, livePendingSettings = false, liveFlushTimer = null;
+const liveDirty = {rail:false, seoRail:false, recents:false};
+function liveRender(before){
+  const after = liveFingerprint();
+  if (before.settings !== after.settings) livePendingSettings = true;
+  if (before.rail !== after.rail) liveDirty.rail = true;
+  if (before.seoRail !== after.seoRail) liveDirty.seoRail = true;
+  if (before.recents !== after.recents) liveDirty.recents = true;
+  let mode = null;
+  if (after.m === before.m && (after.m === 'gbp' || after.m === 'seo')){
+    if (before.main !== after.main) mode = 'full';
+    else if (before.scan !== after.scan) mode = 'scan';
+  }
+  if (mode){
+    if (!livePending || livePending.m !== after.m) livePending = {m: after.m, mode: mode, viewingLatest: before.viewingLatest};
+    else if (mode === 'full') livePending.mode = 'full';
+  }
+  liveFlush();
+}
+function liveFlushSoon(){
+  if (!livePending && !livePendingSettings) return;
+  clearTimeout(liveFlushTimer);
+  liveFlushTimer = setTimeout(liveFlush, 300);
+}
+function liveLightRender(){
+  const H = window.EDGE_live || {};
+  if (liveDirty.rail){ liveDirty.rail = false; try{ renderTree(); renderCrumbs(); renderGbpTabs(); }catch(e){} }
+  if (liveDirty.seoRail){ liveDirty.seoRail = false; try{ if (H.seoTree) H.seoTree(); }catch(e){} }
+  if (liveDirty.recents){ liveDirty.recents = false; try{ if (H.serpRecents) H.serpRecents(); }catch(e){} }
+  try{ if (H.hubMeta) H.hubMeta(); }catch(e){}
+  presPaint();
+}
+function liveFlush(){
+  clearTimeout(liveFlushTimer); liveFlushTimer = null;
+  /* a rebuilt row under a half-finished click swallows the click */
+  if (livePointerDown || document.body.classList.contains('seo-dragging')){
+    liveFlushTimer = setTimeout(liveFlush, 350);
+    return;
+  }
+  liveLightRender();
+  if (livePendingSettings && !liveEditing()){
+    livePendingSettings = false;
+    try{ hydrateSettings(); }catch(e){}
+  }
+  const m = liveModule();
+  const p = livePending;
+  if (p){
+    if (p.m !== m){
+      livePending = null;           /* switching tools redraws the one you land on */
+    } else if (liveUserBusy(m, p.mode)){
+      liveFlushTimer = setTimeout(liveFlush, 800);
+      return;
+    } else {
+      livePending = null;
+      try{
+        if (p.mode === 'full'){
+          if (m === 'gbp') renderAll();
+          else if (m === 'seo' && window.EDGE_live && window.EDGE_live.seoAll) window.EDGE_live.seoAll();
+        } else {
+          liveScanRedraw(p.viewingLatest);
+        }
+      }catch(e){}
+      presPaint();
+    }
+  }
+  if (livePendingSettings && !liveFlushTimer) liveFlushTimer = setTimeout(liveFlush, 1200);
+}
+function liveScanRedraw(viewingLatest){
+  const c = activeClient();
+  if (!c) return;
+  if (state.view === 'overview'){
+    try{ renderGbpCards(); renderCompareHistory(); }catch(e){}
+    if (!viewingLatest) return;
+    const cs = c.compareScans || [];
+    const latest = cs.length ? cs[cs.length - 1] : null;
+    if (latest && currentCompareScan && scanKey(currentCompareScan) === scanKey(latest)){
+      currentCompareScan = latest;
+      latest.points.forEach((p, i) => { try{ refreshCmpDot(i); }catch(e){} });
+      try{ updateCompareStatus(latest); renderCompareTable(latest); }catch(e){}
+    } else {
+      drawCompare(latest);
+    }
+    return;
+  }
+  const kw = activeKeyword();
+  try{ renderKeywords(); }catch(e){}
+  if (!viewingLatest) return;            /* you are looking at an older scan: leave it be */
+  const latest = kw && kw.scans && kw.scans.length ? kw.scans[kw.scans.length - 1] : null;
+  if (latest && currentScan && scanKey(currentScan) === scanKey(latest)){
+    currentScan = latest;
+    latest.points.forEach((p, i) => { try{ refreshDot(i); }catch(e){} });
+    try{ updateSummary(latest); renderVerdict(latest); renderHistory(); }catch(e){}
+  } else {
+    try{ renderHistory(); drawScan(latest); }catch(e){}
+  }
+}
+
+/* ---- one shared job at a time ----------------------------------------------
+   Every open copy of this tool checks the auto-scan schedules once a minute,
+   so two people with it open at nine o'clock used to run the same scheduled
+   scan twice and pay for it twice. Whoever claims the day's run first does
+   it; everyone else skips. If the claim can't be checked (offline), the old
+   behaviour stands and the scan runs. */
+const sharedJobSkip = new Set();
+async function claimSharedJob(key){
+  if (sharedJobSkip.has(key)) return false;
+  if (!fbDb || !fbUid || !cloudLoadedOk || isPublicView()) return true;
+  const ref = fbDb.collection('users').doc(fbUid).collection('locks').doc(String(key).replace(/[\/\s]+/g, '-'));
+  try{
+    const got = await fbDb.runTransaction(async tx => {
+      const s = await tx.get(ref);
+      if (s.exists && (s.data() || {}).session !== SESSION_ID) return false;
+      tx.set(ref, {session: SESSION_ID, by: presName(), at: Date.now()});
+      return true;
+    });
+    if (!got) sharedJobSkip.add(key);
+    return got;
+  }catch(e){
+    return true;
+  }
+}
+
+/* ==========================================================================
+   WHO IS WORKING WHERE
+   ==========================================================================
+   Every signed-in tab keeps a small note in users/{uid}/presence: a name,
+   which tool, client, profile and keyword it has open, and any scan it is
+   running with its progress. Everyone's notes show in the top bar, beside
+   the client and profile names in the rail, and as a chip on the screen you
+   and a teammate both have open. The notes live under the same users/{uid}
+   path the Firestore rule at the top of this file already covers, so no
+   rule changes are needed. A note is refreshed every 30 seconds and dropped
+   from view if it goes quiet for longer than two minutes.
+   ========================================================================== */
+const PRES_BEAT_MS = 30000, PRES_STALE_MS = 130000, PRES_REAP_MS = 20 * 60 * 1000, PRES_TICK_MS = 3000;
+const PRES_NAME_KEY = 'edge-presence-name', PRES_ASKED_KEY = 'edge-presence-asked', PRES_TAG_KEY = 'edge-presence-tag';
+let presOn = false, presUnsub = null, presTickTimer = null, presNudgeTimer = null;
+let presPeers = new Map(), presOffset = 0, presScan = null, presNamePending = false;
+let presSentNav = '', presSentDone = null, presSentAt = 0, presLiveKey = '';
+let presPanelIsOpen = false, presPanelAnchor = null;
+const presReaped = new Set();
+
+function presRef(sid){
+  return fbDb.collection('users').doc(fbUid).collection('presence').doc(sid || SESSION_ID);
+}
+function presTag(){
+  let t = '';
+  try{ t = localStorage.getItem(PRES_TAG_KEY) || ''; }catch(e){}
+  if (!t){
+    t = Math.random().toString(36).slice(2, 5).toUpperCase();
+    try{ localStorage.setItem(PRES_TAG_KEY, t); }catch(e){}
+  }
+  return t;
+}
+function presOwnName(){
+  try{ return (localStorage.getItem(PRES_NAME_KEY) || '').trim().slice(0, 40); }catch(e){ return ''; }
+}
+function presName(){
+  const n = presOwnName();
+  if (n) return n;
+  const mail = (fbAuth && fbAuth.currentUser && fbAuth.currentUser.email) || '';
+  const base = mail ? mail.split('@')[0] : 'Teammate';
+  return base.charAt(0).toUpperCase() + base.slice(1) + ' ' + presTag();
+}
+function presWhere(){
+  const m = liveModule();
+  const w = {module: m === 'none' ? 'away' : m};
+  try{
+    if (m === 'gbp'){
+      const c = activeClient();
+      if (c){
+        w.clientId = c.id; w.clientName = c.name || '';
+        w.view = state.view === 'overview' ? 'overview' : 'focus';
+        if (w.view === 'focus'){
+          const g = activeGbp(), k = activeKeyword();
+          if (g){ w.gbpId = g.id; w.gbpName = g.name || g.bizName || ''; }
+          if (k) w.keyword = k.text || '';
+        }
+      }
+    } else if (m === 'seo'){
+      const c = (state.seoClients || []).find(x => x && x.id === state.activeSeoClientId);
+      if (c){ w.seoClientId = c.id; w.seoClientName = c.name || ''; }
+    } else if (m === 'serp'){
+      w.serpView = state.serpView === 'keywords' ? 'keywords' : 'checker';
+    }
+  }catch(e){}
+  return w;
+}
+function presPayload(){
+  const s = presScan;
+  const mail = (fbAuth && fbAuth.currentUser && fbAuth.currentUser.email) || '';
+  return {
+    session: SESSION_ID, name: presName(), email: mail, where: presWhere(), hidden: !!document.hidden, v: 1,
+    scan: s ? {
+      title: String(s.title || 'Scanning').slice(0, 140), sub: String(s.sub || '').slice(0, 160),
+      done: +s.done || 0, total: +s.total || 0, startedAt: s.startedAt || Date.now(),
+      module: s.module || '', clientId: s.clientId || '', gbpId: s.gbpId || '', seoClientId: s.seoClientId || ''
+    } : null
+  };
+}
+function presSend(force){
+  if (!presOn || !fbDb || !fbUid || isPublicView()) return;
+  const p = presPayload();
+  const nav = JSON.stringify([p.name, p.where, p.hidden, p.scan ? [p.scan.title, p.scan.sub, p.scan.total, p.scan.module, p.scan.clientId, p.scan.gbpId, p.scan.seoClientId] : null]);
+  const now = Date.now();
+  const done = p.scan ? p.scan.done : null;
+  /* where you are goes out at once; scan progress at most every 4 seconds */
+  const due = force || nav !== presSentNav || now - presSentAt >= PRES_BEAT_MS ||
+              (done !== presSentDone && now - presSentAt >= 4000);
+  if (!due) return;
+  presSentNav = nav; presSentDone = done; presSentAt = now;
+  const doc = Object.assign({}, p, {at: now, ts: firebase.firestore.FieldValue.serverTimestamp()});
+  try{ presRef().set(doc).catch(() => {}); }catch(e){}
+}
+function presNudge(){
+  if (!presOn) return;
+  clearTimeout(presNudgeTimer);
+  presNudgeTimer = setTimeout(() => { presNudgeTimer = null; presSend(false); presPaintHere(); }, 350);
+}
+function presLive(){
+  const now = Date.now() + presOffset;
+  const out = [];
+  presPeers.forEach(p => {
+    if (p.session !== SESSION_ID && now - (p.tsMs || 0) < PRES_STALE_MS) out.push(p);
+  });
+  return out.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+}
+function presStart(){
+  presStop();
+  if (!fbDb || !fbUid || isPublicView()) return;
+  presOn = true;
+  presUnsub = fbDb.collection('users').doc(fbUid).collection('presence').onSnapshot(snap => {
+    const next = new Map();
+    snap.forEach(d => {
+      const x = d.data({serverTimestamps: 'estimate'}) || {};
+      const ts = (x.ts && typeof x.ts.toMillis === 'function') ? x.ts.toMillis() : (x.at || 0);
+      /* this tab's own note, once the server has stamped it, says how far
+         this computer's clock is from the server's */
+      if (d.id === SESSION_ID && !d.metadata.hasPendingWrites && x.at && ts) presOffset = ts - x.at;
+      next.set(d.id, Object.assign({}, x, {session: d.id, tsMs: ts}));
+    });
+    presPeers = next;
+    presPaint();
+  }, () => { /* presence is a nicety; syncing carries on without it */ });
+  presSend(true);
+  clearInterval(presTickTimer);
+  presTickTimer = setInterval(presTick, PRES_TICK_MS);
+  let asked = true;
+  try{ asked = !!localStorage.getItem(PRES_ASKED_KEY) || !!presOwnName(); }catch(e){}
+  presNamePending = !asked;
+  presPaint();
+}
+function presStop(){
+  presOn = false;
+  if (presUnsub){ try{ presUnsub(); }catch(e){} }
+  presUnsub = null;
+  clearInterval(presTickTimer); presTickTimer = null;
+  clearTimeout(presNudgeTimer); presNudgeTimer = null;
+  presPeers = new Map();
+  presSentNav = ''; presSentDone = null; presSentAt = 0;
+  presPanelOpen(false);
+  presPaint();
+}
+/* Best effort: a closed tab that doesn't get this far simply goes quiet and
+   drops off everyone's view within two minutes. */
+function presLeave(){
+  if (!fbDb || !fbUid) return Promise.resolve();
+  try{
+    const del = presRef().delete().catch(() => {});
+    return Promise.race([del, sleep(1500)]);
+  }catch(e){ return Promise.resolve(); }
+}
+function presTick(){
+  if (!presOn) return;
+  try{ if (presScan && !ScanOverlay.isOpen()) presScan = null; }catch(e){}
+  presSend(false);
+  const key = presLive().map(p => p.session).join(',');
+  if (key !== presLiveKey || presPaintLater) presPaint();
+  /* tidy away notes from tabs that closed without saying so */
+  const now = Date.now() + presOffset;
+  presPeers.forEach(p => {
+    if (p.session !== SESSION_ID && now - (p.tsMs || 0) > PRES_REAP_MS && !presReaped.has(p.session)){
+      presReaped.add(p.session);
+      try{ presRef(p.session).delete().catch(() => {}); }catch(e){}
+    }
+  });
+  if (presNamePending && liveModule() !== 'none' && !liveUserBusy('', 'name')){
+    presNamePending = false;
+    presAskName();
+  }
+}
+document.addEventListener('visibilitychange', () => { if (presOn) presSend(true); });
+window.addEventListener('pagehide', () => { if (presOn) presLeave(); });
+
+async function presAskName(){
+  const bd = $('backdrop');
+  if (!bd || bd.classList.contains('on')) return;
+  bd.classList.add('pres-top');
+  let v = null;
+  try{
+    v = await ask('What should teammates see?',
+      'Your name shows beside whatever client you have open and on any scan you run, and you see theirs the same way. It is kept on this computer only.',
+      'Your first name', presOwnName());
+  }finally{
+    bd.classList.remove('pres-top');
+  }
+  try{ localStorage.setItem(PRES_ASKED_KEY, '1'); }catch(e){}
+  if (v){
+    try{ localStorage.setItem(PRES_NAME_KEY, v.slice(0, 40)); }catch(e){}
+    presSend(true);
+    presPaint();
+  }
+}
+
+/* ---- drawing it ---- */
+function presInitials(name){
+  const parts = String(name || '?').trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return '?';
+  const a = parts[0], b = parts.length > 1 ? parts[parts.length - 1] : '';
+  return ((a[0] || '?') + (b ? b[0] : (a[1] || ''))).toUpperCase();
+}
+function presHue(name){
+  const s = String(name || '');
+  let h = 11;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return Math.abs(h) % 360;
+}
+function presWhereText(p){
+  const w = (p && p.where) || {};
+  if (w.module === 'hub') return 'On the start screen';
+  if (w.module === 'gbp'){
+    const c = (state.clients || []).find(x => x && x.id === w.clientId);
+    const cn = (c && c.name) || w.clientName;
+    if (!cn) return 'GBP Tracker';
+    if (w.view === 'overview') return 'GBP Tracker \u203a ' + cn + ' \u203a comparing profiles';
+    const g = c && (c.gbps || []).find(x => x && x.id === w.gbpId);
+    const gn = (g && (g.name || g.bizName)) || w.gbpName;
+    return 'GBP Tracker \u203a ' + cn + (gn ? ' \u203a ' + gn : '') + (w.keyword ? ' \u203a \u201c' + w.keyword + '\u201d' : '');
+  }
+  if (w.module === 'seo'){
+    const c = (state.seoClients || []).find(x => x && x.id === w.seoClientId);
+    const n = (c && c.name) || w.seoClientName;
+    return 'SEO Clients' + (n ? ' \u203a ' + n : '');
+  }
+  if (w.module === 'serp') return 'Live SERP \u203a ' + (w.serpView === 'keywords' ? 'keyword finder' : 'search preview');
+  return 'Signed in';
+}
+function presScanLine(s){
+  return (s.title || 'Scanning') + (s.total > 1 ? ' \u2014 ' + (s.done || 0) + ' of ' + s.total : '');
+}
+function presTitle(p){
+  let t = (p.name || 'Teammate') + ': ' + presWhereText(p);
+  if (p.scan) t += '\n' + presScanLine(p.scan);
+  if (p.hidden) t += '\n(this tab is in the background)';
+  return t;
+}
+function presAvatar(p, cls, scanning){
+  return '<b class="pav' + (scanning ? ' is-scan' : '') + (p.hidden ? ' is-away' : '') + (cls ? ' ' + cls : '') +
+    '" style="--pav-h:' + presHue(p.name) + '" title="' + esc(presTitle(p)) + '">' + esc(presInitials(p.name)) + '</b>';
+}
+/* 'scan' when the person is running a scan on this thing, 'here' when they
+   simply have it open. */
+function presMatch(p, kind, id){
+  const w = p.where || {}, s = p.scan || null;
+  if (kind === 'client'){
+    if (s && s.module === 'gbp' && s.clientId === id) return 'scan';
+    return (w.module === 'gbp' && w.clientId === id) ? 'here' : null;
+  }
+  if (kind === 'gbp'){
+    if (s && s.module === 'gbp' && s.gbpId === id) return 'scan';
+    return (w.module === 'gbp' && w.view !== 'overview' && w.gbpId === id) ? 'here' : null;
+  }
+  if (kind === 'seo'){
+    if (s && s.module === 'seo' && s.seoClientId === id) return 'scan';
+    return (w.module === 'seo' && w.seoClientId === id) ? 'here' : null;
+  }
+  return null;
+}
+function presWho(kind, id){
+  const seen = new Map();
+  presLive().forEach(p => {
+    const how = presMatch(p, kind, id);
+    if (!how) return;
+    const prev = seen.get(p.name);
+    if (!prev || (how === 'scan' && prev.how !== 'scan')) seen.set(p.name, {p, how});
+  });
+  return Array.from(seen.values());
+}
+function presBadges(kind, id){
+  const list = presWho(kind, id);
+  if (!list.length) return '';
+  return list.slice(0, 3).map(x => presAvatar(x.p, 'pav-xs', x.how === 'scan')).join('') +
+    (list.length > 3 ? '<b class="pav pav-xs pav-more">+' + (list.length - 3) + '</b>' : '');
+}
+/* Dropped into the rail rows as they are built; repainted in place when
+   people move, so the rail is never rebuilt just because someone clicked. */
+function presSlot(kind, id){
+  let inner = '';
+  try{ inner = presBadges(kind, id); }catch(e){}
+  return '<b class="pres-slot" data-pres="' + esc(kind + ':' + id) + '">' + inner + '</b>';
+}
+function presPaintSlots(){
+  document.querySelectorAll('.pres-slot[data-pres]').forEach(el => {
+    const v = el.getAttribute('data-pres') || '', i = v.indexOf(':');
+    el.innerHTML = presBadges(v.slice(0, i), v.slice(i + 1));
+  });
+}
+function presPaintTeam(){
+  const me = presName();
+  const seen = new Set(), others = [];
+  let scanning = false;
+  presLive().forEach(p => {
+    if (p.scan) scanning = true;
+    if (p.name === me || seen.has(p.name)) return;
+    seen.add(p.name);
+    others.push(p);
+  });
+  const stack = others.length
+    ? others.slice(0, 4).map(p => presAvatar(p, '', !!p.scan)).join('') + (others.length > 4 ? '<b class="pav pav-more">+' + (others.length - 4) + '</b>' : '')
+    : presAvatar({name: me, where: presWhere()}, 'is-me', false);
+  const label = others.length
+    ? others.length + (others.length === 1 ? ' teammate' : ' teammates') + ' online'
+    : 'Only you right now';
+  const html = '<span class="tt-stack">' + stack + '</span><span class="tt-label">' + label + '</span>';
+  ['tnTeam', 'hubTeam'].forEach(id => {
+    const el = $(id);
+    if (!el) return;
+    el.hidden = !presOn;
+    el.classList.toggle('has-scan', scanning);
+    el.setAttribute('title', others.length ? 'See who is working on what' : 'Nobody else is signed in right now');
+    if (el.innerHTML !== html) el.innerHTML = html;
+  });
+}
+function presHereHtml(list){
+  if (!list.length) return '';
+  const first = list[0];
+  const scanner = list.find(x => x.how === 'scan');
+  let text = esc(first.p.name) + (list.length > 1
+    ? ' and ' + (list.length - 1) + (list.length === 2 ? ' other' : ' others') + ' are here'
+    : (first.how === 'scan' ? ' is scanning here' : ' is here too'));
+  if (scanner && scanner.p.scan && scanner.p.scan.total > 1) text += ' <em>' + (scanner.p.scan.done || 0) + '/' + scanner.p.scan.total + '</em>';
+  return '<button type="button" class="ph-chip" title="See who is working on what">' +
+    '<span class="ph-stack">' + list.slice(0, 3).map(x => presAvatar(x.p, '', x.how === 'scan')).join('') + '</span>' +
+    '<span class="ph-text">' + text + '</span></button>';
+}
+function presPaintHere(){
+  const g = $('gbpHere'), s = $('seoHere');
+  try{
+    if (g){
+      let list = [];
+      const c = activeClient();
+      if (presOn && c){
+        if (state.view === 'overview') list = presWho('client', c.id);
+        else { const gb = activeGbp(); if (gb) list = presWho('gbp', gb.id); }
+      }
+      const html = presHereHtml(list);
+      if (g.innerHTML !== html) g.innerHTML = html;
+    }
+    if (s){
+      const sc = (state.seoClients || []).find(x => x && x.id === state.activeSeoClientId);
+      const html = presHereHtml(presOn && sc ? presWho('seo', sc.id) : []);
+      if (s.innerHTML !== html) s.innerHTML = html;
+    }
+  }catch(e){}
+}
+function presCanJump(p){
+  const w = p.where || {};
+  if (w.module === 'gbp') return (state.clients || []).some(c => c && c.id === w.clientId);
+  if (w.module === 'seo') return (state.seoClients || []).some(c => c && c.id === w.seoClientId);
+  return w.module === 'serp';
+}
+function presRowHtml(p, isMe){
+  const sameName = !isMe && p.name === presName();
+  let who = esc(p.name || 'Teammate');
+  if (isMe) who += ' <small>you</small>';
+  else if (sameName) who += ' <small>you, in another tab</small>';
+  if (!isMe && p.hidden) who += ' <small>tab in the background</small>';
+  let scan = '';
+  if (p.scan){
+    const t = +p.scan.total || 0, d = Math.min(+p.scan.done || 0, t || Infinity);
+    const pct = t > 1 ? Math.max(3, Math.round(d / t * 100)) : 40;
+    scan = '<div class="pp-scan"><div class="pp-scan-t">' + esc(p.scan.title || 'Scanning') + '</div>' +
+      (p.scan.sub ? '<div class="pp-scan-s">' + esc(p.scan.sub) + '</div>' : '') +
+      '<div class="pp-bar' + (t > 1 ? '' : ' indet') + '"><i style="width:' + pct + '%"></i></div>' +
+      (t > 1 ? '<div class="pp-scan-n">' + d + ' of ' + t + ' done</div>' : '') + '</div>';
+  }
+  const go = (!isMe && presCanJump(p)) ? '<button type="button" class="pp-go" data-pp-go="' + esc(p.session) + '">Go there</button>' : '';
+  return '<div class="pp-row">' + presAvatar(p, '', !!p.scan) +
+    '<div class="pp-body"><div class="pp-who">' + who + '</div><div class="pp-where">' + esc(presWhereText(p)) + '</div>' + scan + '</div>' +
+    go + '</div>';
+}
+function presPanelHtml(){
+  const live = presLive();
+  return '<div class="pp-head"><b>Working now</b><button type="button" class="pp-x" data-pp-close aria-label="Close">\u00d7</button></div>' +
+    '<div class="pp-list">' + presRowHtml(presPayload(), true) + live.map(p => presRowHtml(p, false)).join('') +
+    (live.length ? '' : '<div class="pp-empty">Nobody else is signed in right now. When a teammate opens the tool, you will see where they are here.</div>') +
+    '</div>' +
+    '<div class="pp-foot"><button type="button" class="pp-name" data-pp-rename>Change the name teammates see</button>' +
+    '<span>Changes anyone saves show up on every open screen within a few seconds.</span></div>';
+}
+function presPanelEl(){
+  let el = $('presPanel');
+  if (!el){
+    el = document.createElement('div');
+    el.id = 'presPanel';
+    el.className = 'pres-panel';
+    el.setAttribute('role', 'dialog');
+    el.setAttribute('aria-label', 'Who is working right now');
+    el.hidden = true;
+    document.body.appendChild(el);
+    el.addEventListener('click', e => {
+      const go = e.target.closest('[data-pp-go]');
+      if (go){ presJump(go.getAttribute('data-pp-go')); return; }
+      if (e.target.closest('[data-pp-close]')){ presPanelOpen(false); return; }
+      if (e.target.closest('[data-pp-rename]')){ presPanelOpen(false); presAskName(); }
+    });
+  }
+  return el;
+}
+function presPanelPlace(){
+  const el = $('presPanel');
+  if (!el) return;
+  const a = presPanelAnchor;
+  const r = (a && document.contains(a) && a.getBoundingClientRect) ? a.getBoundingClientRect() : null;
+  const W = window.innerWidth, w = Math.min(360, W - 24);
+  let right = r && r.width ? Math.max(12, W - r.right) : 14;
+  if (W - right - w < 12) right = Math.max(12, W - w - 12);
+  el.style.right = right + 'px';
+  el.style.left = 'auto';
+  el.style.top = Math.max(8, Math.min(r && r.height ? r.bottom + 8 : 62, window.innerHeight - 160)) + 'px';
+}
+function presPanelOpen(on, anchor){
+  presPanelIsOpen = !!on;
+  if (anchor) presPanelAnchor = anchor;
+  const el = $('presPanel') || (on ? presPanelEl() : null);
+  if (el){
+    el.hidden = !presPanelIsOpen;
+    if (presPanelIsOpen){ el.innerHTML = presPanelHtml(); presPanelPlace(); }
+  }
+  ['tnTeam', 'hubTeam'].forEach(id => { const b = $(id); if (b) b.setAttribute('aria-expanded', presPanelIsOpen ? 'true' : 'false'); });
+}
+function presJump(sid){
+  const p = presPeers.get(sid);
+  presPanelOpen(false);
+  if (!p || !window.EDGE) return;
+  const w = p.where || {};
+  if (w.module === 'gbp' && (state.clients || []).some(c => c && c.id === w.clientId)){
+    state.activeClientId = w.clientId;
+    const c = activeClient();
+    if (w.view === 'overview') state.view = 'overview';
+    else {
+      state.view = 'focus';
+      if (w.gbpId && c.gbps.some(g => g.id === w.gbpId)) state.activeGbpId = w.gbpId;
+      else if (!c.gbps.some(g => g.id === state.activeGbpId)) state.activeGbpId = c.gbps.length ? c.gbps[0].id : null;
+      const g = activeGbp();
+      const k = (g && w.keyword) ? (g.keywords || []).find(x => x && x.text === w.keyword) : null;
+      if (k) g.activeKeywordId = k.id;
+    }
+    window.EDGE.go('gbp');
+  } else if (w.module === 'seo' && (state.seoClients || []).some(c => c && c.id === w.seoClientId)){
+    state.activeSeoClientId = w.seoClientId;
+    window.EDGE.go('seo');
+  } else if (w.module === 'serp'){
+    window.EDGE.go('serp');
+  }
+}
+let presPaintLater = false;
+function presPaint(){
+  /* never swap out the thing under a half-finished click */
+  if (livePointerDown){ presPaintLater = true; return; }
+  presPaintLater = false;
+  try{
+    presLiveKey = presLive().map(p => p.session).join(',');
+    presPaintTeam();
+    presPaintSlots();
+    presPaintHere();
+    if (presPanelIsOpen){
+      const el = $('presPanel');
+      if (el){ el.innerHTML = presPanelHtml(); presPanelPlace(); }
+    }
+  }catch(e){}
+}
+['tnTeam', 'hubTeam'].forEach(id => {
+  const b = $(id);
+  if (b) b.addEventListener('click', e => {
+    e.stopPropagation();
+    presPanelOpen(!(presPanelIsOpen && presPanelAnchor === b), b);
+  });
+});
+['gbpHere', 'seoHere'].forEach(id => {
+  const box = $(id);
+  if (box) box.addEventListener('click', e => {
+    const chip = e.target.closest('.ph-chip');
+    if (!chip) return;
+    e.stopPropagation();
+    presPanelOpen(!(presPanelIsOpen && presPanelAnchor === chip), chip);
+  });
+});
+document.addEventListener('click', e => {
+  if (!presPanelIsOpen) return;
+  const el = $('presPanel');
+  if (el && el.contains(e.target)) return;
+  presPanelOpen(false);
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && presPanelIsOpen) presPanelOpen(false); });
+window.addEventListener('resize', () => { if (presPanelIsOpen) presPanelPlace(); });
+
 /* ---------- auth gate: everyone signs in to the same shared account, so
    every client, profile and scan lives in one Firestore document that the
    whole team reads and writes to, on any computer. ---------- */
@@ -9559,9 +10824,12 @@ function authErrorMessage(err){
   return (err && err.message) ? err.message : 'Sign-in failed.';
 }
 async function loadCloudForUser(user){
+  stopLiveSync();
+  presStop();
   fbUid = user.uid;
   cloudLoadedOk = false;
   cloudBaseStamp = 0;
+  cloudBaseRev = null;
   try{
     const res = await cloudLoadState();
 
@@ -9578,16 +10846,21 @@ async function loadCloudForUser(user){
            deleted — that side simply hasn't heard about it yet. Only the
            deletion register removes anything. */
         backupLocal('before-cloud-merge');
+        stampChanges();
         state = mergeStates(state, remote);
       }
       state.owner = user.uid;
+      liveEnsureSeo();
+      seedSigs();
       try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){}
       cloudBaseStamp = res.stamp || 0;
+      cloudBaseRev = res.rev || null;
       cloudLoadedOk = true;
       setSync('Synced to cloud', 'ok');
 
     } else if (res.status === 'empty'){
       cloudBaseStamp = 0;
+      cloudBaseRev = res.rev || null;
       cloudLoadedOk = true;
       setSync('Cloud ready — this browser is the first copy', 'ok');
 
@@ -9607,7 +10880,11 @@ async function loadCloudForUser(user){
   hydrateSettings();
   renderAll();
   setScreen('app');
-  if (cloudLoadedOk) cloudSave();
+  if (cloudLoadedOk){
+    cloudSave();
+    startLiveSync();
+  }
+  presStart();
 }
 function initCloud(){
   if (!fbAuth || !fbDb){
@@ -9620,8 +10897,10 @@ function initCloud(){
       setScreen('loading');
       loadCloudForUser(user);
     } else {
+      stopLiveSync();
+      presStop();
       fbUid = null; fbReady = false;
-      cloudLoadedOk = false; cloudBaseStamp = 0;
+      cloudLoadedOk = false; cloudBaseStamp = 0; cloudBaseRev = null;
       setScreen('login');
       const btn = $('authSubmitBtn');
       if (btn) btn.disabled = false;
@@ -9659,6 +10938,10 @@ $('authEmail').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.prev
 $('signOutBtn').addEventListener('click', async () => {
   if (!fbAuth) return;
   if (!confirm('Sign out of EDGE SEO Reporter on this computer?')) return;
+  /* leave the team list before the credentials go */
+  try{ await presLeave(); }catch(e){}
+  stopLiveSync();
+  presStop();
   try{ await fbAuth.signOut(); }catch(e){}
 });
 
@@ -9735,6 +11018,7 @@ function renderTree(){
     row.innerHTML =
       '<svg class="caret" viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>' +
       '<span class="tree-name">' + esc(c.name) + '</span>' +
+      presSlot('client', c.id) +
       '<span class="tree-count">' + c.gbps.length + '</span>' +
       '<button class="tree-kill" title="Delete client">&times;</button>';
     row.addEventListener('click', e => {
@@ -9769,7 +11053,7 @@ function renderTree(){
       const kid = document.createElement('div');
       const on = (c.id === state.activeClientId && g.id === state.activeGbpId && state.view === 'focus');
       kid.className = 'tree-kid' + (on ? ' on' : '');
-      kid.innerHTML = '<i class="dot"></i><span>' + esc(g.name || g.bizName || 'Untitled profile') + '</span><button class="tree-kill" title="Delete profile">&times;</button>';
+      kid.innerHTML = '<i class="dot"></i><span>' + esc(g.name || g.bizName || 'Untitled profile') + '</span>' + presSlot('gbp', g.id) + '<button class="tree-kill" title="Delete profile">&times;</button>';
       kid.addEventListener('click', e => {
         if (e.target.closest('.tree-kill')) return;
         selectGbp(c.id, g.id);
@@ -12744,6 +14028,59 @@ const ScanOverlay = (function(){
     lastFocus = null;
   }
   return {open, update, finish, settle, close, isOpen: () => !!cur};
+})();
+
+/* Live sync and the "who is working where" notes both need to know when this
+   browser is running a scan, and on what. Every scan in the app opens this
+   same screen, so it is watched here rather than in each scan's own code.
+   While it is open, the scan being drawn is protected from being overwritten
+   by a copy arriving from somewhere else, and teammates see its progress. */
+(function(){
+  const _open = ScanOverlay.open, _update = ScanOverlay.update, _finish = ScanOverlay.finish;
+  const _settle = ScanOverlay.settle, _close = ScanOverlay.close;
+  function target(){
+    const m = state.seoModule || 'gbp';
+    const t = {module: m, clientId: '', gbpId: '', seoClientId: ''};
+    if (m === 'gbp'){
+      t.clientId = state.activeClientId || '';
+      t.gbpId = state.view === 'overview' ? '' : (state.activeGbpId || '');
+    } else if (m === 'seo'){
+      t.seoClientId = state.activeSeoClientId || '';
+    }
+    return t;
+  }
+  function ended(id){
+    try{
+      if (presScan && (id == null || presScan.id === id)){ presScan = null; presSend(true); }
+      liveFlushSoon();
+    }catch(e){}
+  }
+  ScanOverlay.open = function(o){
+    const id = _open.apply(ScanOverlay, arguments);
+    try{
+      syncHotScans = [currentScan, currentCompareScan].filter(Boolean);
+      presScan = Object.assign({
+        id: id, title: (o && o.title) || 'Scanning', sub: (o && o.sub) || '',
+        done: 0, total: (o && o.total) || 0, startedAt: Date.now()
+      }, target());
+      presSend(true);
+    }catch(e){}
+    return id;
+  };
+  ScanOverlay.update = function(id, o){
+    _update.apply(ScanOverlay, arguments);
+    try{
+      if (presScan && presScan.id === id && o){
+        if (o.done != null) presScan.done = o.done;
+        if (o.total != null) presScan.total = o.total;
+        if (o.title != null) presScan.title = o.title;
+        presNudge();
+      }
+    }catch(e){}
+  };
+  ScanOverlay.finish = function(id){ _finish.apply(ScanOverlay, arguments); ended(id); };
+  ScanOverlay.settle = function(id){ _settle.apply(ScanOverlay, arguments); ended(id); };
+  ScanOverlay.close = function(){ _close.apply(ScanOverlay, arguments); syncHotScans = []; ended(null); };
 })();
 
 /* Rendering the verdict, rebuilding the advice and serialising the whole
@@ -17015,6 +18352,8 @@ function ensureSeoState(){
   if (!Array.isArray(state.serpRecents)) state.serpRecents = [];
 }
 ensureSeoState();
+/* the repair above is not an edit, so it must not be stamped as one */
+try{ if (typeof seedSigs === 'function') seedSigs(); }catch(e){}
 
 const activeSeoClient = () => state.seoClients.find(c => c.id === state.activeSeoClientId) || null;
 
@@ -18202,6 +19541,7 @@ function seoClientRowEl(c, folderHint){
   const hintHtml = folderHint ? '<span class="tree-folder-hint">' + esc(folderHint) + '</span>' : '';
   row.innerHTML = '<span class="seo-status-dot ' + seoStatusDotClass(c.status) + '" title="' + esc(c.status || 'Active') + '"></span>' +
     '<span class="tree-name">' + esc(c.name || 'Untitled') + '</span>' +
+    (typeof presSlot === 'function' ? presSlot('seo', c.id) : '') +
     hintHtml +
     healthHtml +
     bestHtml +
@@ -18530,6 +19870,9 @@ async function seoRunDueSchedules(){
   const now = new Date();
   for (const c of state.seoClients.slice()){
     if (seoScheduleDue(c, now)){
+      /* one open copy of the tool runs each day's scheduled scan, not all of them */
+      if (typeof claimSharedJob === 'function' &&
+          !(await claimSharedJob('autoscan-' + c.id + '-' + now.toDateString()))) continue;
       c.autoScan.lastRun = Date.now();
       save();
       const meter = {usd: 0, credits: 0, gsc: 0};
@@ -21540,6 +22883,19 @@ async function bootSeoReportView(shareId){
     showEmbedMessage('Couldn\u2019t load this report right now.');
   }
 }
+
+/* What the live sync in the first script needs from this module: it redraws
+   the SEO rail, the SEO screen, the recent searches and the hub counts when a
+   teammate's changes arrive, and repairs SEO records the same way this module
+   does before taking note of them. */
+window.EDGE_live = {
+  ensureSeo: ensureSeoState,
+  seoTree: renderSeoTree,
+  seoAll: renderSeoAll,
+  serpRecents: renderSerpRecents,
+  hubMeta(){ if (hubOpen) renderHubMeta(); },
+  hubOpen(){ return hubOpen; }
+};
 
 /* ---------- boot ---------- */
 function bootWorkspace(){

@@ -4719,6 +4719,35 @@ body.so-locked{overflow:hidden;}
                   <div class="hint">Sponsored appearances are recorded and shown beside the rank. They are never turned <em>into</em> a rank: a paid slot alongside 28 organic results used to be reported as position 29, which is a number that appears nowhere on Google and that nobody could count to. A point that only appears in the ads is a miss with an ad noted on it.</div>
                   <label class="sw" style="margin-top:14px"><input type="checkbox" id="confirmListing" checked/><i></i><span>Show the listing before every scan</span></label>
                   <div class="hint">Before any points are read, the Google listing the scan is looking for is shown with its CID, Place ID, phone, website and pin, so you can confirm it is yours. A profile with no confirmed listing always gets the check.</div>
+
+                  <div class="divider"></div>
+                  <div class="f">
+                    <label for="seoRankSource">SEO keyword tracker reads</label>
+                    <select id="seoRankSource">
+                      <option value="live">Live Google, through the provider above</option>
+                      <option value="hybrid">Live Google, with Search Console double-checking misses</option>
+                      <option value="gsc">Search Console only (free)</option>
+                    </select>
+                    <div class="hint">This applies to the SEO keyword tracker, not the grid. Live Google is a reading pinned to each location and costs provider credits. Search Console is Google's own record of where the site showed up for real searchers. It is free and never blocked, but the position is an average across the country over the last 7 to 28 days, and a search with no impressions has no number. The double-check option only asks Search Console about keywords live Google couldn't find, so it adds nothing to the bill.</div>
+                  </div>
+                  <div class="f">
+                    <label for="seoMissRetries">Before saving a keyword as not found</label>
+                    <select id="seoMissRetries">
+                      <option value="1">Read it once</option>
+                      <option value="3">Read it up to 3 times</option>
+                      <option value="5" selected>Read it up to 5 times</option>
+                    </select>
+                    <div class="hint">Only misses are read again. The first read that finds the site is saved and the rest are skipped. A read that errors is retried, not counted as a miss, and a position from the last scan is only replaced by a miss once every read has run.</div>
+                  </div>
+                  <label class="sw" style="margin-bottom:6px"><input type="checkbox" id="seoDeepChase"/><i></i><span>After the last miss, look as deep as result 700</span></label>
+                  <div class="hint" style="margin-bottom:14px">Off by default. DataForSEO bills every page of ten results, so one deep look at a keyword that isn't there costs about seven times a top-100 read. Leave it off unless a client needs positions past 100.</div>
+                  <div class="f">
+                    <label for="gscClientId">Google OAuth client ID <span class="opt">for Search Console</span></label>
+                    <input id="gscClientId" type="text" placeholder="1234567890-abc123.apps.googleusercontent.com" autocomplete="off"/>
+                    <div class="hint">One-time setup in Google Cloud Console: enable the Google Search Console API, create an OAuth client ID of type Web application, and add <span id="gscOriginHint">this page's address</span> under Authorized JavaScript origins. The ID isn't a secret, so it syncs with the other settings. Each person signs in with their own Google account, and the sign-in is kept in this tab only.</div>
+                  </div>
+                  <button class="btn btn-full" type="button" id="gscConnectBtn">Connect Search Console</button>
+                  <div class="status" id="gscStatus" style="margin-top:8px"></div>
                 </div>
               </section>
             </div>
@@ -5594,7 +5623,7 @@ body.so-locked{overflow:hidden;}
               <span id="seoScanProgressLabel">Scanning…</span>
               <button class="btn btn-sm" id="seoScanStopBtn">Stop</button>
             </div>
-            <div class="hint" id="seoProviderHint" style="display:none">Live search isn't configured yet. Switch to <b>GBP Locations → SERP checker settings (step 4)</b> and add your DataForSEO or Serper key — the same key powers keyword checks here.</div>
+            <div class="hint" id="seoProviderHint" style="display:none">Rank checks aren't configured yet. Go to <b>GBP Locations → step 4</b> and add your DataForSEO or Serper key, or set the keyword tracker to read Search Console for free.</div>
           </div>
 
           <div class="tbl-card">
@@ -5990,8 +6019,19 @@ function normPhone(s){
   return (d.length === 11 && d[0] === '1') ? d.slice(1) : d;
 }
 const phoneMatches = (a,b) => { const x = normPhone(a), y = normPhone(b); return x.length >= 7 && x === y; };
+/* Takes whatever was typed or returned - a full URL, a bare domain, a list
+   pasted with commas, a host with a port or a trailing dot - and reduces it
+   to the host alone, without www. A website field that fails to clean is a
+   client reported as not ranking, so this errs on the side of stripping. */
 function cleanDomain(raw){
-  return (raw || '').trim().replace(/^https?:\/\//i,'').replace(/^www\./i,'').replace(/\/.*$/,'').toLowerCase();
+  return String(raw || '').trim().toLowerCase()
+    .split(/[\s,;]+/)[0]
+    .replace(/^[a-z][a-z0-9+.-]*:\/\//, '')
+    .replace(/^[^@\/?#]*@/, '')
+    .replace(/^www\./, '')
+    .replace(/[\/?#].*$/, '')
+    .replace(/:\d+$/, '')
+    .replace(/\.+$/, '');
 }
 const domainMatches = (a,b) => { const x = cleanDomain(a), y = cleanDomain(b); return !!x && !!y && (x === y || x.endsWith('.'+y) || y.endsWith('.'+x)); };
 
@@ -8928,7 +8968,12 @@ const LEGACY_KEY = 'meridian-grid-tracker-v1';
 const DEFAULTS = {
   provider:'dataforseo', relay:'allorigins', serperKey:'', dfsLogin:'', dfsPassword:'',
   proxyPrefix:'', strictMatch:'loose', includeAds:true, depth:100, deepVerify:true, concurrency:6,
-  confirmListing:true
+  confirmListing:true,
+  /* Keyword rank tracker. 'live' reads Google through the provider above,
+     'hybrid' adds a free Search Console second opinion on every miss, and
+     'gsc' reads Search Console only. seoMissRetries is how many reads a
+     keyword gets before it is saved as not found. */
+  seoRankSource:'live', seoMissRetries:5, seoDeepChase:false, gscClientId:''
 };
 let state = { clients:[], activeClientId:null, activeGbpId:null, view:'focus', settings:{...DEFAULTS} };
 let memoryStore = null;
@@ -10787,6 +10832,17 @@ function hydrateSettings(){
   $('deepVerify').checked = s.deepVerify !== false;
   $('speedSel').value = String(s.concurrency || 6);
   $('confirmListing').checked = s.confirmListing !== false;
+  $('seoRankSource').value = ['live','hybrid','gsc'].indexOf(s.seoRankSource) === -1 ? 'live' : s.seoRankSource;
+  $('seoMissRetries').value = String([1,3,5].indexOf(Number(s.seoMissRetries)) === -1 ? 5 : Number(s.seoMissRetries));
+  $('seoDeepChase').checked = !!s.seoDeepChase;
+  $('gscClientId').value = s.gscClientId || '';
+  if ($('gscOriginHint') && /^https?:$/.test(location.protocol)) $('gscOriginHint').textContent = location.origin;
+  /* Loaded ahead of time so the sign-in popup can open straight off the
+     Connect click instead of waiting on a script download. */
+  try{
+    if ((s.gscClientId || '').trim()) gscLoadGis().catch(() => {});
+    gscRenderStatus();
+  }catch(e){}
   toggleProviderFields();
 }
 function toggleProviderFields(){
@@ -10816,6 +10872,31 @@ bindSetting('includeAds','includeAds', el => el.checked);
 bindSetting('deepVerify','deepVerify', el => el.checked);
 bindSetting('speedSel','concurrency', el => parseInt(el.value,10) || 6);
 bindSetting('confirmListing','confirmListing', el => el.checked);
+bindSetting('seoRankSource','seoRankSource');
+bindSetting('seoMissRetries','seoMissRetries', el => parseInt(el.value,10) || 5);
+bindSetting('seoDeepChase','seoDeepChase', el => el.checked);
+bindSetting('gscClientId','gscClientId', el => el.value.trim());
+$('seoRankSource').addEventListener('change', gscRenderStatus);
+$('gscClientId').addEventListener('change', () => {
+  GSC.token = null; GSC.expiresAt = 0; GSC.sites = null;
+  if ((state.settings.gscClientId || '').trim()) gscLoadGis().catch(() => {});
+  gscRenderStatus();
+});
+$('gscConnectBtn').addEventListener('click', async () => {
+  const btn = $('gscConnectBtn');
+  btn.disabled = true;
+  setStatus('gscStatus', 'Opening Google sign-in\u2026', 'busy');
+  try{
+    await gscSignIn();
+    const sites = await gscSites(true);
+    if (!sites.length) setStatus('gscStatus', 'Signed in, but this Google account can\u2019t see any Search Console properties. Connect an account that has access to your clients\u2019 properties.', 'err');
+    else { gscRenderStatus(); toast('Search Console connected', 'ok'); }
+  }catch(err){
+    setStatus('gscStatus', (err && err.message) || 'Google sign-in failed.', 'err');
+  }finally{
+    btn.disabled = false;
+  }
+});
 $('speedSel').addEventListener('change', renderGridInfo);
 $('provider').addEventListener('change', renderGridInfo);
 
@@ -13806,6 +13887,239 @@ function normalizeSerper(data){
   return {organic, ads, listKind: usePlaces ? 'maps' : 'organic'};
 }
 
+/* ==========================================================================
+   GOOGLE SEARCH CONSOLE - the free rank source
+   ==========================================================================
+   Search Console is Google's own record of where a site appeared for real
+   searchers: impressions, clicks and average position, per exact search. It
+   costs nothing and it is not a scrape, so it can't be CAPTCHA'd or come back
+   half-loaded. What it is not is a pinned, one-moment reading. The position
+   is an average across everyone in the country who saw the site over a
+   window of days, and it only exists for searches where the site actually
+   showed up. That makes it the right tool for "does this site rank for this
+   search at all", and a second opinion on any live read that says it doesn't.
+
+   Sign-in uses Google Identity Services in the browser. The access token is
+   held in memory only - never in state, never in the synced profile - and
+   lasts about an hour. The OAuth client ID is public by design, so it is
+   saved with the other settings and the whole team can share one.
+   ========================================================================== */
+const GSC_SCOPE = 'https://www.googleapis.com/auth/webmasters.readonly';
+const GSC_API = 'https://www.googleapis.com/webmasters/v3/';
+/* Search Console filters countries by ISO 3166-1 alpha-3. Every market the
+   region picker offers is listed; anything missing is simply read worldwide. */
+const GSC_ISO3 = {
+  AD:'and', AE:'are', AL:'alb', AM:'arm', AR:'arg', AT:'aut', AU:'aus', AZ:'aze', BA:'bih', BB:'brb',
+  BD:'bgd', BE:'bel', BG:'bgr', BH:'bhr', BM:'bmu', BO:'bol', BR:'bra', BS:'bhs', BW:'bwa', BY:'blr',
+  CA:'can', CH:'che', CL:'chl', CN:'chn', CO:'col', CR:'cri', CY:'cyp', CZ:'cze', DE:'deu', DK:'dnk',
+  DO:'dom', DZ:'dza', EC:'ecu', EE:'est', EG:'egy', ES:'esp', ET:'eth', FI:'fin', FJ:'fji', FR:'fra',
+  GB:'gbr', GE:'geo', GH:'gha', GR:'grc', GT:'gtm', HK:'hkg', HR:'hrv', HU:'hun', ID:'idn', IE:'irl',
+  IL:'isr', IN:'ind', IS:'isl', IT:'ita', JM:'jam', JO:'jor', JP:'jpn', KE:'ken', KR:'kor', KW:'kwt',
+  KY:'cym', KZ:'kaz', LB:'lbn', LI:'lie', LK:'lka', LT:'ltu', LU:'lux', LV:'lva', MA:'mar', MC:'mco',
+  MK:'mkd', MT:'mlt', MU:'mus', MX:'mex', MY:'mys', NA:'nam', NG:'nga', NL:'nld', NO:'nor', NP:'npl',
+  NZ:'nzl', OM:'omn', PA:'pan', PE:'per', PG:'png', PH:'phl', PK:'pak', PL:'pol', PR:'pri', PT:'prt',
+  PY:'pry', QA:'qat', RO:'rou', RS:'srb', RU:'rus', SA:'sau', SE:'swe', SG:'sgp', SI:'svn', SK:'svk',
+  TH:'tha', TN:'tun', TR:'tur', TT:'tto', TW:'twn', TZ:'tza', UA:'ukr', UG:'uga', US:'usa', UY:'ury',
+  VE:'ven', VN:'vnm', ZA:'zaf', ZM:'zmb', ZW:'zwe'
+};
+const GSC = {token:null, expiresAt:0, sites:null, client:null, clientFor:null, pending:null, reject:null, gis:null};
+
+function gscConfigured(){ return !!(state.settings.gscClientId || '').trim(); }
+function gscConnected(){ return !!GSC.token && Date.now() < GSC.expiresAt - 60 * 1000; }
+function gscErr(msg, fatal){ const e = new Error(msg); if (fatal) e.fatal = true; return e; }
+
+function gscLoadGis(){
+  if (window.google && window.google.accounts && window.google.accounts.oauth2) return Promise.resolve();
+  if (GSC.gis) return GSC.gis;
+  GSC.gis = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://accounts.google.com/gsi/client';
+    s.async = true;
+    s.onload = () => resolve();
+    s.onerror = () => {
+      GSC.gis = null;
+      reject(gscErr('Google sign-in could not be loaded. Check the connection, or allow accounts.google.com if an ad blocker is on.'));
+    };
+    document.head.appendChild(s);
+  });
+  return GSC.gis;
+}
+function gscPopupMessage(err){
+  const t = err && err.type;
+  if (t === 'popup_failed_to_open') return 'The browser blocked Google\u2019s sign-in window. Allow popups for this page and press Connect again.';
+  if (t === 'popup_closed') return 'The Google sign-in window was closed before it finished.';
+  return 'Google sign-in failed' + (t ? ' (' + t + ')' : '') + '.';
+}
+
+/* Opens Google's sign-in window (or reuses consent already given) and
+   resolves once a token is in hand. Browsers only let that window open just
+   after a click, which is why it is called from Connect and from the start
+   of a keyword scan, never from an unattended auto-scan. */
+async function gscSignIn(){
+  const id = (state.settings.gscClientId || '').trim();
+  if (!id) throw gscErr('Add the Google OAuth client ID on step four first.', true);
+  if (!/\.apps\.googleusercontent\.com$/i.test(id))
+    throw gscErr('That doesn\u2019t look like an OAuth client ID. It should end in .apps.googleusercontent.com.', true);
+  if (!/^https?:$/.test(location.protocol))
+    throw gscErr('Google sign-in needs this page served from a web address, not opened as a file.', true);
+  if (GSC.pending) return GSC.pending;
+  await gscLoadGis();
+  if (!GSC.client || GSC.clientFor !== id){
+    GSC.client = google.accounts.oauth2.initTokenClient({
+      client_id: id,
+      scope: GSC_SCOPE,
+      callback: () => {},
+      error_callback: err => { if (GSC.reject) GSC.reject(gscErr(gscPopupMessage(err))); }
+    });
+    GSC.clientFor = id;
+  }
+  GSC.pending = new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(gscErr('Google sign-in timed out. Press Connect again.')), 120000);
+    GSC.reject = e => { clearTimeout(timer); reject(e); };
+    GSC.client.callback = resp => {
+      clearTimeout(timer);
+      if (!resp || resp.error){
+        reject(gscErr('Google sign-in was refused (' + ((resp && (resp.error_description || resp.error)) || 'no reason given') + ').'));
+        return;
+      }
+      if (!google.accounts.oauth2.hasGrantedAllScopes(resp, GSC_SCOPE)){
+        reject(gscErr('Search Console access wasn\u2019t granted. Press Connect and allow Search Console on Google\u2019s screen.'));
+        return;
+      }
+      GSC.token = resp.access_token;
+      GSC.expiresAt = Date.now() + (Number(resp.expires_in) || 3600) * 1000;
+      GSC.sites = null;
+      resolve(GSC.token);
+    };
+    try{ GSC.client.requestAccessToken({prompt: ''}); }
+    catch(e){ clearTimeout(timer); reject(gscErr('Google sign-in could not open: ' + e.message)); }
+  });
+  try{ return await GSC.pending; }
+  finally{ GSC.pending = null; GSC.reject = null; }
+}
+
+async function gscFetch(path, body){
+  if (!gscConnected()){
+    throw gscErr(GSC.token
+      ? 'The Search Console sign-in has expired. Press Connect on step four, then scan again.'
+      : 'Search Console isn\u2019t connected. Press Connect on GBP Locations, step four.');
+  }
+  const init = {headers: {Authorization: 'Bearer ' + GSC.token}};
+  if (body){ init.method = 'POST'; init.headers['Content-Type'] = 'application/json'; init.body = JSON.stringify(body); }
+  let res = null;
+  for (let attempt = 1; attempt <= 3; attempt++){
+    try{ res = await fetch(GSC_API + path, init); }
+    catch(e){
+      if (attempt === 3) throw gscErr('Search Console couldn\u2019t be reached (' + e.message + ').');
+      await sleep(800 * attempt); continue;
+    }
+    /* Rate limits and server hiccups are worth waiting out; nothing else is. */
+    if ((res.status === 429 || res.status >= 500) && attempt < 3){ await sleep(1500 * attempt); continue; }
+    break;
+  }
+  if (res.status === 401){
+    GSC.token = null; GSC.expiresAt = 0;
+    throw gscErr('The Search Console sign-in has expired. Press Connect on step four, then scan again.');
+  }
+  let data = null;
+  try{ data = await res.json(); }catch(e){}
+  if (!res.ok){
+    const msg = (data && data.error && data.error.message) ? data.error.message : ('HTTP ' + res.status);
+    throw gscErr('Search Console said: ' + msg);
+  }
+  return data || {};
+}
+async function gscSites(force){
+  if (GSC.sites && !force) return GSC.sites;
+  const data = await gscFetch('sites');
+  GSC.sites = (data.siteEntry || []).filter(s => s && s.siteUrl && s.permissionLevel !== 'siteUnverifiedUser');
+  return GSC.sites;
+}
+/* A Domain property (sc-domain:) covers every subdomain and protocol, so it
+   wins over a URL-prefix one. Among URL-prefix properties, the site root on
+   https is preferred. */
+function gscPropertyFor(website, sites){
+  const d = cleanDomain(website);
+  if (!d) return null;
+  let best = null, bestScore = -1;
+  (sites || []).forEach(s => {
+    const u = String(s.siteUrl || '');
+    let score = -1;
+    if (/^sc-domain:/i.test(u)){
+      const root = u.slice(10).toLowerCase().replace(/\.+$/, '');
+      if (root && (d === root || d.endsWith('.' + root))) score = 100 + root.length;
+    } else {
+      let host = '', path = '/';
+      try{ const x = new URL(u); host = x.hostname.toLowerCase(); path = x.pathname || '/'; }catch(e){ return; }
+      if (host.replace(/^www\./, '') === d) score = 50 + (/^https:/i.test(u) ? 5 : 0) + (path === '/' ? 3 : 0);
+    }
+    if (score > bestScore){ bestScore = score; best = u; }
+  });
+  return best;
+}
+function gscPropertyLabel(property){
+  const u = String(property || '');
+  if (/^sc-domain:/i.test(u)) return u.slice(10);
+  try{ return new URL(u).hostname.replace(/^www\./, ''); }catch(e){ return u; }
+}
+/* Search Console keeps its days in Pacific time, so the date range is
+   worked out there rather than in whatever zone this browser is in. */
+function gscDay(daysAgo){
+  const d = new Date(Date.now() - daysAgo * 86400000);
+  try{
+    return new Intl.DateTimeFormat('en-CA', {timeZone:'America/Los_Angeles', year:'numeric', month:'2-digit', day:'2-digit'}).format(d);
+  }catch(e){ return d.toISOString().slice(0, 10); }
+}
+/* One exact search, one country. The last 7 days are read first so the
+   number is as current as Search Console allows; if there were no
+   impressions in that week the last 28 are read, because a small local
+   search can go days without one. Returns {property, position, impressions,
+   clicks, days, country} or {property, none:true, days, country}. */
+async function gscKeywordPosition(website, keyword, region, days){
+  const sites = await gscSites();
+  const property = gscPropertyFor(website, sites);
+  if (!property){
+    throw gscErr('The connected Google account has no Search Console access to ' + (cleanDomain(website) || 'this site') +
+      '. Add that account as a user on the client\u2019s property, or connect one that has it.');
+  }
+  let gl = String((region && region.gl) || '').toUpperCase();
+  if (gl === 'UK') gl = 'GB';
+  const iso3 = GSC_ISO3[gl] || null;
+  const q = String(keyword || '').toLowerCase().replace(/\s+/g, ' ').trim();
+  const windows = days ? [days] : [7, 28];
+  for (let i = 0; i < windows.length; i++){
+    const w = windows[i];
+    const filters = [{dimension:'query', operator:'equals', expression:q}];
+    if (iso3) filters.push({dimension:'country', operator:'equals', expression:iso3});
+    const data = await gscFetch('sites/' + encodeURIComponent(property) + '/searchAnalytics/query', {
+      startDate: gscDay(w - 1), endDate: gscDay(0),
+      dimensions: ['query'], type: 'web', dataState: 'all', rowLimit: 5,
+      dimensionFilterGroups: [{groupType:'and', filters: filters}]
+    });
+    const row = (data.rows || []).find(r => r && r.impressions > 0 && typeof r.position === 'number');
+    if (row){
+      return {property, position: Math.round(row.position * 10) / 10, impressions: row.impressions,
+              clicks: row.clicks || 0, days: w, country: iso3 ? gl : null};
+    }
+  }
+  return {property, none: true, days: windows[windows.length - 1], country: iso3 ? gl : null};
+}
+function gscRenderStatus(){
+  const el = $('gscStatus');
+  if (!el) return;
+  if (!gscConfigured()){
+    setStatus(el, (state.settings.seoRankSource || 'live') === 'live' ? '' : 'Add the client ID above, then press Connect.', '');
+    return;
+  }
+  if (gscConnected()){
+    const n = GSC.sites ? GSC.sites.length : null;
+    setStatus(el, 'Connected' + (n != null ? ' \u2014 ' + n + ' Search Console propert' + (n === 1 ? 'y' : 'ies') + ' readable' : '') +
+      '. The sign-in lasts about an hour; a keyword scan renews it when it starts.', 'ok');
+  } else {
+    setStatus(el, GSC.token ? 'The sign-in expired. Press Connect again.' : 'Not connected in this tab yet.', '');
+  }
+}
+
 /* relay mode — free, fragile, honest about it */
 function relayUrl(target){
   const r = state.settings.relay || 'allorigins';
@@ -16617,7 +16931,11 @@ function blankSeoLocation(label, regionIdx){
        stopped because Google ran out rather than because the ladder did.
        Both default to the same "nothing known yet" a pre-existing record
        has, so old locations read exactly as they always did. */
-    depthRead:null, exhausted:false
+    depthRead:null, exhausted:false,
+    /* How many live reads the last scan took (found on read 3, or missed in
+       all 5), how many of its attempts errored and were retried, and what
+       Search Console said when it was asked. */
+    reads:null, readsMax:null, failedReads:0, gsc:null, depthAsked:null
   };
 }
 function migrateSeoClient(c){
@@ -16637,6 +16955,13 @@ function migrateSeoClient(c){
          claiming a depth that was never read. Nothing is overwritten. */
       if (l.depthRead === undefined) l.depthRead = null;
       if (typeof l.exhausted !== 'boolean') l.exhausted = false;
+      /* Added with re-checked misses and Search Console. Unknown on older
+         records, which then read exactly as they did before. */
+      if (l.reads === undefined) l.reads = null;
+      if (l.readsMax === undefined) l.readsMax = null;
+      if (typeof l.failedReads !== 'number') l.failedReads = 0;
+      if (l.depthAsked === undefined) l.depthAsked = null;
+      if (l.gsc === undefined || (l.gsc !== null && typeof l.gsc !== 'object')) l.gsc = null;
     });
   });
   ['projectLead','cms','allocatedHours','monthlyProgress','lastMonthlyCall','website','basecampLink','reportLink','notes','logoUrl'].forEach(k => {
@@ -16747,7 +17072,7 @@ function seoRankMixBar(ranks){
    A rank of 0 has always meant "the site was not in what we read". It used
    to be shown as 100+, which claimed a boundary nobody had actually looked
    at and read as a position in its own right. Now the scan chases a keyword
-   down the ladder in seoOrganicLadder(), so a miss carries the depth it was
+   through the reads in seoLiveCheck(), so a miss carries the depth it was
    chased to, and the badge states that depth instead of inventing one.
 
    loc is optional: plenty of call sites only have the number. Without it the
@@ -16759,20 +17084,33 @@ function seoMissDepth(loc){
   return (isFinite(d) && d > 0) ? d : null;
 }
 function seoMissLabel(loc){
+  if (loc && loc.precision === 'gsc') return 'No impressions';
   const d = seoMissDepth(loc);
   if (!d) return 'Not found';
   /* Google ran out of results before the chase did, so there is no deeper
      position to be at: the site is absent from the whole SERP. A depth
      badge here would imply a page eleven that does not exist. */
   if (loc && loc.exhausted) return 'Not ranking';
+  /* A complete read to the depth that was asked for says exactly that:
+     ">100" after a clean top-100 read, even though ads and SERP features
+     meant only 95 organic results were on those ten pages. */
+  if (loc && loc.depthAsked && !loc.partial) return '>' + loc.depthAsked;
   /* Otherwise the chase stopped at our own ceiling, and the badge names the
      rung that was actually cleared — never a deeper one than was read. */
   const rung = SEO_DEPTH_LADDER.filter(x => x <= d).pop();
   return rung ? ('>' + rung) : ('>' + d);
 }
 function seoMissTitle(loc){
+  if (loc && loc.precision === 'gsc'){
+    const g = loc.gsc || {};
+    return 'Search Console recorded no impressions for this exact search' +
+      (g.country ? ' in ' + g.country : '') + ' over the last ' + (g.days || 28) + ' days.';
+  }
   const d = seoMissDepth(loc);
-  if (!d) return 'The site was not found in this search.';
+  const reads = (loc && loc.reads > 1) ? ' Checked in ' + loc.reads + ' separate reads.' : '';
+  if (!d) return 'The site was not found in this search.' + reads;
+  if (loc && loc.exhausted) return 'Read all ' + d + ' results Google returned for this search. The site is not in them.' + reads;
+  if (loc && !loc.partial) return 'Chased to ' + d + ' results at this location and the site was not among them.' + reads;
   if (loc && loc.partial){
     return 'Read ' + d + ' results and the site was not among them, but part of the SERP ' +
       'did not load — worth re-scanning before treating this as an absence.';
@@ -16787,6 +17125,11 @@ function seoRankPill(rank, loc){
   if (rank === 0){
     return '<span class="rank-pill rp-lost" title="' + esc(seoMissTitle(loc)) + '">' +
       esc(seoMissLabel(loc)) + '</span>';
+  }
+  if (loc && loc.precision === 'gsc' && loc.gsc && loc.gsc.position != null){
+    return '<span class="rank-pill rp-' + rankClass(rank) + '" title="' +
+      esc('Search Console average position ' + loc.gsc.position + ' over the last ' + (loc.gsc.days || 7) + ' days') +
+      '">#' + rank + '</span>';
   }
   return '<span class="rank-pill rp-' + rankClass(rank) + '">#' + rank + '</span>';
 }
@@ -16939,43 +17282,66 @@ function seoNormalizeSerperOrganic(data){
 function seoDelay(ms){ return new Promise(res => setTimeout(res, ms)); }
 
 /* ==========================================================================
-   ASKING FOR ONE ORGANIC RANKING
+   READING ONE ORGANIC RANKING
 
-   “DataForSEO returned no results for this view (Internal SE Server Error)”
-   is almost never a statement about the keyword. It is their scraper having
-   a bad moment on one particular request shape - and the shape that trips it
-   most often is coordinate targeting, which is exactly what this tool asks
-   for, because a rank checked from the middle of Red Deer is the only rank
-   worth reporting.
+   DataForSEO bills organic results by the page of ten, so a top-100 read is
+   ten pages whether the site sits at #3 or isn't there at all. Every read now
+   carries stop_crawl_on_match with the client's domain: DataForSEO stops at
+   the first page the site appears on and only bills the pages it actually
+   crawled. A keyword at #4 costs one page instead of ten. Only a keyword that
+   genuinely isn't there pays for the full depth.
 
-   Retrying the identical request three times, which is what used to happen,
-   asks the same question the same way and usually gets the same answer. So
-   instead the request is re-shaped between attempts, and the first shape
-   that comes back with results wins:
+   A miss is never trusted after one read. Live SERP scrapes wobble - a
+   different data centre, a page that timed out, a result Google shuffled for
+   a minute - and that wobble is how a site that plainly ranks got reported
+   as lost. So a keyword that isn't found is read again, up to the number set
+   on step four (five by default), alternating the advanced and regular
+   endpoints so each read takes a different path on DataForSEO's side. The
+   first read that finds the site is saved and the rest are skipped. Only when
+   every read misses is "not found" recorded.
 
-     1. coordinate, advanced endpoint   - precise, what we actually want
-     2. coordinate, regular endpoint    - same pin, different code path on
-                                          their side, and it doubles as the
-                                          retry for a transient failure
-     3. country, advanced endpoint      - broad, but a real answer
-
-   Three calls at most, which is what the old retry loop cost anyway. Rung 3
-   is a genuinely different measurement - a nationwide reading rather than
-   one taken from this city - so it is recorded as such on the location and
-   said out loud in the row, rather than being quietly passed off as a local
-   position.
+   A read that errors is not a miss. It is retried on the other endpoint, and
+   if nothing comes back at all the row keeps its previous position and shows
+   the error. A nationwide reading is only asked for when the pinned
+   coordinate is refused outright, and it is labelled as such.
    ========================================================================== */
 const SEO_SERP_ENDPOINTS = {
   advanced: 'https://api.dataforseo.com/v3/serp/google/organic/live/advanced',
   regular:  'https://api.dataforseo.com/v3/serp/google/organic/live/regular'
 };
-/* How far a keyword is chased before absence is reported as a fact. Each
-   rung is only ever reached because the one below it did not find the site,
-   so a keyword that ranks anywhere in the first hundred never costs more
-   than it did before. 700 is DataForSEO's per-task ceiling. */
+/* Used to word a miss (">100") and, as its last entry, the ceiling of the
+   optional deep look. 700 is DataForSEO's per-task limit. */
 const SEO_DEPTH_LADDER = [100, 200, 300, 500, 700];
-/* The deepest any scan can see, used by the UI to word a genuine miss. */
 const SEO_MAX_DEPTH = SEO_DEPTH_LADDER[SEO_DEPTH_LADDER.length - 1];
+
+/* How many live reads a keyword gets before it is saved as not found. */
+function seoMaxReads(){
+  const n = parseInt(state.settings.seoMissRetries, 10);
+  return (isFinite(n) && n >= 1) ? Math.min(5, n) : 5;
+}
+/* 'live', 'hybrid' (live, with Search Console double-checking misses) or
+   'gsc' (Search Console only). */
+function seoRankSource(){
+  const s = state.settings.seoRankSource;
+  return (s === 'gsc' || s === 'hybrid') ? s : 'live';
+}
+function seoSourceReady(){
+  return seoRankSource() === 'gsc' ? gscConfigured() : providerReady();
+}
+function seoSourceMissingMsg(){
+  return seoRankSource() === 'gsc'
+    ? 'Search Console isn\u2019t set up yet \u2014 add the Google OAuth client ID on GBP Locations, step 4, and press Connect.'
+    : 'Configure a search provider first: GBP Locations \u2192 step 4';
+}
+/* What a run cost, in the units each source bills in. */
+function seoMeterText(m){
+  if (!m) return '';
+  const parts = [];
+  if (m.usd > 0) parts.push('$' + m.usd.toFixed(m.usd < 1 ? 4 : 2) + ' of DataForSEO credit');
+  if (m.credits > 0) parts.push(m.credits + ' Serper credit' + (m.credits === 1 ? '' : 's'));
+  if (m.gsc > 0) parts.push(m.gsc + ' Search Console lookup' + (m.gsc === 1 ? '' : 's') + ', free');
+  return parts.join(' \u00b7 ');
+}
 
 /* ==========================================================================
    RECOGNISING THE CLIENT IN A SET OF RESULTS
@@ -17044,7 +17410,7 @@ function seoTitleMatchesResult(r, client){
 /* Posts one shaped task and hands back the raw response. Deliberately its
    own function rather than a change to dfsQuery(), which the whole GBP grid
    depends on and which is working. */
-async function seoDfsSerp(endpoint, task){
+async function seoDfsSerp(endpoint, task, meter){
   const login = (state.settings.dfsLogin || '').trim();
   const pass = (state.settings.dfsPassword || '').trim();
   const url = (state.settings.proxyPrefix || '').trim() + SEO_SERP_ENDPOINTS[endpoint];
@@ -17065,6 +17431,9 @@ async function seoDfsSerp(endpoint, task){
   }
   if (!res.ok) throw new Error('HTTP ' + res.status);
   const data = await res.json();
+  /* DataForSEO states the charge on every response, so the scan can say
+     exactly what it spent rather than estimating it. */
+  if (meter && typeof data.cost === 'number' && isFinite(data.cost)) meter.usd += data.cost;
   if (data.status_code && data.status_code !== 20000){
     const err = new Error(data.status_message || String(data.status_code));
     err.fatal = [40101, 40200, 40201, 40202].indexOf(data.status_code) !== -1;
@@ -17101,126 +17470,243 @@ function seoCountryLocationCode(region){
   return labsLocationCode(iso);
 }
 
-async function seoOrganicLadder(keyword, p, region, opts){
-  const prov = state.settings.provider || 'dataforseo';
-  const depth = (opts && opts.depth) || 100;
+/* The domain DataForSEO should stop at, written the way it wants it: no
+   protocol, no www, no path. Anything that isn't a plain domain is left off
+   rather than sent, which only costs the early stop, never the result. */
+function seoStopTarget(client){
+  const d = cleanDomain(client && client.website);
+  return /^[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$/i.test(d) ? d : null;
+}
+/* Flipped off for the session if DataForSEO ever refuses the early-stop
+   fields, so a change on their side degrades to full-depth reads instead of
+   failing every keyword. */
+let seoStopCrawlOk = true;
 
-  if (prov === 'serper'){
-    const data = await serperQuery(keyword, p, region, 'web', opts);
-    const out = seoNormalizeSerperOrganic(data);
-    out.precision = 'coordinate';
-    return out;
+/* One DataForSEO read. */
+async function seoDfsRead(keyword, p, region, o){
+  const task = {keyword: keyword, language_code: labsLanguageCode(region.hl), device: 'desktop', depth: o.depth};
+  if (o.where === 'country') task.location_code = o.countryCode;
+  else task.location_coordinate = p.lat.toFixed(7) + ',' + p.lng.toFixed(7);
+  const useStop = !!o.target && seoStopCrawlOk;
+  if (useStop){
+    task.stop_crawl_on_match = [{match_value: o.target, match_type: 'with_subdomains'}];
+    /* Only a real organic position ends the crawl. A map-pack or ad
+       appearance must not, or the organic rank below it would go unread. */
+    task.find_targets_in = ['organic', 'featured_snippet'];
   }
-  if (prov === 'direct'){
-    const err = new Error('Relay/direct mode isn\u2019t supported for keyword rank tracking yet \u2014 switch to DataForSEO or Serper on step 4 (GBP Locations).');
-    err.fatal = true; throw err;
+  let data;
+  try{
+    data = await seoDfsSerp(o.endpoint, task, o.meter);
+  }catch(err){
+    if (useStop && !(err && err.fatal) && /stop_crawl|find_targets|invalid field|unknown field/i.test(String(err && err.message))){
+      seoStopCrawlOk = false;
+      delete task.stop_crawl_on_match;
+      delete task.find_targets_in;
+      data = await seoDfsSerp(o.endpoint, task, o.meter);
+    } else throw err;
   }
-
-  const lang = labsLanguageCode(region.hl);
-  const coord = p.lat.toFixed(7) + ',' + p.lng.toFixed(7);
-  const country = seoCountryLocationCode(region);
-  const taskAt = (d, where) => Object.assign(
-    {keyword: keyword, language_code: lang, device: 'desktop', depth: d}, where);
-  const atCoord = {location_coordinate: coord};
-
-  /* ------------------------------------------------------------------
-     Keep digging until the site is actually located.
-
-     The old ladder asked one page-one-sized question and, if the site
-     wasn't in it, called that a real absence and printed 100+. For a site
-     sitting at 112 that is not an absence \u2014 it is a position nobody
-     bothered to go and read, and 100+ is the same badge whether the truth
-     is 101 or 640.
-
-     So depth now escalates instead of stopping: a normal first look, then
-     progressively deeper reads, and the run only ends early when the site
-     has been found. The first rung answers almost every keyword, so the
-     deeper ones cost nothing on the ones that already rank \u2014 the spend
-     lands only on the keywords that genuinely sit past page ten, which is
-     exactly where the answer was missing before.
-
-     700 is DataForSEO's ceiling for a single organic task; beyond it there
-     is nothing further to ask, and the row says so in those words instead
-     of hiding behind a round number.
-  ------------------------------------------------------------------ */
-  const first = Math.max(10, Math.min(700, depth));
-  const deeper = SEO_DEPTH_LADDER.filter(d => d > first);
-  const rungs = [
-    {endpoint:'advanced', precision:'coordinate', depth:first, task: taskAt(first, atCoord)},
-    /* The plain endpoint, same depth: a different shape of request often
-       succeeds where the advanced one came back thin. */
-    {endpoint:'regular',  precision:'coordinate', depth:first, task: taskAt(first, atCoord)}
-  ];
-  deeper.forEach(d => {
-    rungs.push({endpoint:'advanced', precision:'coordinate', depth:d, task: taskAt(d, atCoord)});
-  });
-  /* Last resort: the pin was refused, so read the country instead \u2014 at full
-     depth, because a nationwide reading is the one most likely to be deep. */
-  if (country){
-    const d = deeper.length ? deeper[deeper.length - 1] : first;
-    rungs.push({endpoint:'advanced', precision:'country', depth:d, task: taskAt(d, {location_code: country})});
-  }
-
-  /* Knowing which site we're looking for changes when it's worth spending
-     another call: a rung that already found it is finished, however partial
-     the read was, and a rung that didn't find it has not actually answered
-     the question yet unless there was nothing deeper left to ask. */
-  const match = (opts && opts.match) || null;
-  const hasSite = arr => !!match && arr.some(match);
-  const onDepth = (opts && opts.onDepth) || null;
-
-  let best = null, lastErr = null, deepestRead = 0;
-  for (let i = 0; i < rungs.length; i++){
-    const rung = rungs[i];
-    if (onDepth) { try{ onDepth(rung.depth, i, rungs.length); }catch(e){} }
-    let data;
-    try{
-      data = await seoDfsSerp(rung.endpoint, rung.task);
-    }catch(err){
-      if (err && err.fatal) throw err;
-      lastErr = err;
-      /* A moment's pause before re-shaping: back-to-back calls are the other
-         thing that provokes a server error. */
-      if (i < rungs.length - 1) await seoDelay(900);
-      continue;
-    }
-    const out = seoNormalizeDfsOrganic(data);
-    out.precision = rung.precision;
-    out.partial = !!data.__partial;
-    out.partialNote = data.__partial || null;
-    /* How far down this rung was actually able to see. Reported on a miss so
-       the row can say "read to 300, not there" \u2014 a claim that can be checked \u2014
-       rather than a bare 100+. */
-    out.depthAsked = rung.depth;
-    out.depthRead = out.organic.length;
-    deepestRead = Math.max(deepestRead, out.organic.length);
-
-    /* Found it \u2014 nothing further to ask, at any depth. */
-    if (hasSite(out.organic)) return out;
-
-    /* Not found. Keep the fullest read seen so far and go deeper, unless the
-       rung came back short of what it asked for: Google had fewer results
-       than the depth requested, so there is no page eleven to go and find. */
-    if (!best || out.organic.length > best.organic.length) best = out;
-    const exhausted = !out.partial && out.organic.length > 0 && out.organic.length < rung.depth;
-    if (exhausted){
-      best.exhausted = true;
-      best.depthRead = Math.max(best.depthRead || 0, deepestRead);
-      return best;
-    }
-    if (i < rungs.length - 1) await seoDelay(900);
-  }
-  if (best){ best.depthRead = Math.max(best.depthRead || 0, deepestRead); return best; }
-  const msg = lastErr && lastErr.message ? lastErr.message : 'no response';
-  const err = new Error('Google couldn\u2019t be read for this keyword right now (' + msg + '). ' +
-    'Open the live search from this row to check it by hand, or scan again in a few minutes.');
-  throw err;
+  const out = seoNormalizeDfsOrganic(data);
+  const result = ((((data.tasks || [])[0] || {}).result || [])[0]) || {};
+  const pagesAsked = Math.ceil(o.depth / 10);
+  const pagesRead = (typeof result.pages_count === 'number') ? result.pages_count : null;
+  out.partial = !!data.__partial;
+  out.partialNote = data.__partial || null;
+  out.depthAsked = o.depth;
+  out.depthRead = out.organic.length;
+  out.pagesRead = pagesRead;
+  /* "Google ran out of results" is only claimed when DataForSEO says it
+     crawled fewer pages than were asked for, on a complete read. The old
+     test compared organic results to the depth, and since ads and SERP
+     features take slots on every page that was true on nearly every read -
+     which is how a single thin read got labelled "the whole result set" and
+     ended the chase. */
+  out.exhausted = !out.partial && pagesRead != null && pagesRead > 0 && pagesRead < pagesAsked;
+  out.precision = o.where === 'country' ? 'country' : 'coordinate';
+  return out;
 }
 
-async function seoScanOne(client, kw, loc){
-  if (!loc.label || !loc.label.trim()){ loc.error = 'Add a location first.'; return; }
-  if (!client.website || !client.website.trim()){ loc.error = 'Add this client\'s website on the Dashboard tab first.'; return; }
-  if (!providerReady()){ loc.error = 'Search provider isn\'t configured yet.'; return; }
+/* One Serper read. Google stopped honouring num=100 in September 2025, so
+   asking Serper for 100 results in one call quietly returns ten, and every
+   site ranking 11-100 came back as not found. Pages are now walked ten at a
+   time, positions are counted across them, and the walk stops at the page
+   the site is on. */
+async function seoSerperRead(keyword, p, region, o){
+  const key = (state.settings.serperKey || '').trim();
+  const url = (state.settings.proxyPrefix || '').trim() + 'https://google.serper.dev/search';
+  const pages = Math.max(1, Math.min(10, Math.ceil(o.depth / 10)));
+  const organic = [], seen = new Set();
+  let exhausted = false, pagesRead = 0;
+  const done = extra => Object.assign({organic, partial:false, partialNote:null, depthAsked:o.depth,
+    depthRead:organic.length, pagesRead, exhausted, precision:'coordinate'}, extra || {});
+  for (let page = 1; page <= pages; page++){
+    const body = {
+      q: keyword,
+      ll: '@' + p.lat.toFixed(7) + ',' + p.lng.toFixed(7) + ',14z',
+      gl: (region.gl || 'us').toLowerCase(),
+      hl: region.hl || 'en',
+      num: 10,
+      page: page
+    };
+    let res;
+    try{
+      res = await fetch(url, {method:'POST', headers:{'X-API-KEY':key, 'Content-Type':'application/json'}, body: JSON.stringify(body)});
+    }catch(e){
+      if (page === 1){ const err = new Error('the request was blocked by the browser \u2014 add a CORS proxy prefix on step four'); err.fatal = true; throw err; }
+      return done({partial:true, partialNote:'page ' + page + ' could not be fetched'});
+    }
+    if (res.status === 401 || res.status === 403){ const err = new Error('Serper rejected that key'); err.fatal = true; throw err; }
+    if (res.status === 429){ const err = new Error('Serper is rate-limited or out of credits'); err.fatal = true; throw err; }
+    if (!res.ok){
+      if (page === 1) throw new Error('HTTP ' + res.status);
+      return done({partial:true, partialNote:'page ' + page + ' failed (HTTP ' + res.status + ')'});
+    }
+    const data = await res.json();
+    if (o.meter) o.meter.credits += 1;
+    pagesRead++;
+    const rows = data.organic || [];
+    if (!rows.length){ exhausted = page > 1; break; }
+    rows.forEach(x => {
+      const link = x.link || '';
+      if (link && seen.has(link)) return;
+      if (link) seen.add(link);
+      /* Counted across pages rather than trusting the per-page position,
+         which restarts at 1 on every page. */
+      organic.push({title: x.title || '', domain: link ? cleanDomain(link) : null, url: link || null, position: organic.length + 1});
+    });
+    if (o.match && organic.some(o.match)) break;
+  }
+  return done();
+}
+
+/* Reads a keyword until the site is found or every allowed read has missed.
+   Resolves with the read that answered, plus found / reads / readsMax /
+   failedReads. Throws only when nothing at all could be read, or with
+   err.stopped when the run was stopped before the re-checks finished. */
+async function seoLiveCheck(keyword, p, region, opts){
+  const o = opts || {};
+  const prov = state.settings.provider || 'dataforseo';
+  if (prov === 'direct'){
+    const err = new Error('Relay mode can\u2019t track keyword ranks. Switch to DataForSEO or Serper on step 4 (GBP Locations), or set the tracker to read Search Console.');
+    err.fatal = true; throw err;
+  }
+  const depth = Math.max(10, Math.min(SEO_MAX_DEPTH, parseInt(o.depth, 10) || 100));
+  const maxReads = Math.max(1, o.maxReads || seoMaxReads());
+  const match = o.match || (() => false);
+  const hit = out => out.organic.some(match);
+  const stopped = () => !!(o.shouldStop && o.shouldStop());
+  const shapes = ['advanced', 'regular'];
+  let best = null, lastErr = null, reads = 0, failed = 0, tries = 0;
+
+  const readOnce = async (shape, d, where) => {
+    const out = prov === 'serper'
+      ? await seoSerperRead(keyword, p, region, {depth: Math.min(d, 100), match, meter: o.meter})
+      : await seoDfsRead(keyword, p, region, {endpoint: shape, depth: d, where, countryCode: o.countryCode, target: o.target, meter: o.meter});
+    /* A SERP with no organic results at all is a failed scrape, not an
+       answer. It is retried, never saved as a miss. */
+    if (!out.organic.length) throw new Error('Google returned no organic results on this read');
+    return out;
+  };
+  const keep = out => { if (!best || out.organic.length > best.organic.length) best = out; };
+  const answer = (out, extra) => Object.assign(out, {reads, readsMax: maxReads, failedReads: failed}, extra);
+
+  /* Each read that comes back counts towards maxReads; an attempt that errors
+     doesn't, but attempts are capped so a provider that is down can't loop. */
+  while (reads < maxReads && tries < maxReads * 2){
+    if (stopped()) break;
+    const shape = shapes[tries % 2];
+    tries++;
+    if (o.onRead){ try{ o.onRead(reads + 1, maxReads); }catch(e){} }
+    let out;
+    try{
+      out = await readOnce(shape, depth, 'coordinate');
+    }catch(err){
+      if (err && err.fatal) throw err;
+      lastErr = err; failed++;
+      await seoDelay(1200 + Math.round(Math.random() * 1200));
+      continue;
+    }
+    reads++;
+    if (hit(out)) return answer(out, {found: true});
+    keep(out);
+    /* A short, slightly uneven pause before the next read, so it lands on a
+       fresh request rather than a replay of the one that just missed. */
+    if (reads < maxReads) await seoDelay(1500 + Math.round(Math.random() * 1500));
+  }
+  if (stopped() && reads < maxReads){
+    const e = new Error('Stopped before every re-check ran');
+    e.stopped = true; throw e;
+  }
+
+  /* Optional: one deep look past the normal depth, DataForSEO only. */
+  if (best && prov === 'dataforseo' && state.settings.seoDeepChase && !best.exhausted && depth < SEO_MAX_DEPTH){
+    if (o.onRead){ try{ o.onRead(reads + 1, maxReads, 'deep'); }catch(e){} }
+    try{
+      const deep = await readOnce('advanced', SEO_MAX_DEPTH, 'coordinate');
+      if (hit(deep)) return answer(deep, {found: true, deep: true});
+      keep(deep);
+    }catch(err){ if (err && err.fatal) throw err; }
+  }
+
+  /* The pinned coordinate was refused on every attempt: ask for the country
+     once, so there is at least an answer, and label it as nationwide. */
+  if (!reads && prov === 'dataforseo' && o.countryCode){
+    try{
+      const out = await readOnce('advanced', depth, 'country');
+      reads = 1;
+      if (hit(out)) return answer(out, {found: true});
+      keep(out);
+    }catch(err){ if (err && err.fatal) throw err; lastErr = err; }
+  }
+
+  if (best) return answer(best, {found: false});
+  const msg = lastErr && lastErr.message ? lastErr.message : 'no response';
+  throw new Error('Google couldn\u2019t be read for this keyword right now (' + msg + '). ' +
+    'The last saved position is unchanged. Open the live search from this row to check it by hand, or scan again in a few minutes.');
+}
+
+/* Saves a Search Console answer onto a location. */
+function seoRecordGsc(loc, r, mode, live, liveErr){
+  loc.prevRank = loc.rank;
+  loc.rank = r.none ? 0 : Math.max(1, Math.round(r.position));
+  loc.matchedTitle = null;
+  loc.matchedDomain = r.none ? null : gscPropertyLabel(r.property);
+  loc.matchedBy = r.none ? null : 'site';
+  loc.precision = 'gsc';
+  loc.gsc = {
+    mode: mode, property: r.property, none: !!r.none,
+    position: r.none ? null : r.position,
+    impressions: r.none ? 0 : r.impressions, clicks: r.none ? 0 : r.clicks,
+    days: r.days, country: r.country || null,
+    liveReads: live ? live.reads : 0,
+    liveError: liveErr ? String(liveErr.message || liveErr) : null
+  };
+  loc.readCount = null; loc.topDomains = null; loc.partial = false;
+  loc.depthRead = null; loc.depthAsked = null; loc.exhausted = false;
+  loc.reads = live ? live.reads : null;
+  loc.readsMax = live ? live.readsMax : null;
+  loc.failedReads = live ? (live.failedReads || 0) : 0;
+  loc.checkedAt = Date.now();
+  loc.manual = false;
+  loc.error = null;
+  loc.history = loc.history || [];
+  loc.history.push({rank: loc.rank, checkedAt: loc.checkedAt, src: 'gsc'});
+  if (loc.history.length > 60) loc.history.shift();
+}
+
+/* Checks one keyword at one location and saves the answer onto it.
+   Resolves 'ok', 'error' (loc.error says why; the saved position is left as
+   it was) or 'stopped' (nothing was changed). */
+async function seoScanOne(client, kw, loc, hooks){
+  const h = hooks || {};
+  if (!loc.label || !loc.label.trim()){ loc.error = 'Add a location first.'; return 'error'; }
+  if (!client.website || !client.website.trim()){ loc.error = 'Add this client\'s website on the Dashboard tab first.'; return 'error'; }
+  const source = seoRankSource();
+  if (!seoSourceReady()){
+    loc.error = source === 'gsc'
+      ? 'Search Console isn\u2019t set up yet \u2014 add the OAuth client ID on GBP Locations, step 4.'
+      : 'Search provider isn\'t configured yet.';
+    return 'error';
+  }
   const region = REGIONS[loc.regionIdx || 0] || REGIONS[0];
   let g = (loc.lat != null && loc.lng != null) ? {lat:loc.lat, lng:loc.lng} : null;
   if (!g){
@@ -17229,7 +17715,7 @@ async function seoScanOne(client, kw, loc){
       catch(e){ if (attempt < 2) await seoDelay(1000); }
     }
   }
-  if (!g){ loc.error = 'Couldn\u2019t locate \u201c' + loc.label + '\u201d.'; return; }
+  if (!g){ loc.error = 'Couldn\u2019t locate \u201c' + loc.label + '\u201d.'; return 'error'; }
   loc.lat = g.lat; loc.lng = g.lng;
   const depth = state.settings.depth || 100;
   /* Written before the request rather than after it. This is the same
@@ -17245,11 +17731,48 @@ async function seoScanOne(client, kw, loc){
     surface:'web', radius:String(locRadius),
     area: !!(g && g.area), canonical: (g && g.canonical) || ''});
   try{
-    const data = await seoOrganicLadder(kw.text, {lat:g.lat, lng:g.lng}, region, {
-      depth,
-      match: r => !!seoIdentifyResult(r, client) || seoTitleMatchesResult(r, client),
-      onDepth: d => { if (d > seoDeepestDepth) seoDeepestDepth = d; }
-    });
+    /* ---- Search Console only: free, one lookup, nothing to re-check. */
+    if (source === 'gsc'){
+      const r = await gscKeywordPosition(client.website, kw.text, region);
+      if (h.meter) h.meter.gsc++;
+      seoRecordGsc(loc, r, 'gsc', null, null);
+      return 'ok';
+    }
+
+    /* ---- Live Google, re-read until found or every read has missed. */
+    let data = null, liveErr = null;
+    try{
+      data = await seoLiveCheck(kw.text, {lat:g.lat, lng:g.lng}, region, {
+        depth,
+        maxReads: seoMaxReads(),
+        target: seoStopTarget(client),
+        countryCode: seoCountryLocationCode(region),
+        match: r => !!seoIdentifyResult(r, client) || seoTitleMatchesResult(r, client),
+        onRead: h.onRead, shouldStop: h.shouldStop, meter: h.meter
+      });
+    }catch(err){
+      if (err && err.stopped) return 'stopped';
+      if (source !== 'hybrid' || (err && err.fatal) || !gscConfigured()) throw err;
+      liveErr = err;
+    }
+
+    /* ---- Double-check mode: before a miss (or a failed read) is saved,
+       Search Console is asked whether real searchers saw the site for this
+       exact search. If they did, that is the answer that gets saved, with
+       its source on it. */
+    let gscNote = null;
+    if (source === 'hybrid' && gscConfigured() && (!data || !data.found)){
+      try{
+        const r = await gscKeywordPosition(client.website, kw.text, region);
+        if (h.meter) h.meter.gsc++;
+        if (!r.none){ seoRecordGsc(loc, r, 'hybrid', data, liveErr); return 'ok'; }
+        gscNote = {none: true, property: r.property, days: r.days, country: r.country || null};
+      }catch(e){
+        gscNote = {error: (e && e.message) || 'Search Console could not be read'};
+      }
+    }
+    if (!data) throw liveErr;
+
     const organic = data.organic || [];
     let found = null, idx = -1, how = null;
     /* Domain first, across the whole set - a real match further down beats a
@@ -17264,9 +17787,17 @@ async function seoScanOne(client, kw, loc){
         if (seoTitleMatchesResult(organic[i], client)){ found = organic[i]; idx = i; how = 'name'; break; }
       }
     }
+    /* A position that was there last time is not taken away by a check that
+       didn't get to finish its re-reads. The row keeps the old number and
+       says why. */
+    if (!found && loc.rank > 0 && data.reads < data.readsMax){
+      loc.error = 'Only ' + data.reads + ' of ' + data.readsMax + ' reads came back and none of them found the site, ' +
+        'so the last position (#' + loc.rank + ') has been kept. Scan again to confirm.';
+      return 'error';
+    }
     loc.prevRank = loc.rank;
     // Prefer the provider's own authoritative organic position over our
-    // array index — see seoNormalizeDfsOrganic()/seoNormalizeSerperOrganic().
+    // array index — see seoNormalizeDfsOrganic().
     loc.rank = found ? (found.position != null ? found.position : idx + 1) : 0;
     loc.matchedTitle = found ? found.title : null;
     loc.matchedDomain = found ? found.domain : null;
@@ -17276,27 +17807,22 @@ async function seoScanOne(client, kw, loc){
     /* Which shape of request actually answered. 'country' means the pin was
        refused and this is a nationwide reading, not a local one. */
     loc.precision = data.precision || 'coordinate';
-    /* A bare \u201c100+\u201d is unarguable with. These two say what was actually
-       read, so a real absence can be told apart from a thin or wrong SERP
-       at a glance: three results read means the scrape failed, a hundred
-       results read with familiar competitors in them means the site really
-       isn't there. */
+    loc.reads = data.reads;
+    loc.readsMax = data.readsMax;
+    loc.failedReads = data.failedReads || 0;
+    loc.gsc = found ? null : gscNote;
     if (found){
       loc.readCount = null; loc.topDomains = null; loc.partial = false;
-      loc.depthRead = null; loc.exhausted = false;
+      loc.depthRead = null; loc.depthAsked = null; loc.exhausted = false;
     }
     else {
+      /* What was actually read, so a real absence can be told apart from a
+         thin or wrong SERP at a glance. */
       loc.readCount = organic.length;
       loc.topDomains = organic.slice(0, 3).map(r => r.domain).filter(Boolean);
-      /* A miss on an incomplete read is a weaker claim than a miss on a
-         full one, and the row says so rather than printing a confident
-         number over a SERP that was never fully fetched. */
       loc.partial = !!data.partial;
-      /* How far the chase actually got, and whether it stopped because it
-         ran out of Google rather than out of patience. Between them these
-         let every screen word a miss as the measurement it is — "read to
-         300, not there" — instead of the old catch-all badge. */
       loc.depthRead = data.depthRead != null ? data.depthRead : organic.length;
+      loc.depthAsked = data.depthAsked || null;
       loc.exhausted = !!data.exhausted;
     }
     loc.checkedAt = Date.now();
@@ -17305,8 +17831,10 @@ async function seoScanOne(client, kw, loc){
     loc.history = loc.history || [];
     loc.history.push({rank: loc.rank, checkedAt: loc.checkedAt});
     if (loc.history.length > 60) loc.history.shift();
+    return 'ok';
   }catch(err){
     loc.error = (err && err.message) ? err.message : 'Search failed';
+    return 'error';
   }
 }
 
@@ -17336,10 +17864,10 @@ function seoProgressUpdate(widgets, done, total, note){
   const tail = note ? ' \u00b7 ' + note : '';
   widgets.forEach(w => { w.fill.style.width = pct; w.label.textContent = 'Scanning ' + done + ' / ' + total + '\u2026' + tail; });
 }
-/* A deep chase can take a while, and a bar that just sits there looks stuck.
-   The deepest rung any keyword in the run has reached is reported instead, so
-   a long pause reads as work rather than a hang. */
-let seoDeepestDepth = 0;
+/* Re-checking misses takes a while, and a bar that just sits there looks
+   stuck. The number of extra reads so far is shown instead, so a long pause
+   reads as work rather than a hang. */
+let seoRecheckReads = 0;
 function seoProgressHide(widgets){
   widgets.forEach(w => { w.bar.style.display = 'none'; });
 }
@@ -17347,15 +17875,31 @@ function seoProgressHide(widgets){
 async function seoScanAndRender(c, pairs){
   pairs = pairs.filter(p => p.loc.label && p.loc.label.trim());
   if (!pairs.length){ toast('Add at least one keyword with a location first', 'err'); return; }
-  if (!c.website || !c.website.trim()){ toast('Add this client’s website on the Dashboard tab first — rank checks need it.', 'err'); return; }
-  if (!providerReady()){ toast('Configure a search provider first: GBP Locations → step 4', 'err'); return; }
+  if (!c.website || !c.website.trim()){ toast('Add this client\u2019s website on the Dashboard tab first \u2014 rank checks need it.', 'err'); return; }
+  if (!seoSourceReady()){ toast(seoSourceMissingMsg(), 'err'); return; }
   if (seoScanRunning){ toast('A scan is already running for this client', 'err'); return; }
   seoScanRunning = true;
   seoScanStop = false;
+  const source = seoRankSource();
+  /* Search Console needs a live sign-in. Asking here, while the click that
+     started the scan still counts, is what lets Google's window open. */
+  if (source !== 'live' && gscConfigured() && !gscConnected()){
+    try{ await gscSignIn(); }
+    catch(err){
+      if (source === 'gsc'){
+        seoScanRunning = false;
+        toast((err && err.message) || 'Search Console sign-in failed', 'err');
+        return;
+      }
+      toast('Search Console isn\u2019t connected, so misses won\u2019t get a second opinion this run. ' + ((err && err.message) || ''), 'err');
+    }
+  }
   const widgets = seoProgressWidgets();
   seoProgressShow(widgets, pairs.length);
-  let done = 0, ranking = 0, missing = 0, failed = 0;
-  seoDeepestDepth = 0;
+  let done = 0, ranking = 0, missing = 0, failed = 0, skipped = 0;
+  seoRecheckReads = 0;
+  const meter = {usd: 0, credits: 0, gsc: 0};
+  const maxReads = source === 'gsc' ? 1 : seoMaxReads();
 
   /* The scan-in-progress screen. One keyword or two hundred, it says what
      is being checked right now, how far through it is, and to wait. */
@@ -17364,23 +17908,32 @@ async function seoScanAndRender(c, pairs){
   const kwCount = new Set(pairs.map(p => p.k.id)).size;
   const locCount = new Set(pairs.map(p => (p.loc.label || '').trim().toLowerCase())).size;
   const inflight = new Map();
+  const reading = new Map();
+  const baseNote = source === 'gsc'
+    ? 'Reading Search Console \u2014 no provider credits are used. Each result is saved the moment it comes back.'
+    : 'Sit tight \u2014 each result is saved the moment it comes back. Keep this tab open until it finishes.';
   const ov = ScanOverlay.open({
     eyebrow: single ? 'Keyword scan in progress' : 'Scan in progress',
-    title: single ? 'Scanning “' + first.k.text + '”' : 'Scanning ' + pairs.length + ' keyword locations',
+    title: single ? 'Scanning \u201c' + first.k.text + '\u201d' : 'Scanning ' + pairs.length + ' keyword locations',
     sub: single
-      ? 'in ' + first.loc.label.trim() + ' · ' + (c.name || 'this client')
-      : (c.name || 'This client') + ' · ' + kwCount + ' keyword' + (kwCount === 1 ? '' : 's') +
+      ? 'in ' + first.loc.label.trim() + ' \u00b7 ' + (c.name || 'this client')
+      : (c.name || 'This client') + ' \u00b7 ' + kwCount + ' keyword' + (kwCount === 1 ? '' : 's') +
         ' across ' + locCount + ' location' + (locCount === 1 ? '' : 's'),
     total: pairs.length, unit: 'checked',
-    note: 'Sit tight — each result is saved the moment it comes back. Keep this tab open until it finishes.',
+    note: baseNote,
     onStop: () => { seoScanStop = true; }
   });
   const paintOverlay = () => ScanOverlay.update(ov, {
     done, total: pairs.length,
-    now: Array.from(inflight.values()).map(p => ({main: p.k.text, sub: p.loc.label.trim()})),
-    note: seoDeepestDepth > SEO_DEPTH_LADDER[0]
-      ? 'Digging deeper — now reading as far as result ' + seoDeepestDepth + ' for the ones not found yet.'
-      : 'Sit tight — each result is saved the moment it comes back. Keep this tab open until it finishes.',
+    now: Array.from(inflight.entries()).map(([i, p]) => {
+      const r = reading.get(i);
+      const tail = !r ? '' : (r.kind === 'deep' ? ' \u00b7 one deep look' : (r.n > 1 ? ' \u00b7 re-check ' + r.n + ' of ' + r.max : ''));
+      return {main: p.k.text, sub: p.loc.label.trim() + tail};
+    }),
+    note: seoRecheckReads
+      ? 'Re-checking anything not found \u2014 ' + seoRecheckReads + ' extra read' + (seoRecheckReads === 1 ? '' : 's') +
+        ' so far. A keyword is only saved as not found once ' + maxReads + ' reads have missed it.'
+      : baseNote,
     stats: single ? [] : [
       {label: 'Ranking', value: ranking, tone: 'good'},
       {label: 'Not found', value: missing},
@@ -17388,19 +17941,32 @@ async function seoScanAndRender(c, pairs){
     ]
   });
   paintOverlay();
+  let lastStatus = null;
   try{
     await runPool(pairs.length, state.settings.concurrency || 6, () => seoScanStop, async (i) => {
       inflight.set(i, pairs[i]);
       paintOverlay();
-      try{ await seoScanOne(c, pairs[i].k, pairs[i].loc); }
-      finally{ inflight.delete(i); }
+      let status = 'ok';
+      try{
+        status = await seoScanOne(c, pairs[i].k, pairs[i].loc, {
+          meter,
+          shouldStop: () => seoScanStop,
+          onRead: (n, max, kind) => {
+            if (n > 1 || kind === 'deep') seoRecheckReads++;
+            reading.set(i, {n, max, kind: kind || null});
+            paintOverlay();
+          }
+        });
+      }
+      finally{ inflight.delete(i); reading.delete(i); }
+      lastStatus = status;
       const L = pairs[i].loc;
-      if (L.error) failed++;
+      if (status === 'stopped') skipped++;
+      else if (L.error) failed++;
       else if (L.rank > 0) ranking++;
       else if (L.rank === 0) missing++;
       done++;
-      seoProgressUpdate(widgets, done, pairs.length,
-        seoDeepestDepth > SEO_DEPTH_LADDER[0] ? ('digging to ' + seoDeepestDepth) : '');
+      seoProgressUpdate(widgets, done, pairs.length, seoRecheckReads ? 're-checking misses' : '');
       paintOverlay();
       if (done % 3 === 0){ save(); renderSeoKeywords(); }
     });
@@ -17408,19 +17974,33 @@ async function seoScanAndRender(c, pairs){
     seoScanRunning = false;
     seoProgressHide(widgets);
     const stopped = seoScanStop;
+    const spent = seoMeterText(meter);
     let title, sub, st;
     if (single && done === 1){
       const L = first.loc;
-      st = L.error ? 'error' : 'done';
-      title = L.error ? 'Couldn’t read this one'
-            : L.rank > 0 ? '“' + first.k.text + '” ranks #' + L.rank
-            : '“' + first.k.text + '” isn’t in the results';
-      sub = L.error ? L.error : 'in ' + L.label.trim() + ' · saved';
+      if (lastStatus === 'stopped'){
+        st = 'stopped';
+        title = 'Scan stopped';
+        sub = 'Nothing was saved for this keyword \u2014 it was stopped before every re-check ran.';
+      } else {
+        st = L.error ? 'error' : 'done';
+        title = L.error ? 'Couldn\u2019t read this one'
+              : L.rank > 0 ? '\u201c' + first.k.text + '\u201d ranks #' + L.rank
+              : '\u201c' + first.k.text + '\u201d isn\u2019t in the results';
+        let how = '';
+        if (!L.error && L.precision === 'gsc') how = ' \u00b7 Search Console average, last ' + ((L.gsc && L.gsc.days) || 7) + ' days';
+        else if (!L.error && L.rank > 0 && L.reads > 1) how = ' \u00b7 found on read ' + L.reads + ' of ' + L.readsMax;
+        else if (!L.error && L.rank === 0 && L.reads) how = ' \u00b7 missed in ' + L.reads + ' separate read' + (L.reads === 1 ? '' : 's');
+        sub = L.error ? L.error : 'in ' + L.label.trim() + how + ' \u00b7 saved';
+      }
+      if (spent) sub += ' \u00b7 ' + spent;
     } else {
       st = stopped ? 'stopped' : (failed && failed === done ? 'error' : 'done');
       title = stopped ? 'Scan stopped' : 'Scan complete';
-      sub = done + ' of ' + pairs.length + ' checked · ' + ranking + ' ranking · ' + missing + ' not found' +
-            (failed ? ' · ' + failed + ' error' + (failed === 1 ? '' : 's') : '');
+      sub = done + ' of ' + pairs.length + ' checked \u00b7 ' + ranking + ' ranking \u00b7 ' + missing + ' not found' +
+            (failed ? ' \u00b7 ' + failed + ' error' + (failed === 1 ? '' : 's') : '') +
+            (skipped ? ' \u00b7 ' + skipped + ' left as they were' : '') +
+            (spent ? ' \u00b7 ' + spent : '');
     }
     ScanOverlay.finish(ov, {state: st, title, sub, stats: single ? [] : [
       {label: 'Ranking', value: ranking, tone: 'good'},
@@ -17429,7 +18009,7 @@ async function seoScanAndRender(c, pairs){
     ]});
   }
   save(); renderSeoKeywords();
-  toast(seoScanStop ? 'Scan stopped' : 'Scan complete — results saved');
+  toast(seoScanStop ? 'Scan stopped' : 'Scan complete \u2014 results saved');
   /* A finished scan never touches a published link by itself unless it was
      asked to. The new positions are saved either way - what's in question is
      only what the client sees. */
@@ -17926,11 +18506,18 @@ function seoIsScheduleDue(schedule, now){
   return true;
 }
 function seoScheduleDue(c, now){ return seoIsScheduleDue(c.autoScan, now); }
-async function seoAutoScanClient(c){
+async function seoAutoScanClient(c, meter){
   const pairs = seoAutoScanEligiblePairs(c);
-  if (!pairs.length || !c.website || !c.website.trim() || !providerReady()) return 0;
+  if (!pairs.length || !c.website || !c.website.trim() || !seoSourceReady()) return 0;
+  /* An unattended run can't open Google's sign-in window, so if Search
+     Console has lapsed the Search Console-only mode leaves every row as it
+     was and says so, rather than overwriting positions with errors. */
+  if (seoRankSource() === 'gsc' && !gscConnected()){
+    toast('Auto-scan for ' + c.name + ' skipped \u2014 Search Console needs signing in again (GBP Locations, step 4).', 'err');
+    return 0;
+  }
   await runPool(pairs.length, state.settings.concurrency || 6, () => false, async (i) => {
-    await seoScanOne(c, pairs[i].k, pairs[i].loc);
+    await seoScanOne(c, pairs[i].k, pairs[i].loc, {meter});
   });
   save();
   const active = activeSeoClient();
@@ -17945,8 +18532,10 @@ async function seoRunDueSchedules(){
     if (seoScheduleDue(c, now)){
       c.autoScan.lastRun = Date.now();
       save();
-      const n = await seoAutoScanClient(c);
-      if (n) toast('Auto-scanned ' + c.name + ' \u2014 ' + n + ' location' + (n === 1 ? '' : 's') + ' checked');
+      const meter = {usd: 0, credits: 0, gsc: 0};
+      const n = await seoAutoScanClient(c, meter);
+      const spent = seoMeterText(meter);
+      if (n) toast('Auto-scanned ' + c.name + ' \u2014 ' + n + ' location' + (n === 1 ? '' : 's') + ' checked' + (spent ? ' \u00b7 ' + spent : ''));
       const active = activeSeoClient();
       if (active && active.id === c.id) seoRenderAutoScanStatus(c);
     }
@@ -18291,9 +18880,30 @@ function seoLocGroupRow(c, k, loc){
       via = ' \u00b7 <b title="Nothing on this client\u2019s own domain was in the results, but this page carries their name. Check it is actually theirs before reporting this position.">matched by page title on ' +
         esc(loc.matchedDomain || 'another domain') + ' \u2014 worth confirming</b>';
     }
+    /* How many reads it took, and what Search Console said. */
+    let reads = '';
+    if (loc.precision === 'gsc' && loc.gsc){
+      const gs = loc.gsc;
+      const where = gs.country ? ' in ' + esc(gs.country) : '';
+      if (!gs.none && gs.position != null){
+        reads = ' \u00b7 <b title="Google Search Console\u2019s own record of where this site appeared for this exact search. It is an average across searchers' +
+          where + ' over the window shown, not a reading pinned to this location.">Search Console avg #' + esc(String(gs.position)) +
+          ', ' + esc(String(gs.impressions)) + ' impression' + (gs.impressions === 1 ? '' : 's') + ', last ' + esc(String(gs.days)) + ' days</b>';
+        if (gs.mode === 'hybrid' && gs.liveReads) reads += ' \u2014 live Google missed it in ' + gs.liveReads + ' read' + (gs.liveReads === 1 ? '' : 's');
+        else if (gs.mode === 'hybrid' && gs.liveError) reads += ' \u2014 the live check failed, so this is Search Console\u2019s figure';
+      } else {
+        reads = ' \u00b7 Search Console: no impressions' + where + ' in the last ' + esc(String(gs.days || 28)) + ' days';
+      }
+    } else if (loc.reads){
+      if (loc.rank > 0 && loc.reads > 1) reads = ' \u00b7 found on read ' + loc.reads + ' of ' + (loc.readsMax || loc.reads);
+      else if (loc.rank === 0) reads = ' \u00b7 missed in ' + loc.reads + ' separate read' + (loc.reads === 1 ? '' : 's');
+      if (loc.failedReads) reads += ' (' + loc.failedReads + ' more errored and ' + (loc.failedReads === 1 ? 'was' : 'were') + ' retried)';
+      if (loc.rank === 0 && loc.gsc && loc.gsc.none) reads += ' \u00b7 Search Console shows no impressions either';
+      else if (loc.rank === 0 && loc.gsc && loc.gsc.error) reads += ' \u00b7 Search Console couldn\u2019t double-check: ' + esc(loc.gsc.error);
+    }
     statusEl.innerHTML = esc(fmtWhen(loc.checkedAt)) +
       (loc.precision === 'country' ? ' \u00b7 <b title="The pinned search was refused, so this position was read for the whole country instead of from this city.">country-wide reading</b>' : '') +
-      via + miss +
+      via + miss + reads +
       ' \u00b7 <a href="' + esc(loc.sourceUrl) + '" target="_blank" rel="noopener">view the search</a>';
     const copyLinkBtn = document.createElement('button');
     copyLinkBtn.type = 'button';
@@ -18577,6 +19187,7 @@ function seoResetLocMeasurement(loc){
     lat:null, lng:null, rank:null, prevRank:null, matchedTitle:null, matchedDomain:null, sourceUrl:null,
     checkedAt:null, manual:false, error:null, precision:null, matchedBy:null, readCount:null,
     topDomains:null, partial:false, history:[], depthRead:null, exhausted:false,
+    reads:null, readsMax:null, failedReads:0, gsc:null, depthAsked:null,
     mode:null, area:false, radius:null, bounds:null, canonical:'', osm:null
   });
 }
@@ -18590,7 +19201,8 @@ function seoMergeLocInto(keep, drop){
   });
   if ((drop.checkedAt || 0) > (keep.checkedAt || 0)){
     ['rank','prevRank','matchedTitle','matchedDomain','sourceUrl','checkedAt','manual','error','precision',
-     'matchedBy','readCount','topDomains','partial','depthRead','exhausted'].forEach(f => { keep[f] = drop[f]; });
+     'matchedBy','readCount','topDomains','partial','depthRead','exhausted',
+     'reads','readsMax','failedReads','gsc','depthAsked'].forEach(f => { keep[f] = drop[f]; });
   }
   if (keep.lat == null && drop.lat != null){ keep.lat = drop.lat; keep.lng = drop.lng; }
   keep.history = Array.from(hist.values()).sort((x, y) => (x.checkedAt || 0) - (y.checkedAt || 0)).slice(-60);
@@ -19818,7 +20430,7 @@ function renderSeoAll(){
   seoLoadDashboard();
   renderSeoStats(c);
   renderSeoKeywords();
-  $('seoProviderHint').style.display = providerReady() ? 'none' : 'block';
+  $('seoProviderHint').style.display = seoSourceReady() ? 'none' : 'block';
 }
 
 /* ==========================================================================
@@ -21117,8 +21729,8 @@ claudeRegister('seo.scan', async cmd => {
   const c = claudeSeoClient(cmd);
   if (!c.website || !c.website.trim())
     throw new Error(c.name + ' has no website set, and a rank check needs one.');
-  if (!providerReady())
-    throw new Error('No search provider is configured — set one up in GBP Locations, step 4.');
+  if (!seoSourceReady())
+    throw new Error(seoSourceMissingMsg());
   const pairs = [];
   if (cmd.keyword){
     const k = claudeSeoKeyword(c, cmd);

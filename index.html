@@ -5100,6 +5100,11 @@ body.so-locked{overflow:hidden;}
                     <select id="historySelect" style="width:auto;min-width:190px;font-size:12px;padding:7px 30px 7px 11px"></select>
                     <button class="btn btn-sm" id="expandMapBtn">Expand map</button>
                     <button class="btn btn-sm" id="pdfBtn">Download PDF</button>
+                    <!-- Deliberately inside .tools, which the embed hides: what
+                         the public link opens on is the agency's decision, not
+                         something a client should be able to change. -->
+                    <button class="btn btn-sm" id="pinViewBtn" type="button" title="Open the shared link at exactly this zoom and position">Set opening view</button>
+                    <button class="btn btn-sm" id="unpinViewBtn" type="button" hidden title="Go back to framing the points automatically">Back to auto-fit</button>
                   </div>
                   <!-- Its own row, not part of .tools, because the embed hides
                        the tools but a client looking at the map still has every
@@ -9534,7 +9539,7 @@ try{ wireRefresh(); }catch(err){}
    does not match the build you uploaded, the host is serving an old file
    and no amount of re-publishing will change what the widget shows.
    ========================================================================== */
-const EDGE_BUILD = '2026-09-29b · hand-placed points, free zoom, save image';
+const EDGE_BUILD = '2026-09-29c · hand-placed points, free zoom, save image, pinned opening view';
 window.EDGE_BUILD = EDGE_BUILD;
 try{ console.log('%cEDGE SEO Reporter', 'font-weight:700', '— build ' + EDGE_BUILD); }catch(e){}
 
@@ -9562,6 +9567,11 @@ function blankGbp(name){
        hand on the map. A profile saved before this existed has neither
        field and is migrated to 'grid', which is exactly what it was. */
     areaMode:'grid', customPoints:[], pointRadiusKm:1.5, pointTarget:12,
+    /* Where the public link opens. null means "work it out from the points",
+       which is right until someone decides otherwise — a person who has
+       pulled the map back to show the whole province has made a judgement
+       the arithmetic cannot make for them, and it should survive. */
+    embedView:null,
     /* Derived from the spacing rather than fixed at 14z, so a new grid cannot
        be born with holes in it. */
     zoom:'auto',
@@ -9605,6 +9615,13 @@ function migrateClient(c){
         .map(p => ({id: p.id || uid(), lat: Number(p.lat), lng: Number(p.lng)}));
       if (!(Number(g.pointRadiusKm) > 0)) g.pointRadiusKm = 1.5;
       if (!(Number(g.pointTarget) > 0)) g.pointTarget = Math.max(1, g.customPoints.length || 12);
+      /* A pinned opening view, if this profile has one. Anything that will
+         not parse as a real coordinate and zoom is dropped rather than
+         carried forward, which puts the link back on auto-fit. */
+      if (g.embedView && !(isFinite(Number(g.embedView.lat)) && isFinite(Number(g.embedView.lng)) &&
+          isFinite(Number(g.embedView.zoom)))) g.embedView = null;
+      if (g.embedView) g.embedView = {lat:Number(g.embedView.lat), lng:Number(g.embedView.lng),
+                                      zoom:Number(g.embedView.zoom)};
       g.keywords.forEach(k => { if (!Array.isArray(k.scans)) k.scans = []; });
     });
   }
@@ -11679,7 +11696,7 @@ function loadGbpIntoForm(){
   $('surface').value = g ? g.surface : 'local';
   $('tRegion').value = g ? g.regionIdx : 0;
   $('zoomSel').value = g ? String(g.zoom || 'auto') : 'auto';
-  renderMeter(); renderKeywords(); renderHistory(); renderGridInfo(); refreshStepState();
+  renderMeter(); renderKeywords(); renderHistory(); renderGridInfo(); renderEmbedViewBtns(); refreshStepState();
   const kw = activeKeyword();
   drawScan(kw && kw.scans.length ? kw.scans[kw.scans.length - 1] : null);
   recenterMap();
@@ -14309,10 +14326,20 @@ function recenterMap(){
   const planned = drawPlannedArea();
   const pointsMode = !!(g && g.areaMode === 'points');
 
+  /* In an embed with a pinned opening view, the framing is already decided
+     and embedFit() is about to apply it. Fitting the points here first
+     would show the client the fitted view for a frame and then jump — so
+     the markers are drawn and the framing is left alone. In the tool itself
+     this never applies: whoever is working on the profile needs the map to
+     follow the points, whatever the public link is pinned to. */
+  const pinnedEmbed = document.body.classList.contains('embed-mode') &&
+                      g && g.embedView && isFinite(g.embedView.lat);
+
   /* Scan results win: once there are points on the ground, they are what
      the map is for. Then the plan, which is the next most specific thing
      there is. Otherwise an area frames itself and a point centres. */
-  if (scan && scan.points.length){ fitToPoints(map, scan.points); }
+  if (pinnedEmbed){ /* embedFit() owns the view */ }
+  else if (scan && scan.points.length){ fitToPoints(map, scan.points); }
   else if (planned){ try{ map.fitBounds(planned, {padding:[46,46], maxZoom:15}); }catch(e){} }
   else if (!framedArea && centre && centre.lat != null){ map.setView([centre.lat, centre.lng], 12); }
 
@@ -19159,6 +19186,13 @@ async function publishGbpView(g){
       gbpName: g.name || g.bizName || 'Location',
       activeKeywordId: g.activeKeywordId || keywordsData[0].id,
       keywords: keywordsData,
+      /* Where the link should open. null leaves the embed to frame the
+         points itself, which is the default and the right answer most of
+         the time; a pinned view overrides it because someone looked at the
+         map and decided this is the shot the client should land on. */
+      view: (g.embedView && isFinite(g.embedView.lat)) ? {
+        lat: Number(g.embedView.lat), lng: Number(g.embedView.lng), zoom: Number(g.embedView.zoom)
+      } : null,
       /* The tracked business itself — name, rating and Google's pin — so
          the embedded map can draw it. JSON round-trip drops anything
          undefined, which Firestore would refuse. */
@@ -19185,10 +19219,69 @@ async function publishAndShare(){
   const url = embedUrlFor(id);
   try{ await navigator.clipboard.writeText(url); }catch(e){ /* clipboard not available — link is still shown below */ }
   const exactPin = !!(g.listing && !g.listing.stale && g.listing.lat != null);
+  const pinned = !!(g.embedView && isFinite(g.embedView.lat));
   ask('Public embed link (copied)', 'This link updates automatically the next time you expand this profile\u2019s map. Every keyword with a scan is included, so the client can switch between them, and the business itself is pinned on the map with its name and rating. ' +
+    (pinned
+      ? 'It opens at the view you pinned (zoom ' + g.embedView.zoom + '); press Back to auto-fit to let it frame the points instead. '
+      : 'It opens framed on the scanned points \u2014 pan and zoom to the shot you want, then press Set opening view to make the link start there. ') +
     (exactPin ? '' : 'Tip: confirm the listing on step one so the pin sits on Google\u2019s exact spot \u2014 until then it marks the grid centre. ') +
     'Paste it into AgencyAnalytics\u2019 Embed widget, in the URL or iFrame field.', '', url);
 }
+
+/* ==========================================================================
+   WHAT THE SHARED LINK OPENS ON
+   ==========================================================================
+   By default the embed frames the scanned points, which is the right answer
+   when nobody has said otherwise. But a person who pulls the map back until
+   Grande Prairie and Calgary are both on screen with the province around
+   them has made a judgement about what the client should see first, and
+   fitting to the points throws that away on every reload.
+
+   So the current view can be pinned to the profile and published with it.
+   The button lives in the tools row, which the embed hides — what a public
+   link opens on belongs to whoever owns the report, not to whoever opens
+   it. "Back to auto-fit" clears it and the framing returns to the points.
+   ========================================================================== */
+function renderEmbedViewBtns(){
+  const pin = $('pinViewBtn'), un = $('unpinViewBtn');
+  if (!pin || !un) return;
+  const g = activeGbp();
+  const set = !!(g && g.embedView && isFinite(g.embedView.lat));
+  pin.textContent = set ? 'Update opening view' : 'Set opening view';
+  pin.title = set
+    ? 'The shared link opens at a view you pinned. Press to replace it with the map as it is now.'
+    : 'Open the shared link at exactly this zoom and position, instead of fitting to the points.';
+  un.hidden = !set;
+}
+async function pinEmbedView(){
+  const g = activeGbp();
+  if (!g){ toast('Pick a profile first', 'err'); return; }
+  let c, z;
+  try{ c = map.getCenter(); z = map.getZoom(); }catch(e){ return; }
+  if (!c || !isFinite(c.lat)){ toast('The map has no view to pin yet', 'err'); return; }
+  g.embedView = {lat: Number(c.lat.toFixed(6)), lng: Number(c.lng.toFixed(6)), zoom: z};
+  save(); renderEmbedViewBtns();
+  /* Saved locally whatever happens; re-published so the live link changes
+     now rather than the next time somebody expands the map. */
+  const id = g.keywords.some(k => k.scans.length) ? await publishGbpView(g) : null;
+  toast(id
+    ? 'The shared link now opens here — zoom ' + z + '. Reload the widget to see it.'
+    : 'Opening view saved. It goes live with the link once this profile has a scan.', 'ok');
+}
+async function unpinEmbedView(){
+  const g = activeGbp();
+  if (!g || !g.embedView) return;
+  g.embedView = null;
+  save(); renderEmbedViewBtns();
+  const id = g.keywords.some(k => k.scans.length) ? await publishGbpView(g) : null;
+  toast(id
+    ? 'Back to auto-fit — the link will frame the scanned points again.'
+    : 'Back to auto-fit.', 'ok');
+}
+const pinViewBtnEl = $('pinViewBtn');
+if (pinViewBtnEl) pinViewBtnEl.addEventListener('click', pinEmbedView);
+const unpinViewBtnEl = $('unpinViewBtn');
+if (unpinViewBtnEl) unpinViewBtnEl.addEventListener('click', unpinEmbedView);
 
 const expandMapBtnEl = $('expandMapBtn');
 if (expandMapBtnEl) expandMapBtnEl.addEventListener('click', () => {
@@ -19245,6 +19338,12 @@ function renderEmbedSnapshot(data){
     customPoints: (scan && scan.grid && scan.grid.custom)
       ? scan.points.map(p => ({id: uid(), lat: p.lat, lng: p.lng}))
       : [],
+    /* The pinned opening view, when the agency set one. Links published
+       before this existed simply have no `view` and keep auto-fitting. */
+    embedView: (data && data.view && isFinite(Number(data.view.lat)) &&
+                isFinite(Number(data.view.lng)) && isFinite(Number(data.view.zoom)))
+      ? {lat:Number(data.view.lat), lng:Number(data.view.lng), zoom:Number(data.view.zoom)}
+      : null,
     keywords: keywords, activeKeywordId: activeId
   });
   /* What the tool published about the business (links made before this
@@ -19304,6 +19403,18 @@ function renderEmbedKeywordSwitch(){
    widget. Everything a person would actually want to look at is reachable. */
 function embedFit(){
   try{ map.invalidateSize(); }catch(e){}
+  /* A pinned opening view wins outright. Someone pulled the map to this
+     zoom and position on purpose — usually to show where these towns sit in
+     the province, which no amount of fitting to the points will produce —
+     and second-guessing that would undo the decision every time the widget
+     reloaded. It stays put when the client switches keyword too, so the
+     framing a report was built around does not shift underneath it. */
+  const gp = activeGbp();
+  if (gp && gp.embedView && isFinite(gp.embedView.lat)){
+    map.setMinZoom(2);
+    try{ map.setView([gp.embedView.lat, gp.embedView.lng], gp.embedView.zoom); }catch(e){}
+    return;
+  }
   const kw = activeKeyword();
   const scan = kw && kw.scans.length ? kw.scans[kw.scans.length - 1] : null;
   const pts = scan && scan.points ? scan.points.filter(p => isFinite(p.lat) && isFinite(p.lng)) : [];

@@ -1680,17 +1680,16 @@ body.report-mode .kwr-root{display:block; font-family:var(--ui); color:var(--ink
 .kwr-out-row .g-inline input{font-family:var(--mono); font-size:11.5px;}
 @media (max-width:620px){ .kwr-opt-list{grid-template-columns:1fr;} }
 
-/* ---- publish-all dialog (account level) ----
-   Reuses the share dialog's list box; these only style the rows inside it. */
-.seo-puball-row{display:flex; align-items:center; gap:10px; font-size:12.5px; color:var(--ink-2); font-weight:500; min-height:18px;}
-.seo-puball-row .seo-puball-name{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
-.seo-puball-row .kwr-loc-n{flex:none; text-align:right;}
-.seo-puball-row.skip{color:var(--ink-3);}
-.seo-puball-row.busy .kwr-loc-n{color:var(--brand-deep);}
-.seo-puball-row.ok .kwr-loc-n{color:var(--good);}
-.seo-puball-row.err .kwr-loc-n{color:var(--alert);}
-.seo-puball-empty{font-size:12.5px; color:var(--ink-3);}
-.seo-puball-opt{grid-template-columns:1fr;}
+/* ---- share all clients (account level) ----
+   Built from the Share dialog's own parts; these only add the read-only
+   title, the earlier-versions row and a scroll limit for short screens. */
+.seo-puball-modal{max-height:calc(100vh - 40px); overflow-y:auto;}
+.seo-puball-modal input[readonly]{color:var(--ink-2); cursor:default;}
+.seo-puball-modal input[readonly]:focus{border-color:var(--line); background:var(--card-2); box-shadow:none;}
+.seo-puball-versions{border-top:1px solid var(--line); padding-top:15px; margin-top:4px;}
+.seo-puball-vrow{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.5fr) auto; gap:9px; align-items:center;}
+.seo-puball-vrow select{min-width:0;}
+@media (max-width:620px){ .seo-puball-vrow{grid-template-columns:1fr;} }
 
 /* ==========================================================================
    ═══ PREMIUM LAYER ═══
@@ -5434,7 +5433,7 @@ body.so-locked{overflow:hidden;}
         <input id="seoImportFile" type="file" accept="application/json" style="display:none"/>
       </div>
       <div class="mini-row" style="margin-top:6px">
-        <button class="mini-btn" id="seoPublishAllBtn" type="button" title="Refresh the shared link of every client at once">Publish all client links</button>
+        <button class="mini-btn" id="seoPublishAllBtn" type="button" title="Publish every client’s keyword list at once, or go back to an earlier version">Share all clients</button>
       </div>
       <div class="mini-row" style="margin-top:6px">
         <button class="mini-btn claude-btn" data-claude-sync type="button">Keep a copy for Claude</button>
@@ -5989,25 +5988,60 @@ custom home builder | Red Deer, AB; Calgary, AB"></textarea>
   </div>
 </div>
 
-<!-- ==================== SEO PUBLISH ALL CLIENT LINKS (ACCOUNT LEVEL) ==================== -->
+<!-- ==================== SEO SHARE ALL CLIENTS (ACCOUNT LEVEL) ==================== -->
 <div class="backdrop" id="seoPublishAllBackdrop">
-  <div class="modal modal-wide">
-    <h3>Publish every client link</h3>
-    <p>Refreshes the shared link of every SEO client in one pass — the clients you have now and any you add later. Each link keeps its address, so an embed already in a report shows the new positions without being touched. Every client goes out with the settings saved in its own Share dialog.</p>
+  <div class="modal modal-wide seo-puball-modal">
+    <h3>Share all client keyword lists</h3>
+    <p>Publishes a read-only copy of every client’s list in one pass. Each report keeps its own title and the locations ticked in that client’s own Share dialog; the checklist below is applied to all of them, including clients you add later. Links never change, so embeds already in your reports update in place.</p>
     <div class="f">
-      <span class="lbl">Clients</span>
-      <div class="kwr-loc-picker" id="seoPublishAllList"></div>
+      <label for="seoAllTitle">Report title</label>
+      <input id="seoAllTitle" type="text" value="All clients" readonly tabindex="-1"/>
+      <div class="hint" id="seoAllTitleHint">Each report keeps its own title.</div>
     </div>
     <div class="f">
-      <div class="kwr-opt-list seo-puball-opt">
-        <label><input type="checkbox" id="seoPublishAllNew" checked/> Also create a link for clients that haven’t been shared yet</label>
+      <label for="seoAllIntro">Intro line <span class="opt">optional</span></label>
+      <input id="seoAllIntro" type="text" placeholder="Leave blank to keep each client’s own intro line" autocomplete="off"/>
+    </div>
+    <div class="f">
+      <label for="seoAllVersion">Which scan these links show</label>
+      <select id="seoAllVersion">
+        <option value="latest">Most recent scan — moves forward each time you publish</option>
+        <option value="keep">Keep each client’s own choice — pinned links stay pinned</option>
+      </select>
+      <div class="hint" id="seoAllVersionHint"></div>
+    </div>
+    <div class="f">
+      <span class="lbl">What to show</span>
+      <div class="kwr-opt-list">
+        <label><input type="checkbox" id="seoAllShowDates" checked/> Date each rank was checked</label>
+        <label><input type="checkbox" id="seoAllShowLinks" checked/> Link to the live search</label>
+        <label><input type="checkbox" id="seoAllShowDelta" checked/> Change since the last scan</label>
+        <label><input type="checkbox" id="seoAllShowStats" checked/> Summary numbers at the top</label>
+        <label><input type="checkbox" id="seoAllShowUnranked" checked/> Keywords not ranking yet</label>
+        <label><input type="checkbox" id="seoAllOpenAll" checked/> Every location expanded</label>
+        <label><input type="checkbox" id="seoAllShowSnapshot"/> Which scan this is, on the report</label>
       </div>
-      <div class="hint">A client that has never been shared gets its link with the same defaults a fresh Share dialog starts with. A link pinned to an earlier scan stays on that scan — change it from that client’s own Share dialog.</div>
+    </div>
+    <div class="f">
+      <span class="lbl">When a new scan finishes</span>
+      <div class="kwr-opt-list">
+        <label><input type="checkbox" id="seoAllAutoPublish"/> Refresh these links with the new positions automatically</label>
+      </div>
+      <div class="hint">Leave it off and a scan changes nothing a client can see until you publish again. It only applies while a link is set to the most recent scan — a pinned version never moves on its own.</div>
+    </div>
+    <div class="f seo-puball-versions">
+      <span class="lbl">Go back to an earlier version</span>
+      <div class="seo-puball-vrow">
+        <select id="seoAllVerClient" aria-label="Which link"></select>
+        <select id="seoAllVerPick" aria-label="Which version"></select>
+        <button class="btn" type="button" id="seoAllVerRestore">Restore</button>
+      </div>
+      <div class="hint">Each link keeps its last 7 versions, and the last 7 Share all runs are kept too — pick All clients to undo a whole run, or one client to go back on its own. A restore is kept as a version as well, and a restored link stays put until it’s published again.</div>
     </div>
     <div class="status" id="seoPublishAllStatus"></div>
     <div class="acts">
       <button class="btn" id="seoPublishAllCancel">Close</button>
-      <button class="btn btn-go" id="seoPublishAllOk">Publish all links</button>
+      <button class="btn btn-go" id="seoPublishAllOk">Publish all clients</button>
     </div>
   </div>
 </div>
@@ -22108,7 +22142,10 @@ function seoReportEmbedCode(url){
   return '<iframe src="' + url + '" style="width:100%;height:1200px;border:0" loading="lazy" title="Keyword rankings"></iframe>';
 }
 function seoReportDefaults(c){
-  return {
+  /* Once "Share all clients" has been used, its checklist is the house
+     default, so a client added later starts from the same settings as every
+     other report. A client's own saved settings still win over this. */
+  return seoAccountChecklistOnto({
     title: (c.name || 'Client') + ' \u2014 keyword rankings',
     intro: '',
     locKeys: null,          // null means "every location"
@@ -22119,7 +22156,7 @@ function seoReportDefaults(c){
     asOf: null,
     showSnapshot: false,
     autoPublish: false
-  };
+  });
 }
 
 /* ==========================================================================
@@ -22273,12 +22310,13 @@ async function publishSeoReport(c, opts){
   if (!fbDb || !fbUid) return {ok:false, reason:'offline'};
   const payload = buildSeoReportPayload(c, opts);
   if (!payload.groups.length) return {ok:false, reason:'empty'};
-  try{
-    await fbDb.collection('publicViews').doc(seoReportShareId(c)).set(payload);
-    return {ok:true, id: seoReportShareId(c)};
-  }catch(err){
-    return {ok:false, reason:'write', message:(err && err.message) || ''};
-  }
+  /* Every publish - the Share dialog, Share all clients, a scan set to
+     refresh the link, a rename - goes through seoWriteReport(), which writes
+     the same document it always did and also keeps the link's earlier
+     versions so any of them can be put back. */
+  let scanTs = null;
+  try{ scanTs = payload.asOf || ((seoScanRunsFor(c)[0] || {}).ts) || null; }catch(e){ scanTs = null; }
+  return seoWriteReport(c, payload, {scanTs});
 }
 
 /* ---------- share dialog ---------- */
@@ -22444,101 +22482,382 @@ $('seoShareCopyUrl').addEventListener('click', e => seoShareCopyField('seoShareU
 $('seoShareCopyEmbed').addEventListener('click', e => seoShareCopyField('seoShareEmbed', e.currentTarget));
 
 /* ==========================================================================
-   PUBLISH ALL CLIENT LINKS  (account level)
+   EARLIER VERSIONS OF A PUBLISHED LINK
 
-   The Share dialog above publishes one client. This button, in the rail
-   footer, publishes every client in one pass. It reads state.seoClients at
-   the moment it is pressed, so a client added next month is included with
-   nothing to set up.
+   The public document a client opens (publicViews/kwreport-<id>) is written
+   exactly as before. Alongside it, every publish now keeps a private copy,
+   so a link can be put back to any of its last seven versions.
 
-   Each client still goes through publishSeoReport() with the options saved
-   in its own Share dialog, so it writes to the same share id - the same
-   link, and the same embed code already sitting in a report. Pressing this
-   after a scan is the same as opening Share on every client and pressing
-   Publish again.
+   The copies live under users/{uid}, next to the workspace itself, so the
+   Firestore rule that already protects the workspace covers them and none
+   of them is public:
+     reportVersions/{shareId}       a small index for one link - the live
+                                    version plus up to 7 earlier ones
+     reportVersionData/{versionId}  the full published copy for one entry
+     reportPushes/{pushId}          one record per "Share all clients" run,
+                                    the latest plus up to 7 earlier ones
 
-   Left alone on purpose:
-     - a link pinned to an earlier scan (a pinned version never moves on its
-       own, as the Share dialog promises);
-     - a client with no keyword that has a location yet;
-     - a client that has never been shared, when that box is unticked.
-   No client's saved Share settings are changed. The only fields written are
-   reportPublished / reportPublishedAt, the same two the Share dialog sets
-   after a successful publish.
+   Publishing the same thing twice does not use up a slot: a version is
+   recognised by its content, so an unchanged republish simply marks the
+   existing entry as live again. Nothing here can stop a publish - if the
+   history can't be read or written, the link is still published.
+   ========================================================================== */
+function seoVersionsKeep(){ return 7; }   /* earlier versions per link, besides the live one */
+function seoPushesKeep(){ return 7; }     /* earlier Share all runs, besides the latest */
+function seoUserCol(name){ return fbDb.collection('users').doc(fbUid).collection(name); }
+
+/* Firestore hands maps back in its own key order, so content is compared
+   through a key-sorted serialisation rather than plain JSON. */
+function seoStable(v){
+  if (Array.isArray(v)) return '[' + v.map(seoStable).join(',') + ']';
+  if (v && typeof v === 'object'){
+    return '{' + Object.keys(v).filter(k => v[k] !== undefined).sort()
+      .map(k => JSON.stringify(k) + ':' + seoStable(v[k])).join(',') + '}';
+  }
+  return JSON.stringify(v === undefined ? null : v);
+}
+function seoHash(str){
+  let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+  for (let i = 0; i < str.length; i++){
+    const ch = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return (h2 >>> 0).toString(36) + (h1 >>> 0).toString(36) + '.' + str.length.toString(36);
+}
+/* When and by whom are left out: they change on every publish even when
+   what the client sees does not. */
+function seoPayloadSig(p){
+  const copy = Object.assign({}, p || {});
+  delete copy.updatedAt; delete copy.updatedBy;
+  return seoHash(seoStable(copy));
+}
+function seoPayloadStats(p){
+  let kw = 0, ranked = 0, latest = 0;
+  ((p && p.groups) || []).forEach(g => ((g && g.keywords) || []).forEach(k => {
+    kw++;
+    if (k && k.rank != null && k.rank > 0) ranked++;
+    if (k && k.checkedAt && k.checkedAt > latest) latest = k.checkedAt;
+  }));
+  return {kw, ranked, latest: latest || null};
+}
+function seoVersionItem(shareId, p, at, scanTs){
+  const st = seoPayloadStats(p);
+  return {
+    id: shareId + '~' + at,
+    at: at, last: at,
+    sig: seoPayloadSig(p),
+    kw: st.kw, ranked: st.ranked,
+    scan: (p && p.asOf) || scanTs || st.latest || null,
+    title: (p && p.title) || null
+  };
+}
+
+/* Read before the live copy is replaced. A link published before versions
+   were kept has no index yet, so what it shows right now is saved as its
+   first entry - that way the very first publish can be undone too. */
+async function seoVersionsPrepare(c, shareId){
+  const snap = await seoUserCol('reportVersions').doc(shareId).get();
+  if (snap.exists){
+    const d = snap.data() || {};
+    return {items: (Array.isArray(d.items) ? d.items : []).filter(it => it && it.id), liveId: d.liveId || null};
+  }
+  const idx = {items: [], liveId: null};
+  const live = await fbDb.collection('publicViews').doc(shareId).get();
+  if (live.exists){
+    const p = live.data();
+    if (p && p.type === 'kwreport' && Array.isArray(p.groups)){
+      const at = Number(p.updatedAt) || Date.now();
+      const item = seoVersionItem(shareId, p, at, null);
+      await seoUserCol('reportVersionData').doc(item.id).set({shareId, clientId: c.id, at, payload: p});
+      idx.items.push(item);
+      idx.liveId = item.id;
+    }
+  }
+  return idx;
+}
+
+/* Written after the live copy. Returns the id of the entry that now matches
+   what the link shows. The live entry is always the newest, so trimming to
+   the last eight can never remove it. */
+async function seoVersionsRecord(c, shareId, payload, idx, meta){
+  const now = Date.now();
+  const sig = seoPayloadSig(payload);
+  const items = idx.items.map(it => Object.assign({}, it));
+  let item = items.find(it => it.sig === sig);
+  if (item){
+    item.last = now;
+  } else {
+    item = seoVersionItem(shareId, payload, now, (meta && meta.scanTs) || null);
+    await seoUserCol('reportVersionData').doc(item.id).set({shareId, clientId: c.id, at: now, payload});
+    items.push(item);
+  }
+  items.sort((a, b) => (b.last || b.at || 0) - (a.last || a.at || 0));
+  const keep = items.slice(0, seoVersionsKeep() + 1);
+  const drop = items.slice(seoVersionsKeep() + 1);
+  await seoUserCol('reportVersions').doc(shareId).set({
+    shareId, clientId: c.id, clientName: c.name || 'Client',
+    liveId: item.id, items: keep, updatedAt: now
+  });
+  drop.forEach(it => { seoUserCol('reportVersionData').doc(it.id).delete().catch(() => {}); });
+  return item.id;
+}
+
+/* The one place a client link is written. Same document, same payload and
+   same error shape publishSeoReport() always returned. */
+async function seoWriteReport(c, payload, meta){
+  if (!fbDb || !fbUid) return {ok:false, reason:'offline'};
+  const shareId = seoReportShareId(c);
+  let idx = null;
+  try{ idx = await seoVersionsPrepare(c, shareId); }catch(e){ idx = null; }
+  try{
+    await fbDb.collection('publicViews').doc(shareId).set(payload);
+  }catch(err){
+    return {ok:false, reason:'write', message:(err && err.message) || ''};
+  }
+  let version = null;
+  if (idx){
+    try{ version = await seoVersionsRecord(c, shareId, payload, idx, meta || {}); }catch(e){ version = null; }
+  }
+  return {ok:true, id: shareId, version};
+}
+
+/* Earlier versions of one link, newest first, without the one that's live. */
+async function seoVersionsList(c){
+  const snap = await seoUserCol('reportVersions').doc(seoReportShareId(c)).get();
+  if (!snap.exists) return [];
+  const d = snap.data() || {};
+  return (Array.isArray(d.items) ? d.items : [])
+    .filter(it => it && it.id && it.id !== d.liveId)
+    .sort((a, b) => (b.last || b.at || 0) - (a.last || a.at || 0));
+}
+async function seoPushesList(){
+  const snap = await seoUserCol('reportPushes').orderBy('at', 'desc').limit(seoPushesKeep() + 1).get();
+  return snap.docs.map(d => Object.assign({id: d.id}, d.data()));
+}
+function seoPushSameLinks(a, b){
+  const ka = Object.keys(a || {}).sort(), kb = Object.keys(b || {}).sort();
+  return ka.length === kb.length && ka.every((k, i) => k === kb[i] && a[k] && b[k] && a[k].v === b[k].v);
+}
+async function seoPushSave(rec){
+  /* A run that left every link showing exactly what the latest run already
+     put there doesn't take a slot of its own. */
+  try{
+    const latest = (await seoPushesList())[0];
+    if (latest && seoPushSameLinks(latest.clients, rec.clients)) return false;
+  }catch(e){ /* can't compare - save it anyway */ }
+  await seoUserCol('reportPushes').doc('push-' + rec.at).set(rec);
+  try{
+    const snap = await seoUserCol('reportPushes').orderBy('at', 'desc').get();
+    snap.docs.slice(seoPushesKeep() + 1).forEach(d => { d.ref.delete().catch(() => {}); });
+  }catch(e){ /* trimming can wait for the next run */ }
+}
+/* Puts one earlier copy back on a client's link. Goes through the same
+   writer as any publish, so the version it replaces is kept as well. */
+async function seoRestoreVersion(c, versionId){
+  if (!fbDb || !fbUid) return {ok:false, reason:'offline'};
+  let snap;
+  try{ snap = await seoUserCol('reportVersionData').doc(versionId).get(); }
+  catch(err){ return {ok:false, reason:'write', message:(err && err.message) || ''}; }
+  const d = snap.exists ? snap.data() : null;
+  if (!d || !d.payload || !Array.isArray(d.payload.groups)) return {ok:false, reason:'gone'};
+  const payload = Object.assign({}, d.payload, {updatedAt: Date.now(), updatedBy: fbUid || null});
+  const res = await seoWriteReport(c, payload, {});
+  if (res.ok){
+    const cur = (state.seoClients || []).find(x => x && x.id === c.id) || c;
+    cur.reportPublished = true;
+    cur.reportPublishedAt = Date.now();
+  }
+  return res;
+}
+
+/* ==========================================================================
+   SHARE ALL CLIENTS  (account level)
+
+   The Share dialog above publishes one client. This one, opened from the
+   rail footer, publishes every client in one pass with one checklist:
+     - each report keeps its own title and the locations ticked in that
+       client's own Share dialog (a client never shared yet gets every
+       location, the same as a fresh Share dialog);
+     - the "what to show" boxes and the refresh-after-a-scan box are applied
+       to every client and saved onto each one, so opening a client's own
+       Share dialog afterwards shows the same ticks;
+     - the checklist is also remembered on the account (state.seoShareAll),
+       which makes it the starting point for clients added later.
+   Every client goes through publishSeoReport(), so each link, and every
+   embed already in a report, keeps its address.
    ========================================================================== */
 let seoPublishAllBusy = false;
+let seoAllVerSeq = 0;
+let seoAllVerData = [];
 
-function seoPublishAllPlan(includeNew){
-  return (state.seoClients || [])
-    .filter(Boolean)
-    .slice()
-    .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
-    .map(c => {
-      const opts = Object.assign(seoReportDefaults(c), c.reportOpts || {});
-      let hasGroups = false;
-      try{ hasGroups = seoBuildLocationGroups(c).groups.length > 0; }catch(e){ hasGroups = false; }
-      const shared = !!c.reportPublished;
-      let publish = false, note;
-      if (!hasGroups){
-        note = 'No keywords with a location yet';
-      } else if (!shared){
-        publish = !!includeNew;
-        note = includeNew ? 'Gets its first link' : 'Not shared yet \u2014 skipped';
-      } else if (opts.asOf){
-        note = 'Pinned to ' + new Date(Number(opts.asOf)).toLocaleDateString(undefined, {year:'numeric', month:'short', day:'numeric'}) + ' \u2014 left as it is';
-      } else {
-        publish = true;
-        note = 'Refreshes to the latest scan';
-      }
-      return {id: c.id, name: c.name || 'Client', publish, fresh: !shared, note};
-    });
+function seoAllBoxes(){
+  return [
+    ['seoAllShowDates', 'showDates'], ['seoAllShowLinks', 'showLinks'],
+    ['seoAllShowDelta', 'showDelta'], ['seoAllShowStats', 'showStats'],
+    ['seoAllShowUnranked', 'showUnranked'], ['seoAllOpenAll', 'openAll'],
+    ['seoAllShowSnapshot', 'showSnapshot'], ['seoAllAutoPublish', 'autoPublish']
+  ];
 }
-function seoPublishAllRow(id){
-  return Array.from($('seoPublishAllList').children).find(r => r.dataset && r.dataset.id === id) || null;
+function seoAllChecklistDefaults(){
+  return {intro: '', version: 'latest', showDates: true, showLinks: true, showDelta: true,
+          showStats: true, showUnranked: true, openAll: true, showSnapshot: false, autoPublish: false};
 }
-function seoPublishAllMark(row, kind, note){
-  if (!row) return;
-  row.className = 'seo-puball-row' + (kind ? ' ' + kind : '');
-  const n = row.querySelector('.kwr-loc-n');
-  if (n) n.textContent = note;
+/* Used by seoReportDefaults(): nothing changes until Share all has been
+   used at least once, and a client's own saved settings still win. */
+function seoAccountChecklistOnto(o){
+  const a = (typeof state !== 'undefined' && state) ? state.seoShareAll : null;
+  if (!a || typeof a !== 'object') return o;
+  seoAllBoxes().forEach(([, key]) => { if (typeof a[key] === 'boolean') o[key] = a[key]; });
+  if (typeof a.intro === 'string' && a.intro.trim()) o.intro = a.intro;
+  return o;
 }
-function seoPublishAllPaint(){
-  const plan = seoPublishAllPlan($('seoPublishAllNew').checked);
-  const box = $('seoPublishAllList');
-  box.innerHTML = '';
-  if (!plan.length){
-    const e = document.createElement('div');
-    e.className = 'seo-puball-empty';
-    e.textContent = 'No SEO clients yet. Add one and it will show up here.';
-    box.appendChild(e);
-  }
-  plan.forEach(p => {
-    const row = document.createElement('div');
-    row.dataset.id = p.id;
-    const name = document.createElement('span');
-    name.className = 'seo-puball-name';
-    name.textContent = p.name;
-    const n = document.createElement('span');
-    n.className = 'kwr-loc-n';
-    row.appendChild(name); row.appendChild(n);
-    box.appendChild(row);
-    seoPublishAllMark(row, p.publish ? '' : 'skip', p.note);
+function seoAllReadChecklist(){
+  const out = {intro: $('seoAllIntro').value || '', version: $('seoAllVersion').value === 'keep' ? 'keep' : 'latest'};
+  seoAllBoxes().forEach(([id, key]) => { out[key] = $(id).checked; });
+  return out;
+}
+function seoAllClients(){
+  return (state.seoClients || []).filter(Boolean).slice()
+    .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+}
+function seoAllHasLocations(c){
+  try{ return seoBuildLocationGroups(c).groups.length > 0; }catch(e){ return false; }
+}
+function seoAllNames(list){
+  if (!list.length) return '';
+  return list.slice(0, 4).join(', ') + (list.length > 4 ? ' and ' + (list.length - 4) + ' more' : '');
+}
+function seoAllDay(ts){
+  return new Date(ts).toLocaleDateString(undefined, {year:'numeric', month:'short', day:'numeric'});
+}
+function seoAllPaintVersionHint(){
+  $('seoAllVersionHint').textContent = $('seoAllVersion').value === 'keep'
+    ? 'Links pinned to an earlier scan stay on it. Every other link moves to the newest positions each time you publish.'
+    : 'Live. Every link moves to the newest positions each time you publish \u2014 including any that were pinned to an earlier scan.';
+}
+function seoAllPaintSummary(){
+  const all = seoAllClients();
+  const ready = all.filter(seoAllHasLocations);
+  const without = all.length - ready.length;
+  let msg = '';
+  if (!all.length) msg = 'No SEO clients yet. Add one and it will be included here.';
+  else if (!ready.length) msg = 'None of your clients has a keyword with a location yet, so there is nothing to publish.';
+  else if (!without) msg = 'All ' + ready.length + ' client' + (ready.length === 1 ? '' : 's') + ' will be published.';
+  else msg = ready.length + ' of ' + all.length + ' clients will be published. ' + without + ' ' +
+    (without === 1 ? 'has' : 'have') + ' no keywords with a location yet and ' + (without === 1 ? 'is' : 'are') + ' left out.';
+  setStatus('seoPublishAllStatus', msg, '');
+  $('seoPublishAllOk').disabled = !ready.length;
+}
+function seoAllSetBusy(on){
+  seoPublishAllBusy = on;
+  ['seoPublishAllOk', 'seoAllVerRestore', 'seoAllVerClient', 'seoAllVerPick'].forEach(id => { $(id).disabled = on; });
+  if (!on) seoAllSyncRestoreBtn();
+}
+function seoAllSyncRestoreBtn(){
+  const pick = $('seoAllVerPick').value;
+  $('seoAllVerRestore').disabled = seoPublishAllBusy || !seoAllVerData.some(x => x.key === pick);
+}
+
+/* ---- the earlier-versions row ---- */
+function seoAllFillVersionClients(){
+  const sel = $('seoAllVerClient');
+  const was = sel.value;
+  sel.innerHTML = '';
+  const all = document.createElement('option');
+  all.value = '__all';
+  all.textContent = 'All clients';
+  sel.appendChild(all);
+  seoAllClients().forEach(c => {
+    const o = document.createElement('option');
+    o.value = c.id;
+    o.textContent = c.name || 'Client';
+    sel.appendChild(o);
   });
-  const go = plan.filter(p => p.publish).length;
-  const left = plan.length - go;
-  setStatus('seoPublishAllStatus', go
-    ? go + ' link' + (go === 1 ? '' : 's') + ' will be published' +
-      (left ? ', ' + left + ' left as ' + (left === 1 ? 'it is' : 'they are') : '') + '.'
-    : (plan.length ? 'Nothing to publish with these settings.' : ''), '');
-  $('seoPublishAllOk').disabled = !go;
-  return plan;
+  sel.value = Array.from(sel.options).some(o => o.value === was) ? was : '__all';
 }
+function seoAllVerMessage(text){
+  const pick = $('seoAllVerPick');
+  pick.innerHTML = '';
+  const o = document.createElement('option');
+  o.value = ''; o.textContent = text;
+  pick.appendChild(o);
+  seoAllVerData = [];
+  seoAllSyncRestoreBtn();
+}
+async function seoAllLoadVersions(){
+  const seq = ++seoAllVerSeq;
+  const who = $('seoAllVerClient').value;
+  if (!fbDb || !fbUid){ seoAllVerMessage('Sign in to see earlier versions'); return; }
+  seoAllVerMessage('Loading earlier versions\u2026');
+  let rows = [];
+  try{
+    if (who === '__all'){
+      const pushes = await seoPushesList();
+      rows = pushes.map((p, i) => {
+        const n = Object.keys(p.clients || {}).length;
+        return {
+          key: p.id, kind: 'push', push: p,
+          label: seoRunLabel(p.at) + ' \u2014 ' + n + ' client' + (n === 1 ? '' : 's') +
+            (p.restoredFrom ? ', put back to ' + seoAllDay(p.restoredFrom) : '') +
+            (i === 0 ? ' (latest)' : '')
+        };
+      });
+    } else {
+      const c = (state.seoClients || []).find(x => x && x.id === who);
+      if (!c){ if (seq === seoAllVerSeq) seoAllVerMessage('That client no longer exists'); return; }
+      const items = await seoVersionsList(c);
+      rows = items.slice(0, seoVersionsKeep()).map(it => ({
+        key: it.id, kind: 'client', item: it, client: c,
+        label: seoRunLabel(it.last || it.at) + ' \u2014 ' + (it.ranked || 0) + ' of ' + (it.kw || 0) + ' ranking' +
+          (it.scan ? ', scan of ' + seoAllDay(it.scan) : '')
+      }));
+    }
+  }catch(err){
+    if (seq === seoAllVerSeq) seoAllVerMessage('Couldn\u2019t load earlier versions');
+    return;
+  }
+  if (seq !== seoAllVerSeq) return;          /* a newer pick has taken over */
+  if (!rows.length){
+    seoAllVerMessage(who === '__all' ? 'No Share all runs saved yet' : 'No earlier versions of this link yet');
+    return;
+  }
+  const pick = $('seoAllVerPick');
+  pick.innerHTML = '';
+  rows.forEach(r => {
+    const o = document.createElement('option');
+    o.value = r.key; o.textContent = r.label;
+    pick.appendChild(o);
+  });
+  seoAllVerData = rows;
+  seoAllSyncRestoreBtn();
+}
+
+/* ---- opening and closing ---- */
 function openSeoPublishAllModal(){
   $('seoPublishAllBackdrop').classList.add('on');
   /* A run already in progress keeps its own progress on screen. */
   if (seoPublishAllBusy) return;
-  $('seoPublishAllOk').textContent = 'Publish all links';
-  seoPublishAllPaint();
+  const saved = Object.assign(seoAllChecklistDefaults(), state.seoShareAll || {});
+  $('seoAllIntro').value = saved.intro || '';
+  $('seoAllVersion').value = saved.version === 'keep' ? 'keep' : 'latest';
+  seoAllBoxes().forEach(([id, key]) => { $(id).checked = !!saved[key]; });
+  seoAllPaintVersionHint();
+
+  const all = seoAllClients();
+  $('seoAllTitle').value = 'All clients (' + all.length + ')';
+  const ex = all.find(seoAllHasLocations) || all[0];
+  const exTitle = ex ? ((ex.reportOpts && ex.reportOpts.title) || ((ex.name || 'Client') + ' \u2014 keyword rankings')) : '';
+  $('seoAllTitleHint').textContent = exTitle
+    ? 'Each report keeps its own title, like \u201c' + exTitle + '\u201d.'
+    : 'Each report keeps its own title.';
+
+  seoAllFillVersionClients();
+  seoAllLoadVersions();
+  $('seoPublishAllOk').textContent = 'Publish all clients';
+  seoAllPaintSummary();
 }
 function closeSeoPublishAllModal(){ $('seoPublishAllBackdrop').classList.remove('on'); }
 
@@ -22546,93 +22865,224 @@ const seoPublishAllBtn = $('seoPublishAllBtn');
 if (seoPublishAllBtn) seoPublishAllBtn.addEventListener('click', openSeoPublishAllModal);
 $('seoPublishAllCancel').addEventListener('click', closeSeoPublishAllModal);
 $('seoPublishAllBackdrop').addEventListener('click', e => { if (e.target === $('seoPublishAllBackdrop')) closeSeoPublishAllModal(); });
-$('seoPublishAllNew').addEventListener('change', () => { if (!seoPublishAllBusy) seoPublishAllPaint(); });
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && $('seoPublishAllBackdrop').classList.contains('on')) closeSeoPublishAllModal();
 });
+$('seoAllVersion').addEventListener('change', seoAllPaintVersionHint);
+$('seoAllVerClient').addEventListener('change', seoAllLoadVersions);
+$('seoAllVerPick').addEventListener('change', seoAllSyncRestoreBtn);
 
+/* A few at a time: quicker than one by one on a big account, gentle enough
+   that Firestore never sees a burst. */
+async function seoAllPool(list, width, fn){
+  let next = 0;
+  const lanes = Array.from({length: Math.min(width, list.length)}, async () => {
+    while (next < list.length){ const i = next++; await fn(list[i], i); }
+  });
+  await Promise.all(lanes);
+}
+
+/* ---- publish every client ---- */
 $('seoPublishAllOk').addEventListener('click', async () => {
   if (seoPublishAllBusy) return;
   if (!fbDb || !fbUid){ setStatus('seoPublishAllStatus', 'You need to be signed in and online to publish.', 'err'); return; }
-  /* Worked out again at the moment of pressing, so a client added or a scan
-     finished while the dialog sat open is not missed. */
-  const plan = seoPublishAllPaint();
-  const todo = plan.filter(p => p.publish);
-  if (!todo.length) return;
 
-  seoPublishAllBusy = true;
-  const btn = $('seoPublishAllOk'), newBox = $('seoPublishAllNew');
-  btn.disabled = true; newBox.disabled = true;
-  let done = 0, created = 0, empty = 0, failed = 0, lastErr = '', stopped = false;
+  const checklist = seoAllReadChecklist();
+  state.seoShareAll = checklist;           /* the account's checklist, and the default for new clients */
+  save();
+
+  /* Worked out at the moment of pressing, so a client added or a scan
+     finished while the dialog sat open is included. */
+  const all = seoAllClients();
+  const todo = all.filter(seoAllHasLocations);
+  const noLoc = all.filter(c => !seoAllHasLocations(c)).map(c => c.name || 'Client');
+  if (!todo.length){ seoAllPaintSummary(); return; }
+
+  seoAllSetBusy(true);
+  const at = Date.now();
+  const pushed = {};
+  const okNames = [], newNames = [], emptyNames = [], pinGone = [], failedNames = [];
+  let lastErr = '', stopped = false, doneCount = 0;
+  setStatus('seoPublishAllStatus', 'Publishing\u2026 0 of ' + todo.length + ' done', 'busy');
 
   try{
-    for (let i = 0; i < todo.length; i++){
-      const p = todo[i];
-      const row = seoPublishAllRow(p.id);
-      if (stopped){ failed++; seoPublishAllMark(row, 'err', 'Not published'); continue; }
+    await seoAllPool(todo, 3, async p => {
+      const name = p.name || 'Client';
+      if (stopped){ failedNames.push(name); return; }
       const c = (state.seoClients || []).find(x => x && x.id === p.id);
-      if (!c){ seoPublishAllMark(row, 'skip', 'Removed \u2014 skipped'); continue; }
+      if (!c) return;
 
-      setStatus('seoPublishAllStatus', 'Publishing ' + (i + 1) + ' of ' + todo.length + '\u2026 ' + p.name, 'busy');
-      seoPublishAllMark(row, 'busy', 'Publishing\u2026');
-      /* Read fresh for the same reason as the plan above. */
       const opts = Object.assign(seoReportDefaults(c), c.reportOpts || {});
+      seoAllBoxes().forEach(([, key]) => { opts[key] = !!checklist[key]; });
+      if (checklist.intro.trim()) opts.intro = checklist.intro;
+      if (checklist.version === 'latest') opts.asOf = null;
+      else if (opts.asOf){
+        /* A pin older than the stored history would publish blank ranks,
+           so that link is left exactly as it is. */
+        const probe = buildSeoReportPayload(c, opts);
+        if (!probe.groups.some(g => g.keywords.some(k => k.rank != null))){ pinGone.push(name); return; }
+      }
+
+      const fresh = !c.reportPublished;
       let res;
       try{ res = await publishSeoReport(c, opts); }
       catch(err){ res = {ok:false, reason:'write', message:(err && err.message) || ''}; }
 
       if (res && res.ok){
         /* A cloud merge can swap the client object while the write is in
-           flight, so the flag goes on whichever copy is current now. */
+           flight, so the settings go on whichever copy is current now. */
         const cur = (state.seoClients || []).find(x => x && x.id === p.id) || c;
+        cur.reportOpts = opts;
         cur.reportPublished = true;
         cur.reportPublishedAt = Date.now();
-        done++; if (p.fresh) created++;
-        seoPublishAllMark(row, 'ok', p.fresh ? 'Link created' : 'Published');
+        okNames.push(name);
+        if (fresh) newNames.push(name);
+        if (res.version) pushed[p.id] = {v: res.version, n: name};
       } else if (res && res.reason === 'empty'){
-        empty++;
-        seoPublishAllMark(row, 'skip', 'Nothing left to show with its Share settings');
+        emptyNames.push(name);
       } else if (res && res.reason === 'offline'){
-        stopped = true; failed++;
-        seoPublishAllMark(row, 'err', 'Not published');
+        stopped = true; failedNames.push(name);
       } else {
-        failed++;
+        failedNames.push(name);
         if (res && res.message) lastErr = res.message;
-        seoPublishAllMark(row, 'err', 'Couldn\u2019t publish');
       }
-    }
-    if (done) save();
+      doneCount++;
+      if (!stopped) setStatus('seoPublishAllStatus', 'Publishing\u2026 ' + doneCount + ' of ' + todo.length + ' done', 'busy');
+    });
 
-    const skipped = (plan.length - todo.length) + empty;
-    const s = done === 1 ? '' : 's';
+    if (okNames.length) save();
+    if (Object.keys(pushed).length){
+      try{ await seoPushSave({at, restoredFrom: null, count: okNames.length, clients: pushed}); }catch(e){}
+    }
+
+    const n = okNames.length, s = n === 1 ? '' : 's';
+    const left = [];
+    if (noLoc.length) left.push(noLoc.length + ' with no keywords that have a location (' + seoAllNames(noLoc) + ')');
+    if (emptyNames.length) left.push(emptyNames.length + ' with nothing left to show once the checklist is applied (' + seoAllNames(emptyNames) + ')');
+    if (pinGone.length) left.push(pinGone.length + ' pinned to a scan no longer in the stored history (' + seoAllNames(pinGone) + ')');
+    const leftText = left.length ? ' Left as they were: ' + left.join('; ') + '.' : '';
+
     let msg, kind;
     if (stopped){
       msg = 'Stopped \u2014 you need to be signed in and online to publish.' +
-        (done ? ' ' + done + ' link' + s + ' went out before the connection dropped.' : '');
+        (n ? ' ' + n + ' link' + s + ' went out before the connection dropped.' : '');
       kind = 'err';
-    } else if (failed){
-      msg = done + ' published, ' + failed + ' couldn\u2019t publish. Check the publicViews Firestore rule near the top of the file.' +
-        (lastErr ? ' (' + lastErr + ')' : '');
+    } else if (failedNames.length){
+      msg = n + ' published. ' + failedNames.length + ' couldn\u2019t publish (' + seoAllNames(failedNames) +
+        ') \u2014 check the publicViews Firestore rule near the top of the file.' + (lastErr ? ' (' + lastErr + ')' : '') + leftText;
       kind = 'err';
-    } else if (!done){
-      msg = 'Nothing was published \u2014 those clients have no keywords left once their Share settings are applied.';
+    } else if (!n){
+      msg = 'Nothing was published.' + leftText;
       kind = 'err';
     } else {
-      msg = 'Published ' + done + ' link' + s + (created ? ' (' + created + ' new)' : '') +
-        '. Embeds already in your reports now show these positions' +
-        (skipped ? '; ' + skipped + ' left as ' + (skipped === 1 ? 'it was' : 'they were') + '.' : '.');
+      msg = 'Published ' + n + ' client link' + s + (newNames.length ? ', ' + newNames.length + ' of them for the first time' : '') +
+        '. Embeds already in your reports now show these positions.' + leftText;
       kind = 'ok';
     }
     setStatus('seoPublishAllStatus', msg, kind);
-    /* Closed mid-run? Say how it went anyway. */
     if (!$('seoPublishAllBackdrop').classList.contains('on')){
-      toast(kind === 'ok' ? 'Published ' + done + ' client link' + s : msg, kind === 'ok' ? '' : 'err');
+      toast(kind === 'ok' ? 'Published ' + n + ' client link' + s : msg, kind === 'ok' ? '' : 'err');
     }
   } finally {
-    seoPublishAllBusy = false;
-    btn.textContent = 'Publish all again';
-    btn.disabled = false;
-    newBox.disabled = false;
+    seoAllSetBusy(false);
+    $('seoPublishAllOk').textContent = 'Publish all again';
+    seoAllLoadVersions();
+  }
+});
+
+/* ---- go back to an earlier version ---- */
+$('seoAllVerRestore').addEventListener('click', async () => {
+  if (seoPublishAllBusy) return;
+  if (!fbDb || !fbUid){ setStatus('seoPublishAllStatus', 'You need to be signed in and online to restore a version.', 'err'); return; }
+  const row = seoAllVerData.find(x => x.key === $('seoAllVerPick').value);
+  if (!row) return;
+
+  if (row.kind === 'client'){
+    const c = (state.seoClients || []).find(x => x && x.id === row.client.id);
+    if (!c){ setStatus('seoPublishAllStatus', 'That client no longer exists.', 'err'); return; }
+    const when = seoRunLabel(row.item.last || row.item.at);
+    if (!confirm('Put ' + (c.name || 'this client') + '\u2019s link back to the version from ' + when + '?\n\n' +
+                 'Its embed in your reports shows that version straight away. The version it replaces is kept, so you can switch back from the same list.')) return;
+    seoAllSetBusy(true);
+    setStatus('seoPublishAllStatus', 'Restoring ' + (c.name || 'Client') + '\u2026', 'busy');
+    try{
+      const res = await seoRestoreVersion(c, row.item.id);
+      if (res.ok){
+        save();
+        setStatus('seoPublishAllStatus', (c.name || 'Client') + '\u2019s link is back to the version from ' + when + '.', 'ok');
+      } else if (res.reason === 'gone'){
+        setStatus('seoPublishAllStatus', 'That version is no longer kept. Pick another one from the list.', 'err');
+      } else if (res.reason === 'offline'){
+        setStatus('seoPublishAllStatus', 'You need to be signed in and online to restore a version.', 'err');
+      } else {
+        setStatus('seoPublishAllStatus', 'Couldn\u2019t restore it \u2014 check the publicViews Firestore rule near the top of the file.' + (res.message ? ' (' + res.message + ')' : ''), 'err');
+      }
+    } finally {
+      seoAllSetBusy(false);
+      seoAllLoadVersions();
+    }
+    return;
+  }
+
+  /* A whole earlier Share all run: every client in it goes back to what that
+     run published. Clients added since are left as they are, and the restore
+     is saved as a run of its own so it can be undone. */
+  const push = row.push;
+  const entries = Object.keys(push.clients || {}).map(id => Object.assign({id}, push.clients[id]));
+  if (!entries.length){ setStatus('seoPublishAllStatus', 'That run has no saved links to restore.', 'err'); return; }
+  const when = seoRunLabel(push.at);
+  if (!confirm('Put every client link back to how it was after the Share all of ' + when + '?\n\n' +
+               entries.length + ' link' + (entries.length === 1 ? '' : 's') + ' can change. Clients added since then are left as they are. ' +
+               'This restore is saved as its own run, so you can undo it from the same list.')) return;
+
+  seoAllSetBusy(true);
+  const at = Date.now();
+  const back = {};
+  const okNames = [], goneNames = [], missingNames = [], failedNames = [];
+  let lastErr = '', stopped = false, doneCount = 0;
+  setStatus('seoPublishAllStatus', 'Restoring\u2026 0 of ' + entries.length + ' done', 'busy');
+  try{
+    await seoAllPool(entries, 3, async e => {
+      const name = e.n || 'Client';
+      if (stopped){ failedNames.push(name); return; }
+      const c = (state.seoClients || []).find(x => x && x.id === e.id);
+      if (!c){ goneNames.push(name); return; }
+      const res = await seoRestoreVersion(c, e.v);
+      if (res.ok){ okNames.push(c.name || name); back[c.id] = {v: res.version || e.v, n: c.name || name}; }
+      else if (res.reason === 'gone') missingNames.push(c.name || name);
+      else if (res.reason === 'offline'){ stopped = true; failedNames.push(c.name || name); }
+      else { failedNames.push(c.name || name); if (res.message) lastErr = res.message; }
+      doneCount++;
+      if (!stopped) setStatus('seoPublishAllStatus', 'Restoring\u2026 ' + doneCount + ' of ' + entries.length + ' done', 'busy');
+    });
+    if (okNames.length){
+      save();
+      try{ await seoPushSave({at, restoredFrom: push.at, count: okNames.length, clients: back}); }catch(e){}
+    }
+    const notes = [];
+    if (missingNames.length) notes.push(missingNames.length + ' no longer had that version kept (' + seoAllNames(missingNames) + ')');
+    if (goneNames.length) notes.push(goneNames.length + ' have since been deleted (' + seoAllNames(goneNames) + ')');
+    const noteText = notes.length ? ' Left as they were: ' + notes.join('; ') + '.' : '';
+    let msg, kind;
+    if (stopped){
+      msg = 'Stopped \u2014 you need to be signed in and online to restore.' + (okNames.length ? ' ' + okNames.length + ' went back before the connection dropped.' : '');
+      kind = 'err';
+    } else if (failedNames.length){
+      msg = okNames.length + ' restored. ' + failedNames.length + ' couldn\u2019t be restored (' + seoAllNames(failedNames) + ')' + (lastErr ? ' (' + lastErr + ')' : '') + '.' + noteText;
+      kind = 'err';
+    } else if (!okNames.length){
+      msg = 'Nothing was restored.' + noteText;
+      kind = 'err';
+    } else {
+      msg = okNames.length + ' client link' + (okNames.length === 1 ? ' is' : 's are') + ' back to how ' +
+        (okNames.length === 1 ? 'it' : 'they') + ' looked after the Share all of ' + when + '.' + noteText;
+      kind = 'ok';
+    }
+    setStatus('seoPublishAllStatus', msg, kind);
+    if (!$('seoPublishAllBackdrop').classList.contains('on')) toast(msg, kind === 'ok' ? '' : 'err');
+  } finally {
+    seoAllSetBusy(false);
+    seoAllLoadVersions();
   }
 });
 

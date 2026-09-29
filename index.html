@@ -1680,6 +1680,18 @@ body.report-mode .kwr-root{display:block; font-family:var(--ui); color:var(--ink
 .kwr-out-row .g-inline input{font-family:var(--mono); font-size:11.5px;}
 @media (max-width:620px){ .kwr-opt-list{grid-template-columns:1fr;} }
 
+/* ---- publish-all dialog (account level) ----
+   Reuses the share dialog's list box; these only style the rows inside it. */
+.seo-puball-row{display:flex; align-items:center; gap:10px; font-size:12.5px; color:var(--ink-2); font-weight:500; min-height:18px;}
+.seo-puball-row .seo-puball-name{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.seo-puball-row .kwr-loc-n{flex:none; text-align:right;}
+.seo-puball-row.skip{color:var(--ink-3);}
+.seo-puball-row.busy .kwr-loc-n{color:var(--brand-deep);}
+.seo-puball-row.ok .kwr-loc-n{color:var(--good);}
+.seo-puball-row.err .kwr-loc-n{color:var(--alert);}
+.seo-puball-empty{font-size:12.5px; color:var(--ink-3);}
+.seo-puball-opt{grid-template-columns:1fr;}
+
 /* ==========================================================================
    ═══ PREMIUM LAYER ═══
    A finish pass over everything above. Nothing here changes behaviour, and
@@ -5422,6 +5434,9 @@ body.so-locked{overflow:hidden;}
         <input id="seoImportFile" type="file" accept="application/json" style="display:none"/>
       </div>
       <div class="mini-row" style="margin-top:6px">
+        <button class="mini-btn" id="seoPublishAllBtn" type="button" title="Refresh the shared link of every client at once">Publish all client links</button>
+      </div>
+      <div class="mini-row" style="margin-top:6px">
         <button class="mini-btn claude-btn" data-claude-sync type="button">Keep a copy for Claude</button>
       </div>
       <div class="mini-row" style="margin-top:6px">
@@ -5970,6 +5985,29 @@ custom home builder | Red Deer, AB; Calgary, AB"></textarea>
       <button class="btn" id="seoShareCancel">Close</button>
       <button class="btn" id="seoSharePreview" style="display:none">Open preview</button>
       <button class="btn btn-go" id="seoShareOk">Publish &amp; copy link</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SEO PUBLISH ALL CLIENT LINKS (ACCOUNT LEVEL) ==================== -->
+<div class="backdrop" id="seoPublishAllBackdrop">
+  <div class="modal modal-wide">
+    <h3>Publish every client link</h3>
+    <p>Refreshes the shared link of every SEO client in one pass — the clients you have now and any you add later. Each link keeps its address, so an embed already in a report shows the new positions without being touched. Every client goes out with the settings saved in its own Share dialog.</p>
+    <div class="f">
+      <span class="lbl">Clients</span>
+      <div class="kwr-loc-picker" id="seoPublishAllList"></div>
+    </div>
+    <div class="f">
+      <div class="kwr-opt-list seo-puball-opt">
+        <label><input type="checkbox" id="seoPublishAllNew" checked/> Also create a link for clients that haven’t been shared yet</label>
+      </div>
+      <div class="hint">A client that has never been shared gets its link with the same defaults a fresh Share dialog starts with. A link pinned to an earlier scan stays on that scan — change it from that client’s own Share dialog.</div>
+    </div>
+    <div class="status" id="seoPublishAllStatus"></div>
+    <div class="acts">
+      <button class="btn" id="seoPublishAllCancel">Close</button>
+      <button class="btn btn-go" id="seoPublishAllOk">Publish all links</button>
     </div>
   </div>
 </div>
@@ -22404,6 +22442,199 @@ function seoShareCopyField(inputId, btn){
 }
 $('seoShareCopyUrl').addEventListener('click', e => seoShareCopyField('seoShareUrl', e.currentTarget));
 $('seoShareCopyEmbed').addEventListener('click', e => seoShareCopyField('seoShareEmbed', e.currentTarget));
+
+/* ==========================================================================
+   PUBLISH ALL CLIENT LINKS  (account level)
+
+   The Share dialog above publishes one client. This button, in the rail
+   footer, publishes every client in one pass. It reads state.seoClients at
+   the moment it is pressed, so a client added next month is included with
+   nothing to set up.
+
+   Each client still goes through publishSeoReport() with the options saved
+   in its own Share dialog, so it writes to the same share id - the same
+   link, and the same embed code already sitting in a report. Pressing this
+   after a scan is the same as opening Share on every client and pressing
+   Publish again.
+
+   Left alone on purpose:
+     - a link pinned to an earlier scan (a pinned version never moves on its
+       own, as the Share dialog promises);
+     - a client with no keyword that has a location yet;
+     - a client that has never been shared, when that box is unticked.
+   No client's saved Share settings are changed. The only fields written are
+   reportPublished / reportPublishedAt, the same two the Share dialog sets
+   after a successful publish.
+   ========================================================================== */
+let seoPublishAllBusy = false;
+
+function seoPublishAllPlan(includeNew){
+  return (state.seoClients || [])
+    .filter(Boolean)
+    .slice()
+    .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+    .map(c => {
+      const opts = Object.assign(seoReportDefaults(c), c.reportOpts || {});
+      let hasGroups = false;
+      try{ hasGroups = seoBuildLocationGroups(c).groups.length > 0; }catch(e){ hasGroups = false; }
+      const shared = !!c.reportPublished;
+      let publish = false, note;
+      if (!hasGroups){
+        note = 'No keywords with a location yet';
+      } else if (!shared){
+        publish = !!includeNew;
+        note = includeNew ? 'Gets its first link' : 'Not shared yet \u2014 skipped';
+      } else if (opts.asOf){
+        note = 'Pinned to ' + new Date(Number(opts.asOf)).toLocaleDateString(undefined, {year:'numeric', month:'short', day:'numeric'}) + ' \u2014 left as it is';
+      } else {
+        publish = true;
+        note = 'Refreshes to the latest scan';
+      }
+      return {id: c.id, name: c.name || 'Client', publish, fresh: !shared, note};
+    });
+}
+function seoPublishAllRow(id){
+  return Array.from($('seoPublishAllList').children).find(r => r.dataset && r.dataset.id === id) || null;
+}
+function seoPublishAllMark(row, kind, note){
+  if (!row) return;
+  row.className = 'seo-puball-row' + (kind ? ' ' + kind : '');
+  const n = row.querySelector('.kwr-loc-n');
+  if (n) n.textContent = note;
+}
+function seoPublishAllPaint(){
+  const plan = seoPublishAllPlan($('seoPublishAllNew').checked);
+  const box = $('seoPublishAllList');
+  box.innerHTML = '';
+  if (!plan.length){
+    const e = document.createElement('div');
+    e.className = 'seo-puball-empty';
+    e.textContent = 'No SEO clients yet. Add one and it will show up here.';
+    box.appendChild(e);
+  }
+  plan.forEach(p => {
+    const row = document.createElement('div');
+    row.dataset.id = p.id;
+    const name = document.createElement('span');
+    name.className = 'seo-puball-name';
+    name.textContent = p.name;
+    const n = document.createElement('span');
+    n.className = 'kwr-loc-n';
+    row.appendChild(name); row.appendChild(n);
+    box.appendChild(row);
+    seoPublishAllMark(row, p.publish ? '' : 'skip', p.note);
+  });
+  const go = plan.filter(p => p.publish).length;
+  const left = plan.length - go;
+  setStatus('seoPublishAllStatus', go
+    ? go + ' link' + (go === 1 ? '' : 's') + ' will be published' +
+      (left ? ', ' + left + ' left as ' + (left === 1 ? 'it is' : 'they are') : '') + '.'
+    : (plan.length ? 'Nothing to publish with these settings.' : ''), '');
+  $('seoPublishAllOk').disabled = !go;
+  return plan;
+}
+function openSeoPublishAllModal(){
+  $('seoPublishAllBackdrop').classList.add('on');
+  /* A run already in progress keeps its own progress on screen. */
+  if (seoPublishAllBusy) return;
+  $('seoPublishAllOk').textContent = 'Publish all links';
+  seoPublishAllPaint();
+}
+function closeSeoPublishAllModal(){ $('seoPublishAllBackdrop').classList.remove('on'); }
+
+const seoPublishAllBtn = $('seoPublishAllBtn');
+if (seoPublishAllBtn) seoPublishAllBtn.addEventListener('click', openSeoPublishAllModal);
+$('seoPublishAllCancel').addEventListener('click', closeSeoPublishAllModal);
+$('seoPublishAllBackdrop').addEventListener('click', e => { if (e.target === $('seoPublishAllBackdrop')) closeSeoPublishAllModal(); });
+$('seoPublishAllNew').addEventListener('change', () => { if (!seoPublishAllBusy) seoPublishAllPaint(); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && $('seoPublishAllBackdrop').classList.contains('on')) closeSeoPublishAllModal();
+});
+
+$('seoPublishAllOk').addEventListener('click', async () => {
+  if (seoPublishAllBusy) return;
+  if (!fbDb || !fbUid){ setStatus('seoPublishAllStatus', 'You need to be signed in and online to publish.', 'err'); return; }
+  /* Worked out again at the moment of pressing, so a client added or a scan
+     finished while the dialog sat open is not missed. */
+  const plan = seoPublishAllPaint();
+  const todo = plan.filter(p => p.publish);
+  if (!todo.length) return;
+
+  seoPublishAllBusy = true;
+  const btn = $('seoPublishAllOk'), newBox = $('seoPublishAllNew');
+  btn.disabled = true; newBox.disabled = true;
+  let done = 0, created = 0, empty = 0, failed = 0, lastErr = '', stopped = false;
+
+  try{
+    for (let i = 0; i < todo.length; i++){
+      const p = todo[i];
+      const row = seoPublishAllRow(p.id);
+      if (stopped){ failed++; seoPublishAllMark(row, 'err', 'Not published'); continue; }
+      const c = (state.seoClients || []).find(x => x && x.id === p.id);
+      if (!c){ seoPublishAllMark(row, 'skip', 'Removed \u2014 skipped'); continue; }
+
+      setStatus('seoPublishAllStatus', 'Publishing ' + (i + 1) + ' of ' + todo.length + '\u2026 ' + p.name, 'busy');
+      seoPublishAllMark(row, 'busy', 'Publishing\u2026');
+      /* Read fresh for the same reason as the plan above. */
+      const opts = Object.assign(seoReportDefaults(c), c.reportOpts || {});
+      let res;
+      try{ res = await publishSeoReport(c, opts); }
+      catch(err){ res = {ok:false, reason:'write', message:(err && err.message) || ''}; }
+
+      if (res && res.ok){
+        /* A cloud merge can swap the client object while the write is in
+           flight, so the flag goes on whichever copy is current now. */
+        const cur = (state.seoClients || []).find(x => x && x.id === p.id) || c;
+        cur.reportPublished = true;
+        cur.reportPublishedAt = Date.now();
+        done++; if (p.fresh) created++;
+        seoPublishAllMark(row, 'ok', p.fresh ? 'Link created' : 'Published');
+      } else if (res && res.reason === 'empty'){
+        empty++;
+        seoPublishAllMark(row, 'skip', 'Nothing left to show with its Share settings');
+      } else if (res && res.reason === 'offline'){
+        stopped = true; failed++;
+        seoPublishAllMark(row, 'err', 'Not published');
+      } else {
+        failed++;
+        if (res && res.message) lastErr = res.message;
+        seoPublishAllMark(row, 'err', 'Couldn\u2019t publish');
+      }
+    }
+    if (done) save();
+
+    const skipped = (plan.length - todo.length) + empty;
+    const s = done === 1 ? '' : 's';
+    let msg, kind;
+    if (stopped){
+      msg = 'Stopped \u2014 you need to be signed in and online to publish.' +
+        (done ? ' ' + done + ' link' + s + ' went out before the connection dropped.' : '');
+      kind = 'err';
+    } else if (failed){
+      msg = done + ' published, ' + failed + ' couldn\u2019t publish. Check the publicViews Firestore rule near the top of the file.' +
+        (lastErr ? ' (' + lastErr + ')' : '');
+      kind = 'err';
+    } else if (!done){
+      msg = 'Nothing was published \u2014 those clients have no keywords left once their Share settings are applied.';
+      kind = 'err';
+    } else {
+      msg = 'Published ' + done + ' link' + s + (created ? ' (' + created + ' new)' : '') +
+        '. Embeds already in your reports now show these positions' +
+        (skipped ? '; ' + skipped + ' left as ' + (skipped === 1 ? 'it was' : 'they were') + '.' : '.');
+      kind = 'ok';
+    }
+    setStatus('seoPublishAllStatus', msg, kind);
+    /* Closed mid-run? Say how it went anyway. */
+    if (!$('seoPublishAllBackdrop').classList.contains('on')){
+      toast(kind === 'ok' ? 'Published ' + done + ' client link' + s : msg, kind === 'ok' ? '' : 'err');
+    }
+  } finally {
+    seoPublishAllBusy = false;
+    btn.textContent = 'Publish all again';
+    btn.disabled = false;
+    newBox.disabled = false;
+  }
+});
 
 /* ---------- the public view itself ---------- */
 function kwrDeltaText(rank, prevRank){

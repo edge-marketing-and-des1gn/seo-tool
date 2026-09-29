@@ -4418,6 +4418,76 @@ body.so-locked{overflow:hidden;}
   .pp-bar.indet i{animation:none;}
   .pp-bar i{transition:none;}
 }
+
+/* ==========================================================================
+   HAND-PLACED SEARCH POINTS
+   ==========================================================================
+   A square grid is the right shape for a town and the wrong shape for a
+   client who serves four of them with farmland in between. Every point in
+   that grid costs a real search, and most of the points in the gaps are
+   spent measuring fields.
+
+   So the grid is now one of two ways to choose what gets read. The other is
+   to say how many searches you want and put each one where it matters, by
+   hand, on a map. Nothing about the grid changes — a profile that has
+   always used one still does, with the same settings in the same places.
+
+   Each hand-placed point is drawn with the circle of ground it stands for,
+   because "twelve points" means nothing until you can see whether their
+   circles reach the edges of the towns you care about.
+   ========================================================================== */
+.pt-tools{
+  position:absolute; left:12px; bottom:12px; z-index:500;
+  display:flex; align-items:center; gap:7px; flex-wrap:wrap;
+  max-width:calc(100% - 24px); padding:7px 9px; border-radius:var(--r-md);
+  background:rgba(255,255,255,.94);
+  -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
+  border:1px solid var(--line); box-shadow:var(--sh-2);
+}
+.pt-count{
+  font-family:var(--mono); font-size:11.5px; font-weight:700; white-space:nowrap;
+  color:var(--brand-deep); background:var(--brand-wash); border:1px solid #f3d9c1;
+  padding:4px 10px; border-radius:20px;
+}
+.pt-num{
+  display:inline-flex; align-items:center; gap:6px; flex:none;
+  font-size:9.5px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--ink-3);
+}
+.pt-num input{
+  width:58px; padding:5px 7px; margin:0; text-align:center;
+  font-family:var(--mono); font-size:12px; border-radius:8px;
+}
+/* The figure on the map. Numbered, because "point 7 of 12" is the only way
+   to talk about one of these out loud. */
+.pt-dot{
+  display:grid; place-items:center; width:28px; height:28px; border-radius:50%;
+  background:var(--brand); color:#fff; cursor:grab;
+  font-family:var(--mono); font-size:11px; font-weight:700;
+  border:2.5px solid #fff; box-shadow:0 3px 9px rgba(20,28,36,.42);
+  transition:transform .14s var(--ease), box-shadow .14s var(--ease);
+}
+.pt-dot:hover{transform:scale(1.14); box-shadow:0 6px 16px rgba(20,28,36,.5);}
+.pt-dot:active{cursor:grabbing;}
+/* The same set, previewed on the real coverage map before anything is read.
+   Hollow and dashed, so a plan is never mistaken for a reading. */
+.plan-dot{
+  display:grid; place-items:center; width:26px; height:26px; border-radius:50%;
+  background:rgba(255,255,255,.92); color:var(--brand-deep);
+  font-family:var(--mono); font-size:10.5px; font-weight:700;
+  border:2px dashed var(--brand);
+}
+.pt-empty{
+  position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); z-index:450;
+  max-width:min(400px, 82%); text-align:center; pointer-events:none;
+  background:rgba(255,255,255,.95); border:1px solid var(--line); border-radius:var(--r-lg);
+  padding:16px 20px; box-shadow:var(--sh-3);
+  font-size:12.5px; line-height:1.65; color:var(--ink-2);
+}
+.pt-empty b{display:block; color:var(--ink); font-size:13.5px; margin-bottom:5px; font-weight:600;}
+.pt-empty[hidden]{display:none;}
+@media (max-width:700px){
+  .pt-tools{left:8px; right:8px; bottom:8px; justify-content:center;}
+}
 </style>
 </head>
 <body>
@@ -4707,8 +4777,23 @@ body.so-locked{overflow:hidden;}
                   <svg class="step-chev" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
                 </div>
                 <div class="step-body">
+
+                  <!-- ---- how the points to read are chosen ----
+                       Two ways, and only ever one of them in force, so what
+                       the scan will do is readable off the switch itself.
+                       A profile that has always used the grid opens on the
+                       grid, with every setting exactly where it was. -->
                   <div class="f">
-                    <label for="tLoc">Centre of the grid</label>
+                    <span class="lbl">How the search area is built</span>
+                    <div class="geo-modes" id="areaModes" role="group" aria-label="How the search area is built">
+                      <button type="button" class="geo-mode" data-amode="grid" aria-pressed="true"><i>1</i><span>Square grid</span></button>
+                      <button type="button" class="geo-mode" data-amode="points" aria-pressed="false"><i>2</i><span>Hand-placed points</span></button>
+                    </div>
+                    <div class="geo-mode-note" id="areaModeNote"></div>
+                  </div>
+
+                  <div class="f">
+                    <label for="tLoc" id="tLocLabel">Centre of the grid</label>
                     <div class="g-inline">
                       <input id="tLoc" type="text" placeholder="Business address, or any place name" autocomplete="off"/>
                       <button class="btn" id="tGeocodeBtn">Find</button>
@@ -4723,26 +4808,49 @@ body.so-locked{overflow:hidden;}
                       <div><span>Longitude</span><input id="tLng" type="text" inputmode="decimal" placeholder="-113.8141464"/></div>
                     </div>
                   </div>
-                  <div class="g3">
-                    <div class="f">
-                      <label for="gridSize">Grid</label>
-                      <select id="gridSize">
-                        <option value="3">3 × 3</option><option value="5">5 × 5</option>
-                        <option value="7" selected>7 × 7</option><option value="9">9 × 9</option>
-                        <option value="11">11 × 11</option><option value="13">13 × 13</option>
-                      </select>
+
+                  <!-- ---- the grid, laid out for you ---- -->
+                  <div id="gridOnlyFields">
+                    <div class="g2">
+                      <div class="f">
+                        <label for="gridSize">Grid</label>
+                        <select id="gridSize">
+                          <option value="3">3 × 3</option><option value="5">5 × 5</option>
+                          <option value="7" selected>7 × 7</option><option value="9">9 × 9</option>
+                          <option value="11">11 × 11</option><option value="13">13 × 13</option>
+                        </select>
+                      </div>
+                      <div class="f">
+                        <label for="spacing">Spacing (km)</label>
+                        <input id="spacing" type="text" inputmode="decimal" value="1.5" autocomplete="off"/>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- ---- or the points you choose yourself ---- -->
+                  <div id="pointsOnlyFields" style="display:none">
+                    <div class="g2">
+                      <div class="f">
+                        <label for="ptCount">How many points</label>
+                        <input id="ptCount" type="text" inputmode="numeric" value="12" autocomplete="off"/>
+                      </div>
+                      <div class="f">
+                        <label for="ptRadius">Each covers (km) <span class="opt">the circle around it</span></label>
+                        <input id="ptRadius" type="text" inputmode="decimal" value="1.5" autocomplete="off"/>
+                      </div>
                     </div>
                     <div class="f">
-                      <label for="spacing">Spacing (km)</label>
-                      <input id="spacing" type="text" inputmode="decimal" value="1.5" autocomplete="off"/>
+                      <button class="btn btn-dark btn-full" id="placePointsBtn" type="button">Place the points on the map…</button>
+                      <div class="hint" id="ptSummary"></div>
                     </div>
-                    <div class="f">
-                      <label for="surface">Surface</label>
-                      <select id="surface">
-                        <option value="local" selected>Map pack</option>
-                        <option value="web">Web results</option>
-                      </select>
-                    </div>
+                  </div>
+
+                  <div class="f">
+                    <label for="surface">Surface</label>
+                    <select id="surface">
+                      <option value="local" selected>Map pack</option>
+                      <option value="web">Web results</option>
+                    </select>
                   </div>
                   <div class="f">
                     <label for="tRegion">Country &amp; language</label>
@@ -6094,6 +6202,56 @@ custom home builder | Red Deer, AB; Calgary, AB"></textarea>
   </div>
 </div>
 
+<!-- ==================== PLACE THE SEARCH POINTS BY HAND ====================
+     Opened from step two when the profile is set to hand-placed points. The
+     circle around each one is the ground that search covers, so the map is
+     the whole of the decision: overlap where you want certainty, leave gaps
+     where nothing is being sold. Nothing here is read or spent until the
+     scan itself is run. -->
+<div class="pin-backdrop" id="ptPicker">
+  <div class="pin-modal" role="dialog" aria-modal="true" aria-label="Place the points this scan will read">
+    <div class="pin-head">
+      <div style="min-width:0;flex:1">
+        <h3>Place the points this scan will read</h3>
+        <p>Click the map to drop one. Drag any of them to move it, click it again to take it off. One Google search is run at each point, covering the circle drawn around it.</p>
+      </div>
+      <button type="button" class="pin-x" id="ptPickerClose" aria-label="Close">&times;</button>
+    </div>
+    <div class="pin-mapwrap">
+      <div class="pin-map" id="ptPickerMap"></div>
+      <div class="pin-search">
+        <input type="text" id="ptPickerSearch" placeholder="Jump to a town…" autocomplete="off"/>
+        <button type="button" class="btn btn-sm" id="ptPickerGo">Go</button>
+      </div>
+      <div class="pt-empty" id="ptPickerEmpty">
+        <b>Nothing placed yet</b>
+        Click anywhere on the map to drop your first point — or press <b>Drop that many</b> below to lay a block down and drag each one where it belongs.
+      </div>
+      <div class="pt-tools">
+        <span class="pt-count" id="ptPickerCount">0 placed</span>
+        <label class="pt-num"><span>Want</span><input type="text" inputmode="numeric" id="ptPickerWant" value="12"/></label>
+        <button type="button" class="btn btn-sm" id="ptPickerFill">Drop that many</button>
+        <button type="button" class="btn btn-sm" id="ptPickerUndo">Undo</button>
+        <button type="button" class="btn btn-sm" id="ptPickerClear">Clear all</button>
+      </div>
+    </div>
+    <div class="pin-foot">
+      <div class="pin-read">
+        <span class="pin-read-coord" id="ptPickerReadCount">0 points</span>
+        <span class="pin-read-name" id="ptPickerReadNote">Click the map to drop your first one.</span>
+      </div>
+      <label class="pin-rad">
+        <span class="pin-rad-cap">Each covers</span>
+        <select id="ptPickerRadius"></select>
+      </label>
+      <div class="pin-acts">
+        <button type="button" class="btn" id="ptPickerCancel">Cancel</button>
+        <button type="button" class="btn btn-go" id="ptPickerUse">Use these points</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="toast-wrap" id="toasts"></div>
 
 <!-- ==================== WHAT CLAUDE DID ==================== -->
@@ -6478,12 +6636,59 @@ function autoGridZoom(spacingKm, lat){
   if (!isFinite(z)) return 14;
   return Math.max(GRID_ZOOM_MIN, Math.min(GRID_ZOOM_MAX, z));
 }
+/* ==========================================================================
+   A HAND-PLACED POINT IS A CIRCLE, NOT A CELL
+   ==========================================================================
+   The grid's maths is written in terms of a square cell whose diagonal is
+   spacing × √2, because that is the furthest ground a grid point has to
+   answer for. A hand-placed point answers for the circle drawn around it
+   instead, and the furthest ground in a circle of radius r is 2r away
+   across it. So the equivalent "spacing" for such a point is 2r / √2.
+
+   Expressed that way, every reader further down — the zoom maths, the
+   coverage warning, the map, the PDF, the snapshot written for Claude —
+   keeps working unchanged on scan.grid.spacingKm, and none of them has to
+   learn that two kinds of scan exist.
+   ========================================================================== */
+function pointSpacingKm(radiusKm){
+  return Math.max(0.05, (Number(radiusKm) || 1.5) * 2 / Math.SQRT2);
+}
+/* Whichever of the two a profile is set to, in the one unit everything
+   downstream already understands. */
+function areaSpacingKm(g){
+  if (!g) return 1.5;
+  return g.areaMode === 'points' ? pointSpacingKm(g.pointRadiusKm) : (Number(g.spacingKm) || 1.5);
+}
+/* The middle of the search area. A grid has one by definition; a set of
+   hand-placed points has whatever their own centre of mass is, which is
+   what the map frames and what the scan records as its centre. */
+function areaCentre(g){
+  if (!g) return null;
+  if (g.areaMode === 'points'){
+    const pts = (g.customPoints || []).filter(p => p && isFinite(p.lat) && isFinite(p.lng));
+    if (pts.length){
+      return {
+        lat: pts.reduce((s, p) => s + Number(p.lat), 0) / pts.length,
+        lng: pts.reduce((s, p) => s + Number(p.lng), 0) / pts.length
+      };
+    }
+  }
+  return (g.center && g.center.lat != null) ? {lat: g.center.lat, lng: g.center.lng} : null;
+}
+/* Has this profile been given somewhere to read at all? A grid needs a
+   centre; a hand-placed set needs at least one point. */
+function areaReady(g){
+  if (!g) return false;
+  if (g.areaMode === 'points') return (g.customPoints || []).some(p => p && isFinite(p.lat) && isFinite(p.lng));
+  return g.center && g.center.lat != null && g.center.lng != null;
+}
 /* A profile's zoom may be the string 'auto', so every reader goes through
    here rather than parsing it themselves. */
 function gridZoom(g){
   if (!g) return 14;
   if (g.zoom === 'auto' || g.zoom == null){
-    return autoGridZoom(g.spacingKm, (g.center && g.center.lat) || 0);
+    const c = areaCentre(g);
+    return autoGridZoom(areaSpacingKm(g), (c && c.lat) || 0);
   }
   const n = parseInt(g.zoom, 10);
   return isFinite(n) ? n : 14;
@@ -8185,15 +8390,42 @@ function claudeCentreOf(g){
   };
 }
 function claudeGridOf(g){
-  const lat = (g.center && g.center.lat) || 0;
+  const ac = areaCentre(g) || {};
+  const lat = ac.lat || 0;
   const z = gridZoom(g);
+  const viewKm = Math.round(viewWidthM(z, lat) / 100) / 10;
+
+  /* A hand-placed set is not a grid, and reporting it as one would have an
+     assistant describing a square that does not exist. */
+  if (g.areaMode === 'points'){
+    const r = Number(g.pointRadiusKm) || 1.5;
+    const need = r * 2;
+    const ok = viewKm >= need * 0.98;
+    return {
+      mode: 'hand-placed points',
+      points: (g.customPoints || []).length,
+      coverageRadiusKm: r,
+      zoom: z,
+      viewSetTo: g.zoom === 'auto' ? 'matched to the coverage radius' : 'fixed',
+      eachSearchCoversKm: viewKm,
+      coversEveryCell: ok,
+      warning: ok ? null
+        : 'Each point claims a ' + r + ' km radius but its search only looks at ' + viewKm +
+          ' km of map, so the outer ring of every circle was never read. Misses near the edges may be gaps rather than absences.',
+      surface: g.surface === 'web' ? 'web results' : 'map pack (Google Maps)',
+      note: 'These points were placed by hand, so the ground between them was deliberately not read. ' +
+            'An absence somewhere no point was placed is not a finding.'
+    };
+  }
+
   const cover = gridCoverage(z, g.spacingKm, lat);
   return {
+    mode: 'square grid',
     size: g.gridSize + ' × ' + g.gridSize,
     spacingKm: g.spacingKm,
     zoom: z,
     viewSetTo: g.zoom === 'auto' ? 'matched to the spacing' : 'fixed',
-    eachSearchCoversKm: Math.round(viewWidthM(z, lat) / 100) / 10,
+    eachSearchCoversKm: viewKm,
     cellDiagonalKm: Math.round(g.spacingKm * Math.SQRT2 * 10) / 10,
     /* The single most important thing to know before trusting any number
        below it: did the searches actually look at the ground they report on? */
@@ -8343,10 +8575,16 @@ function buildClaudeBrief(snap){
       L.push('');
       L.push('### ' + p.profile + (p.business && p.business !== p.profile ? ' (' + p.business + ')' : ''));
       L.push('- Centre: ' + (p.centre.label || '—') + ', searched as ' + p.centre.searchedAs);
-      L.push('- Grid: ' + p.grid.size + ' at ' + p.grid.spacingKm + ' km, read at ' + p.grid.zoom +
-             'z (a ' + p.grid.eachSearchCoversKm + ' km view) on the ' + p.grid.surface);
+      if (p.grid.mode === 'hand-placed points'){
+        L.push('- Points: ' + p.grid.points + ' placed by hand, each covering a ' + p.grid.coverageRadiusKm +
+               ' km radius, read at ' + p.grid.zoom + 'z (a ' + p.grid.eachSearchCoversKm + ' km view) on the ' + p.grid.surface);
+        L.push('- ' + p.grid.note);
+      } else {
+        L.push('- Grid: ' + p.grid.size + ' at ' + p.grid.spacingKm + ' km, read at ' + p.grid.zoom +
+               'z (a ' + p.grid.eachSearchCoversKm + ' km view) on the ' + p.grid.surface);
+      }
       if (p.grid.warning) L.push('- **' + p.grid.warning + '**');
-      else L.push('- Coverage is clean: every cell is fully inside the view it was read at.');
+      else L.push('- Coverage is clean: every point is fully inside the view it was read at.');
       if (!p.keywords.length){ L.push('- No keywords yet.'); return; }
       L.push('');
       L.push('| Keyword | Visible | Top 3 | Avg rank | Only on a wider view | Last scanned |');
@@ -8699,8 +8937,30 @@ claudeRegister('gbp.removekeyword', async cmd => {
 });
 claudeRegister('gbp.setgrid', async cmd => {
   const {c, g} = claudeGbpTarget(cmd);
-  const was = {gridSize: g.gridSize, spacingKm: g.spacingKm, zoom: g.zoom, surface: g.surface};
+  const was = {gridSize: g.gridSize, spacingKm: g.spacingKm, zoom: g.zoom, surface: g.surface,
+               areaMode: g.areaMode, pointRadiusKm: g.pointRadiusKm, pointTarget: g.pointTarget};
   const said = [];
+  /* Switching a profile between the square grid and its hand-placed points
+     is a setting like any other. Placing the points themselves is not — a
+     coordinate nobody looked at on a map is exactly what this mode exists
+     to avoid — so that part stays in the person's hands. */
+  if (cmd.mode != null){
+    const m = String(cmd.mode).toLowerCase();
+    if (['grid', 'square', 'points', 'custom', 'manual'].indexOf(m) === -1)
+      throw new Error('Mode must be "grid" or "points".');
+    const want = (m === 'grid' || m === 'square') ? 'grid' : 'points';
+    if (want === 'points' && !(g.customPoints || []).length)
+      throw new Error(g.name + ' has no hand-placed points yet, and they have to be placed on the map in step two — I cannot pick the spots.');
+    g.areaMode = want;
+    said.push(want === 'points'
+      ? 'reading its ' + g.customPoints.length + ' hand-placed points'
+      : 'back on the square grid');
+  }
+  if (cmd.pointRadiusKm != null || cmd.radiusKm != null){
+    const r = parseFloat(cmd.pointRadiusKm != null ? cmd.pointRadiusKm : cmd.radiusKm);
+    if (!(r > 0 && r <= 500)) throw new Error('The coverage radius must be a positive number of kilometres.');
+    g.pointRadiusKm = r; said.push(r + ' km covered around each point');
+  }
   if (cmd.size != null){
     const n = parseInt(cmd.size, 10);
     if (!(n >= 3 && n <= 15 && n % 2 === 1)) throw new Error('Grid size must be an odd number from 3 to 15.');
@@ -8723,8 +8983,8 @@ claudeRegister('gbp.setgrid', async cmd => {
       throw new Error('Surface must be local, maps or organic.');
     g.surface = s; said.push('on the ' + s + ' surface');
   }
-  if (!said.length) throw new Error('Nothing to change — give size, spacingKm, zoom or surface.');
-  return {message: c.name + ' / ' + g.name + ' grid is now ' + said.join(', ') + '.',
+  if (!said.length) throw new Error('Nothing to change — give mode, size, spacingKm, pointRadiusKm, zoom or surface.');
+  return {message: c.name + ' / ' + g.name + ' is now ' + said.join(', ') + '.',
           undo: () => Object.assign(g, was)};
 });
 claudeRegister('gbp.scan', async cmd => {
@@ -8919,7 +9179,7 @@ function buildClaudeHowTo(){
 '|---|---|',
 '| `gbp.addKeyword` | client, profile, keyword |',
 '| `gbp.removeKeyword` | client, profile, keyword |',
-'| `gbp.setGrid` | client, profile, size, spacingKm, zoom, surface |',
+'| `gbp.setGrid` | client, profile, mode _(`grid` or `points`)_, size, spacingKm, pointRadiusKm, zoom, surface |',
 '| `gbp.scan` | client, profile, keyword |',
 '',
 '## Housekeeping',
@@ -9193,6 +9453,11 @@ function blankGbp(name){
   return {
     id:uid(), name:name || 'Main location', bizName:'', gbpLink:'', phone:'', website:'', cid:null, placeId:null,
     center:{lat:null,lng:null,label:'',mode:'place',area:false,radius:null,bounds:null,osm:null,level:null}, regionIdx:0, gridSize:7, spacingKm:1.5, surface:'local',
+    /* Which of the two ways of choosing points is in force. 'grid' is the
+       square this tool has always laid out; 'points' is a set placed by
+       hand on the map. A profile saved before this existed has neither
+       field and is migrated to 'grid', which is exactly what it was. */
+    areaMode:'grid', customPoints:[], pointRadiusKm:1.5, pointTarget:12,
     /* Derived from the spacing rather than fixed at 14z, so a new grid cannot
        be born with holes in it. */
     zoom:'auto',
@@ -9226,6 +9491,16 @@ function migrateClient(c){
       if (!g.name) g.name = g.bizName || 'Profile';
       /* 'auto' is a legitimate value now, so only junk is corrected. */
       if (g.zoom !== 'auto' && typeof g.zoom !== 'number') g.zoom = 'auto';
+      /* Hand-placed points. Anything that predates them is a grid, said
+         out loud rather than left undefined, and a point with a coordinate
+         that will not parse is dropped rather than carried into a scan. */
+      if (g.areaMode !== 'points') g.areaMode = 'grid';
+      if (!Array.isArray(g.customPoints)) g.customPoints = [];
+      g.customPoints = g.customPoints
+        .filter(p => p && isFinite(Number(p.lat)) && isFinite(Number(p.lng)))
+        .map(p => ({id: p.id || uid(), lat: Number(p.lat), lng: Number(p.lng)}));
+      if (!(Number(g.pointRadiusKm) > 0)) g.pointRadiusKm = 1.5;
+      if (!(Number(g.pointTarget) > 0)) g.pointTarget = Math.max(1, g.customPoints.length || 12);
       g.keywords.forEach(k => { if (!Array.isArray(k.scans)) k.scans = []; });
     });
   }
@@ -11253,7 +11528,7 @@ function refreshStepState(){
   const g = activeGbp();
   const done = {
     1: !!(g && g.bizName),
-    2: !!(g && g.center.lat != null && g.center.lng != null),
+    2: areaReady(g),
     3: !!(g && g.keywords.length),
     4: providerReady()
   };
@@ -11270,7 +11545,7 @@ function providerReady(){
    IDENTITY FORM + MATCH STRENGTH INSTRUMENT
    ========================================================================== */
 const IDENT_FIELDS = ['gbpLabel','bizName','gbpLink','bizPhone','bizSite'];
-const AREA_FIELDS = ['tLoc','tLat','tLng','spacing'];
+const AREA_FIELDS = ['tLoc','tLat','tLng','spacing','ptCount','ptRadius'];
 const AREA_SELECTS = ['gridSize','surface','tRegion','zoomSel'];
 
 /* The grid-centre field's own controls, kept so a profile loaded from
@@ -11292,6 +11567,11 @@ function loadGbpIntoForm(){
   restoreGeoField($('tLoc'), g && g.center, tLocFinder);
   $('gridSize').value = g ? g.gridSize : 7;
   $('spacing').value = g ? g.spacingKm : 1.5;
+  $('ptCount').value = g ? (g.pointTarget || (g.customPoints || []).length || 12) : 12;
+  $('ptRadius').value = g ? (g.pointRadiusKm || 1.5) : 1.5;
+  /* Silent: this is the profile being loaded, not a choice being made, so
+     it paints the switch without writing anything back. */
+  setAreaMode(g ? (g.areaMode || 'grid') : 'grid', {silent:true, noMap:true});
   $('surface').value = g ? g.surface : 'local';
   $('tRegion').value = g ? g.regionIdx : 0;
   $('zoomSel').value = g ? String(g.zoom || 'auto') : 'auto';
@@ -11326,6 +11606,13 @@ function persistGbp(){
   g.center.level = Number(tEl.dataset.geoLevel) || null;
   g.gridSize = parseInt($('gridSize').value, 10) || 7;
   g.spacingKm = parseFloat($('spacing').value) || 1.5;
+  /* How many hand-placed points you want, and how far each one reaches.
+     The count is a target for the map's "Drop that many" — what actually
+     gets scanned is whatever is on the map when you press Use. */
+  const want = parseInt($('ptCount').value, 10);
+  g.pointTarget = (isFinite(want) && want > 0) ? Math.min(400, want) : (g.pointTarget || 12);
+  const prad = parseFloat($('ptRadius').value);
+  g.pointRadiusKm = (isFinite(prad) && prad > 0) ? Math.min(500, prad) : (g.pointRadiusKm || 1.5);
   g.surface = $('surface').value;
   g.regionIdx = parseInt($('tRegion').value, 10) || 0;
   const zv = $('zoomSel').value;
@@ -11354,7 +11641,8 @@ function persistGbp(){
     } else g.listing.stale = true;
   }
 
-  save(); renderMeter(); renderGridInfo(); refreshStepState(); renderTree(); renderCrumbs();
+  save(); renderMeter(); renderGridInfo(); renderPointsPanel(); refreshStepState(); renderTree(); renderCrumbs();
+  drawPlannedArea();
 }
 IDENT_FIELDS.forEach(id => $(id).addEventListener('input', persistGbp));
 AREA_FIELDS.forEach(id => $(id).addEventListener('input', persistGbp));
@@ -11994,14 +12282,25 @@ function renderScanCheck(){
   const busy = lkState.gbpId === g.id && lkState.busy;
   const region = lkRegion(g);
   const n = g.gridSize, zoom = gridZoom(g);
+  const custom = g.areaMode === 'points';
+  const placedN = (g.customPoints || []).length;
+  const areaLine = custom
+    ? '<dt>Points</dt><dd>' + placedN + ' placed by hand, ' + esc(g.pointRadiusKm || 1.5) +
+      ' km covered around each, map view ' + esc(zoom) + 'z</dd>'
+    : '<dt>Grid</dt><dd>' + n + ' × ' + n + ' = ' + (n * n) + ' points, ' + esc(g.spacingKm) + ' km apart, map view ' + esc(zoom) + 'z</dd>';
+  const ac = areaCentre(g);
+  const centreLine = '<dt>' + (custom ? 'Middle of them' : 'Centre') + '</dt><dd>' +
+    esc(custom
+      ? (ac ? ac.lat.toFixed(5) + ', ' + ac.lng.toFixed(5) : '—')
+      : (g.center.label || (g.center.lat != null ? g.center.lat.toFixed(5) + ', ' + g.center.lng.toFixed(5) : '—'))) + '</dd>';
   const provNames = {dataforseo:'DataForSEO', serper:'Serper.dev', direct:'Public relay'};
   let h = lkPanelInner(g, true);
   if (!busy && lkState.gbpId === g.id && lkState.error)
     h += '<div class="lk-warn">' + esc(lkState.error) + '</div>';
   h += '<dl class="lk-sum">' +
     '<dt>Keyword</dt><dd>' + esc(kw ? kw.text : '—') + '</dd>' +
-    '<dt>Grid</dt><dd>' + n + ' × ' + n + ' = ' + (n * n) + ' points, ' + esc(g.spacingKm) + ' km apart, map view ' + esc(zoom) + 'z</dd>' +
-    '<dt>Centre</dt><dd>' + esc(g.center.label || (g.center.lat != null ? g.center.lat.toFixed(5) + ', ' + g.center.lng.toFixed(5) : '—')) + '</dd>' +
+    areaLine +
+    centreLine +
     '<dt>Surface</dt><dd>' + (g.surface === 'web' ? 'Web results' : 'Map pack') + ' · ' + esc(region.label) + '</dd>' +
     '<dt>Source</dt><dd>' + esc(scanCheckMode === 'paste' ? 'Paste mode (you read each point)' : (provNames[state.settings.provider] || state.settings.provider)) + ' · top ' + esc(state.settings.depth || 100) + '</dd>' +
     '</dl>';
@@ -12009,7 +12308,7 @@ function renderScanCheck(){
   const has = !!(g.listing && !g.listing.stale);
   $('scanCheckLead').textContent = busy
     ? 'Loading the Google listing this scan will look for…'
-    : (has ? 'This is the listing every grid point will be searched for. Check it is yours before the credits are spent.'
+    : (has ? ('This is the listing every ' + (custom ? 'point' : 'grid point') + ' will be searched for. Check it is yours before the credits are spent.')
            : 'No listing is confirmed for this profile yet, so the scan can only match on the details typed on step one.');
   $('scanCheckGo').disabled = busy;
   $('scanCheckGo').textContent = scanCheckMode === 'paste'
@@ -12026,7 +12325,7 @@ function closeScanCheck(v){
 function scanListingCheck(mode){
   const g = activeGbp(), kw = activeKeyword();
   /* Anything createScan() would refuse, let it refuse with its own words. */
-  if (!g || !g.bizName || g.center.lat == null || g.center.lng == null || !kw) return Promise.resolve(true);
+  if (!g || !g.bizName || !areaReady(g) || !kw) return Promise.resolve(true);
   const needLookup = !g.listing || g.listing.stale;
   if (!needLookup && state.settings.confirmListing === false) return Promise.resolve(true);
   scanCheckMode = mode || 'auto';
@@ -12058,16 +12357,59 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('scanChe
 function renderGridInfo(){
   const g = activeGbp();
   if (!g){ $('gridInfo').textContent = ''; return; }
+  const warnEl = $('zoomWarn');
+  const lanes = state.settings.provider === 'direct' ? 1 : (state.settings.concurrency || 6);
+  const z = gridZoom(g);
+
+  /* ---- hand-placed points ----
+     There is no lattice, so there is nothing to say about spacing. The one
+     question worth asking is whether the search view reaches the far side
+     of the circle each point is drawn with — if it does not, the circle is
+     promising ground the reading never looked at. */
+  if (g.areaMode === 'points'){
+    const pc = areaCentre(g) || {};
+    const plat = pc.lat || 0;
+    const pViewKm = viewWidthM(z, plat) / 1000;
+    const n = (g.customPoints || []).length;
+    const r = Number(g.pointRadiusKm) || 1.5;
+    const need = r * 2;
+    if (warnEl){
+      warnEl.style.display = '';
+      if (pViewKm < need * 0.98){
+        warnEl.style.color = '';
+        warnEl.innerHTML = '<b style="color:var(--alert)">Each point covers less ground than its circle claims.</b> ' +
+          'The search runs at a view about <b>' + pViewKm.toFixed(1) + ' km</b> across, but the circle is ' +
+          '<b>' + need.toFixed(1) + ' km</b> wide, so the outer ring of it is never looked at. Leave the view on ' +
+          '<b>Match the spacing</b>, or bring the radius down to about <b>' + (pViewKm / 2).toFixed(1) + ' km</b>.';
+      } else {
+        warnEl.style.color = 'var(--good)';
+        warnEl.innerHTML = 'Each search looks at about <b>' + pViewKm.toFixed(1) + ' km</b> of map, which covers the ' +
+          'whole of the ' + r + ' km circle drawn around its point.';
+      }
+    }
+    if (!n){
+      $('gridInfo').innerHTML = '<strong>No points placed yet.</strong> Say how many you want above, then open the map ' +
+        'and click where each search should run — or drop them in a block and drag each one where it belongs.';
+      return;
+    }
+    const psecs = Math.max(4, Math.round(n * 1.6 / lanes));
+    const pmins = psecs >= 90 ? (Math.round(psecs / 6) / 10) + ' min' : psecs + ' sec';
+    $('gridInfo').innerHTML = '<strong>' + n + ' hand-placed search' + (n === 1 ? '' : 'es') + '</strong>, each covering a ' +
+      '<strong>' + r + ' km</strong> radius · read at ' + z + 'z, a view about <strong>' + pViewKm.toFixed(1) +
+      ' km</strong> across · about <strong>' + pmins + '</strong> at ' + lanes + ' point' + (lanes === 1 ? '' : 's') +
+      ' at a time. Only the ground you chose is read, so nothing is spent on the country in between.';
+    return;
+  }
+
+  /* ---- the square grid, exactly as before ---- */
   const n = g.gridSize, sp = g.spacingKm;
   const span = ((n - 1) * sp).toFixed(1);
   /* Does each search actually reach the ground the point stands for? Below 1
      it does not, and every number on the grid is then a reading of a view
      that never looked at most of its own cell. */
   const lat = (g.center && g.center.lat) || 0;
-  const z = gridZoom(g);
   const cover = gridCoverage(z, sp, lat);
   const viewKm = viewWidthM(z, lat) / 1000;
-  const lanes = state.settings.provider === 'direct' ? 1 : (state.settings.concurrency || 6);
   const secs = Math.max(4, Math.round((n * n) * 1.6 / lanes));
   const mins = secs >= 90 ? (Math.round(secs / 6) / 10) + ' min' : secs + ' sec';
   /* A grid is a patch of ground a few kilometres across, so a centre set to
@@ -12080,7 +12422,6 @@ function renderGridInfo(){
   /* The gap warning, stated in kilometres rather than as a ratio, because
      "a 6 km view, 9.9 km to the corner" is a fact anyone can act on and
      "coverage 0.6" is not. */
-  const warnEl = $('zoomWarn');
   if (warnEl){
     const diag = sp * Math.SQRT2;
     warnEl.style.display = '';
@@ -12574,6 +12915,9 @@ const map = L.map('map', {zoomControl:true}).setView([52.2690628,-113.8141464], 
 addBaseTiles(map);
 let dotLayer = L.layerGroup().addTo(map);
 let sonarLayer = L.layerGroup().addTo(map);
+/* The hand-placed points as a plan, before anything has been read. Its own
+   layer so it can be shown and cleared without touching the rank dots. */
+let plannedLayer = L.layerGroup().addTo(map);
 let centerMarker = null, liveMarkers = [];
 
 const cmpMap = L.map('cmpMap', {zoomControl:true}).setView([52.2690628,-113.8141464], 12);
@@ -13438,6 +13782,343 @@ function usePinPicker(){
   }
 }
 
+/* ==========================================================================
+   CHOOSING THE POINTS YOURSELF
+   ==========================================================================
+   Step two used to have exactly one answer to "where should this scan
+   read": a square, centred on an address, laid out for you. That is the
+   right answer for a business whose customers are all within a few
+   kilometres of its door, and the wrong one for a client who serves four
+   towns with sixty kilometres of farmland between them — a grid big enough
+   to reach all four spends most of its searches, and most of the money, on
+   fields.
+
+   So the square is now one of two ways to answer the question. The other is
+   to say how many searches you want and put each one where it matters, by
+   hand, on a map. Everything downstream — the coverage map, the stats, the
+   recommendations, the PDF, the snapshot written for Claude — reads the
+   same scan record either way and does not need to know which was used.
+
+   Three rules kept this from turning into a second, parallel tool:
+
+     · a profile that has always used the grid opens on the grid, with
+       every setting exactly where it was, and nothing about it changed;
+     · a hand-placed point stands for the circle drawn around it, and that
+       circle is drawn, because "twelve points" means nothing until you can
+       see whether they reach the edges of the towns you care about;
+     · nothing is read, and nothing is spent, until the scan is run. The
+       map is a plan, and it is drawn on the real coverage map as a plan —
+       hollow and dashed — so it can never be mistaken for a result.
+   ========================================================================== */
+
+/* ---- the switch in step two ---- */
+const AREA_MODE_NOTE = {
+  grid: '<b>A square, laid out for you.</b> Pick a size and a spacing, and the points are placed evenly around the centre above. Right when the whole market is one town.',
+  points: '<b>You choose every point.</b> Say how many you want, then place them on the map — one search runs at each, covering the circle around it. Right when a client serves several towns and the ground between them is worth nothing.'
+};
+function setAreaMode(mode, opts){
+  const o = opts || {};
+  const m = mode === 'points' ? 'points' : 'grid';
+  document.querySelectorAll('#areaModes .geo-mode').forEach(b =>
+    b.setAttribute('aria-pressed', b.dataset.amode === m ? 'true' : 'false'));
+  const gridBox = $('gridOnlyFields'), ptBox = $('pointsOnlyFields');
+  if (gridBox) gridBox.style.display = m === 'grid' ? '' : 'none';
+  if (ptBox) ptBox.style.display = m === 'points' ? '' : 'none';
+  const note = $('areaModeNote');
+  if (note) note.innerHTML = AREA_MODE_NOTE[m];
+  /* In points mode the centre is no longer the thing being searched — it is
+     only where the map opens — so the field says so rather than implying a
+     grid that is not being built. */
+  const lbl = $('tLocLabel');
+  if (lbl) lbl.textContent = m === 'points' ? 'Where to open the map' : 'Centre of the grid';
+  if (!o.silent){
+    const g = activeGbp();
+    if (g && g.areaMode !== m){ g.areaMode = m; save(); renderTree(); }
+  }
+  renderPointsPanel(); renderGridInfo(); refreshStepState();
+  if (!o.noMap){ drawPlannedArea(); recenterMap(); }
+}
+document.querySelectorAll('#areaModes .geo-mode').forEach(b => {
+  b.addEventListener('click', () => setAreaMode(b.dataset.amode));
+});
+
+/* What is currently planned, said in one line under the button. */
+function renderPointsPanel(){
+  const el = $('ptSummary');
+  if (!el) return;
+  const g = activeGbp();
+  if (!g || g.areaMode !== 'points'){ el.textContent = ''; return; }
+  const n = (g.customPoints || []).length;
+  const want = Number(g.pointTarget) || n || 0;
+  const r = Number(g.pointRadiusKm) || 1.5;
+  if (!n){
+    el.innerHTML = '<b style="color:var(--brand-deep)">No points placed yet.</b> Open the map and click where each ' +
+      'search should run. You can also drop ' + want + ' in a block and then drag each one where it belongs.';
+    return;
+  }
+  el.innerHTML = '<b>' + n + ' point' + (n === 1 ? '' : 's') + ' placed</b>' +
+    (want && want !== n ? ' — you asked for ' + want : '') +
+    ' · ' + r + ' km covered around each · read at ' + gridZoom(g) + 'z. ' +
+    'Open the map again to move, add or remove any of them.';
+}
+const placePointsBtn = $('placePointsBtn');
+if (placePointsBtn) placePointsBtn.addEventListener('click', () => openPointPicker());
+
+/* ---- the plan, drawn on the real coverage map ----
+   Shown only while the active keyword has nothing read, because once there
+   are rank dots they are standing on these very coordinates and a second
+   ring around each one is noise. Returns the bounds so recenterMap() can
+   frame them without measuring twice. */
+function drawPlannedArea(){
+  plannedLayer.clearLayers();
+  const g = activeGbp();
+  if (!g || g.areaMode !== 'points') return null;
+  const pts = (g.customPoints || []).filter(p => p && isFinite(p.lat) && isFinite(p.lng));
+  if (!pts.length) return null;
+  const kw = activeKeyword();
+  const latest = kw && kw.scans.length ? kw.scans[kw.scans.length - 1] : null;
+  if (latest && latest.points.some(p => p.rank != null)) return null;
+  const r = (Number(g.pointRadiusKm) || 1.5) * 1000;
+  pts.forEach((p, i) => {
+    L.circle([p.lat, p.lng], {
+      radius: r, color: '#b8570f', weight: 1.5, dashArray: '5 5',
+      fillColor: '#e87722', fillOpacity: .08, interactive: false
+    }).addTo(plannedLayer);
+    L.marker([p.lat, p.lng], {
+      icon: L.divIcon({className:'', html:'<div class="plan-dot">' + (i + 1) + '</div>', iconSize:[26,26], iconAnchor:[13,13]}),
+      interactive: false, keyboard: false
+    }).addTo(plannedLayer);
+  });
+  try{ return L.latLngBounds(pts.map(p => [p.lat, p.lng])); }catch(e){ return null; }
+}
+
+/* ==========================================================================
+   THE MAP YOU PLACE THEM ON
+   ========================================================================== */
+const PT_RADII = [0.25, 0.5, 0.75, 1, 1.5, 2, 3, 5, 8, 12, 20, 35, 50, 80, 120];
+let ptMap = null, ptLayer = null, ptPoints = [], ptRadiusKm = 1.5, ptUndo = [];
+
+function ptRadiusLabel(km){
+  return km < 1 ? Math.round(km * 1000) + ' m' : km + ' km';
+}
+function ptFillRadiusSelect(){
+  const sel = $('ptPickerRadius');
+  if (!sel) return;
+  sel.innerHTML = '';
+  const opts = PT_RADII.slice();
+  if (opts.indexOf(ptRadiusKm) === -1) opts.push(ptRadiusKm);
+  opts.sort((a, b) => a - b).forEach(v => {
+    const o = document.createElement('option');
+    o.value = String(v);
+    o.textContent = ptRadiusLabel(v);
+    sel.appendChild(o);
+  });
+  sel.value = String(ptRadiusKm);
+}
+function ptPaint(){
+  const n = ptPoints.length;
+  const want = Math.max(0, parseInt(($('ptPickerWant') || {}).value, 10) || 0);
+  const countEl = $('ptPickerCount');
+  if (countEl) countEl.textContent = n + ' placed' + (want && want !== n ? ' of ' + want : '');
+  const readEl = $('ptPickerReadCount');
+  if (readEl) readEl.textContent = n + ' point' + (n === 1 ? '' : 's');
+  const noteEl = $('ptPickerReadNote');
+  if (noteEl){
+    noteEl.classList.toggle('pending', !n);
+    noteEl.textContent = !n
+      ? 'Click the map to drop your first one.'
+      : (n + ' search' + (n === 1 ? '' : 'es') + ' will run, each covering ' + ptRadiusLabel(ptRadiusKm) +
+         ' around its point' + (want && want > n ? ' — ' + (want - n) + ' short of the ' + want + ' you asked for' : '') + '.');
+  }
+  const empty = $('ptPickerEmpty');
+  if (empty) empty.hidden = n > 0;
+  const use = $('ptPickerUse');
+  if (use) use.disabled = !n;
+  const undo = $('ptPickerUndo');
+  if (undo) undo.disabled = !ptUndo.length;
+  const clear = $('ptPickerClear');
+  if (clear) clear.disabled = !n;
+}
+function ptSnapshot(){
+  ptUndo.push(ptPoints.map(p => ({id:p.id, lat:p.lat, lng:p.lng})));
+  if (ptUndo.length > 40) ptUndo.shift();
+}
+function ptRedraw(){
+  if (!ptMap) return;
+  ptLayer.clearLayers();
+  const r = ptRadiusKm * 1000;
+  ptPoints.forEach((p, i) => {
+    const circle = L.circle([p.lat, p.lng], {
+      radius: r, color: '#b8570f', weight: 1.5, dashArray: '5 5',
+      fillColor: '#e87722', fillOpacity: .10, interactive: false
+    }).addTo(ptLayer);
+    const m = L.marker([p.lat, p.lng], {
+      icon: L.divIcon({className:'', html:'<div class="pt-dot">' + (i + 1) + '</div>', iconSize:[28,28], iconAnchor:[14,14]}),
+      draggable: true, autoPan: true,
+      title: 'Point ' + (i + 1) + ' — drag to move, click to remove'
+    }).addTo(ptLayer);
+    /* The circle follows the finger live, so the ground being covered is
+       visible while it is being chosen rather than after. */
+    m.on('dragstart', ptSnapshot);
+    m.on('drag', e => circle.setLatLng(e.target.getLatLng()));
+    m.on('dragend', e => {
+      const ll = e.target.getLatLng();
+      p.lat = Number(ll.lat.toFixed(7));
+      p.lng = Number(ll.lng.toFixed(7));
+      ptPaint();
+    });
+    /* Removing one renumbers the rest, so the whole set is rebuilt — but
+       not from inside the click that is still being handled. */
+    m.on('click', () => {
+      ptSnapshot();
+      ptPoints = ptPoints.filter(x => x.id !== p.id);
+      setTimeout(ptRedraw, 0);
+    });
+  });
+  ptPaint();
+}
+function ptAdd(latlng){
+  ptSnapshot();
+  ptPoints.push({id: uid(), lat: Number(latlng.lat.toFixed(7)), lng: Number(latlng.lng.toFixed(7))});
+  ptRedraw();
+}
+function ptFit(){
+  if (!ptMap || !ptPoints.length) return;
+  try{
+    const b = L.latLngBounds(ptPoints.map(p => [p.lat, p.lng]));
+    ptMap.fitBounds(b.pad(0.4), {maxZoom: 15});
+  }catch(e){}
+}
+/* A starting block, spaced so the circles just touch, centred on whatever
+   the map is looking at. It is a starting point to pull apart, not a grid:
+   every one of them is meant to be dragged. */
+function ptDropBlock(){
+  if (!ptMap) return;
+  const want = Math.max(1, Math.min(400, parseInt($('ptPickerWant').value, 10) || 12));
+  $('ptPickerWant').value = want;
+  const c = ptMap.getCenter();
+  const cols = Math.ceil(Math.sqrt(want));
+  const rows = Math.ceil(want / cols);
+  const step = ptRadiusKm * 2;
+  const cosLat = Math.max(0.05, Math.cos(c.lat * Math.PI / 180));
+  const out = [];
+  for (let r = 0; r < rows && out.length < want; r++){
+    for (let col = 0; col < cols && out.length < want; col++){
+      const dy = (r - (rows - 1) / 2) * step;
+      const dx = (col - (cols - 1) / 2) * step;
+      out.push({
+        id: uid(),
+        lat: Number((c.lat - dy / 110.574).toFixed(7)),
+        lng: Number((c.lng + dx / (111.320 * cosLat)).toFixed(7))
+      });
+    }
+  }
+  ptSnapshot();
+  ptPoints = out;
+  ptRedraw();
+  ptFit();
+}
+function openPointPicker(){
+  const g = activeGbp();
+  if (!g){ toast('Pick a profile first', 'err'); return; }
+  if (typeof L === 'undefined'){ toast('The map library has not loaded yet', 'err'); return; }
+  ptRadiusKm = Number(g.pointRadiusKm) || 1.5;
+  ptPoints = (g.customPoints || [])
+    .filter(p => p && isFinite(p.lat) && isFinite(p.lng))
+    .map(p => ({id: p.id || uid(), lat: Number(p.lat), lng: Number(p.lng)}));
+  ptUndo = [];
+  $('ptPickerWant').value = Number(g.pointTarget) || ptPoints.length || 12;
+  ptFillRadiusSelect();
+  $('ptPicker').classList.add('on');
+  document.body.classList.add('pin-locked');
+
+  const c = areaCentre(g) || {lat: 52.2690628, lng: -113.8141464};
+  if (!ptMap){
+    ptMap = L.map('ptPickerMap', {zoomControl: true}).setView([c.lat, c.lng], 10);
+    addBaseTiles(ptMap);
+    ptLayer = L.layerGroup().addTo(ptMap);
+    ptMap.on('click', e => ptAdd(e.latlng));
+  } else {
+    ptMap.setView([c.lat, c.lng], ptMap.getZoom() || 10);
+  }
+  /* Drawn straight away, not on a timer — a picker that says "0 placed" for
+     a moment before the points you already have appear reads as if it had
+     lost them. Only the resize and the framing wait for the modal to have
+     a size to measure. */
+  ptRedraw();
+  setTimeout(() => {
+    try{ ptMap.invalidateSize(); }catch(e){}
+    ptRedraw();
+    if (ptPoints.length) ptFit(); else ptMap.setView([c.lat, c.lng], 10);
+  }, 60);
+}
+function closePointPicker(){
+  const el = $('ptPicker');
+  if (el) el.classList.remove('on');
+  document.body.classList.remove('pin-locked');
+}
+if ($('ptPicker')){
+  $('ptPicker').addEventListener('mousedown', e => { if (e.target === $('ptPicker')) closePointPicker(); });
+  $('ptPickerClose').addEventListener('click', closePointPicker);
+  $('ptPickerCancel').addEventListener('click', closePointPicker);
+  $('ptPickerFill').addEventListener('click', ptDropBlock);
+  $('ptPickerWant').addEventListener('input', ptPaint);
+  $('ptPickerClear').addEventListener('click', () => {
+    if (!ptPoints.length) return;
+    ptSnapshot(); ptPoints = []; ptRedraw();
+  });
+  $('ptPickerUndo').addEventListener('click', () => {
+    if (!ptUndo.length) return;
+    ptPoints = ptUndo.pop();
+    ptRedraw();
+  });
+  $('ptPickerRadius').addEventListener('change', e => {
+    ptRadiusKm = Number(e.target.value) || ptRadiusKm;
+    ptRedraw();
+  });
+  /* Jumping the map somewhere. Same lookup every other field in the app
+     uses, so a town resolves to the same place here as anywhere else. */
+  const ptJump = async () => {
+    const q = ($('ptPickerSearch').value || '').trim();
+    if (!q || !ptMap) return;
+    const go = $('ptPickerGo');
+    go.disabled = true; go.textContent = '…';
+    try{
+      const hit = await geoResolvePlace(q);
+      if (hit){
+        const b = bboxBounds(hit.boundingbox, parseFloat(hit.lon));
+        if (b) ptMap.fitBounds(b, {padding:[36,36], maxZoom:14});
+        else ptMap.setView([parseFloat(hit.lat), parseFloat(hit.lon)], 12);
+      } else toast('No match for “' + q + '”', 'err');
+    }catch(err){ toast('Lookup failed', 'err'); }
+    finally{ go.disabled = false; go.textContent = 'Go'; }
+  };
+  $('ptPickerGo').addEventListener('click', ptJump);
+  $('ptPickerSearch').addEventListener('keydown', e => {
+    if (e.key === 'Enter'){ e.preventDefault(); ptJump(); }
+  });
+  $('ptPickerUse').addEventListener('click', () => {
+    const g = activeGbp();
+    if (!g) return;
+    if (!ptPoints.length){ toast('Place at least one point first', 'err'); return; }
+    g.customPoints = ptPoints.map(p => ({id: p.id, lat: Number(p.lat), lng: Number(p.lng)}));
+    g.pointRadiusKm = ptRadiusKm;
+    g.pointTarget = Math.max(1, parseInt($('ptPickerWant').value, 10) || ptPoints.length);
+    g.areaMode = 'points';
+    $('ptRadius').value = g.pointRadiusKm;
+    $('ptCount').value = g.pointTarget;
+    closePointPicker();
+    save();
+    setAreaMode('points', {silent:true});
+    renderTree();
+    toast(g.customPoints.length + ' point' + (g.customPoints.length === 1 ? '' : 's') +
+      ' saved — run the scan when you’re ready', 'ok');
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && $('ptPicker').classList.contains('on')) closePointPicker();
+  });
+}
+
 function fitToPoints(m, pts){
   if (!pts || !pts.length) return;
   const b = L.latLngBounds(pts.map(p => [p.lat, p.lng]));
@@ -13504,16 +14185,22 @@ function recenterMap(){
   const scan = kw && kw.scans.length ? kw.scans[kw.scans.length-1] : null;
   const centre = g && g.center;
   const framedArea = showSearchArea(map, mapAreaRef, centre);
+  /* The hand-placed plan, if there is one and nothing has been read yet. */
+  const planned = drawPlannedArea();
+  const pointsMode = !!(g && g.areaMode === 'points');
 
   /* Scan results win: once there are points on the ground, they are what
-     the map is for. Otherwise an area frames itself and a point centres. */
+     the map is for. Then the plan, which is the next most specific thing
+     there is. Otherwise an area frames itself and a point centres. */
   if (scan && scan.points.length){ fitToPoints(map, scan.points); }
+  else if (planned){ try{ map.fitBounds(planned, {padding:[46,46], maxZoom:15}); }catch(e){} }
   else if (!framedArea && centre && centre.lat != null){ map.setView([centre.lat, centre.lng], 12); }
 
   if (centerMarker){ centerMarker.remove(); centerMarker = null; }
   /* No marker for an area. A dot at the centre of a province points at
-     somewhere nobody chose and reads as if they had. */
-  if (centre && centre.lat != null && !centre.area){
+     somewhere nobody chose and reads as if they had. The same goes for a
+     hand-placed set: its centre of mass is arithmetic, not a decision. */
+  if (centre && centre.lat != null && !centre.area && !pointsMode){
     centerMarker = L.circleMarker([centre.lat, centre.lng], {
       radius:6, color:'#fff', weight:2, fillColor:'#1b222a', fillOpacity:1
     }).addTo(map).bindTooltip(g.bizName || g.name || 'Business', {direction:'top'});
@@ -14236,7 +14923,9 @@ function drawScan(scan){
   renderVerdict(scan);
   updateAssist();
   $('retryFailedBtn').disabled = !scan || !scan.points.some(p => p.rank == null || p.rank === 0 || p.matchConfidence === 'fuzzy' || p.sparse);
-  if (!scan) return;
+  /* A keyword with nothing read yet still has a plan worth looking at, and
+     switching to it must put that plan back on the map. */
+  if (!scan){ drawPlannedArea(); return; }
   scan.points.forEach((p, i) => addDot(p, i, scan));
   recenterMap();
 }
@@ -14274,7 +14963,9 @@ function dotPopup(p, idx, scan){
   const d = document.createElement('div');
   const head = document.createElement('div');
   head.className = 'pop-h';
-  head.textContent = 'Row ' + (p.row+1) + ', column ' + (p.col+1);
+  head.textContent = (scan && scan.grid && scan.grid.custom)
+    ? ('Point ' + (idx + 1) + ' of ' + scan.points.length)
+    : ('Row ' + (p.row+1) + ', column ' + (p.col+1));
   d.appendChild(head);
 
   const r = document.createElement('div');
@@ -14554,7 +15245,11 @@ function updateSummary(scan){
   $('statVis').textContent = read.length ? found.length : '—';
   $('statVisSub').textContent = read.length ? 'of ' + read.length + ' points read' : 'of points scanned';
   $('statPts').textContent = pts.length ? read.length + '/' + pts.length : '—';
-  $('statPtsSub').textContent = pts.length ? (scan.grid.rows + ' × ' + scan.grid.rows + ' · ' + scan.grid.spacingKm + ' km') : 'across the grid';
+  $('statPtsSub').textContent = pts.length
+    ? (scan.grid.custom
+        ? ((scan.grid.count || pts.length) + ' hand-placed · ' + (scan.grid.radiusKm || 1.5) + ' km each')
+        : (scan.grid.rows + ' × ' + scan.grid.rows + ' · ' + scan.grid.spacingKm + ' km'))
+    : 'across the grid';
 
   const title = $('mapTitle');
   if (title) title.textContent = scan ? ('Coverage for “' + (scan.keyword || '') + '”') : 'Coverage map';
@@ -14633,11 +15328,27 @@ function tipStats(scan, g){
   const found = pts.filter(p => p.rank >= 1);
   const rows = scan.grid.rows, half = (rows - 1) / 2;
   const inner = [], outer = [];
-  pts.forEach(p => {
-    const d = Math.max(Math.abs(p.row - half), Math.abs(p.col - half));
-    if (d <= Math.max(half / 2, 0.5)) inner.push(p);
-    else if (d >= half * 0.75) outer.push(p);
-  });
+  /* How far each point sits from the middle of the area. A grid can count
+     that in cells; a hand-placed set has no cells, so it is measured on the
+     ground — otherwise the "rings" would be reading placement order, which
+     means nothing at all. */
+  let reachKm = scan.grid.custom ? 0 : scan.grid.spacingKm * (rows - 1) / 2;
+  if (scan.grid.custom){
+    const c = scan.center || {};
+    const far = pts.map(p => (c.lat != null ? cmpDistanceKm(c.lat, c.lng, p.lat, p.lng) : 0));
+    const max = Math.max.apply(null, far.concat([0.001]));
+    reachKm = Math.max.apply(null, far.concat([0]));
+    pts.forEach((p, i) => {
+      if (far[i] <= max * 0.4) inner.push(p);
+      else if (far[i] >= max * 0.7) outer.push(p);
+    });
+  } else {
+    pts.forEach(p => {
+      const d = Math.max(Math.abs(p.row - half), Math.abs(p.col - half));
+      if (d <= Math.max(half / 2, 0.5)) inner.push(p);
+      else if (d >= half * 0.75) outer.push(p);
+    });
+  }
   const avgRank = arr => { const f = arr.filter(p => p.rank >= 1); return f.length ? f.reduce((s,p) => s + p.rank, 0) / f.length : null; };
   const visPct = arr => arr.length ? Math.round(arr.filter(p => p.rank >= 1).length / arr.length * 100) : null;
 
@@ -14676,7 +15387,8 @@ function tipStats(scan, g){
     rivalReviews: mean(rivalReviews), rivalRating: mean(rivalRatings),
     selfReviews, selfRating, selfCat,
     winnerCat: cats[0] || null,
-    spacingKm: scan.grid.spacingKm, rows: scan.grid.rows
+    spacingKm: scan.grid.spacingKm, rows: scan.grid.rows,
+    custom: !!scan.grid.custom, reachKm: reachKm
   };
 }
 
@@ -14716,9 +15428,10 @@ function buildTips(scan, g){
   }
 
   if (s.innerVis != null && s.outerVis != null && s.innerVis - s.outerVis >= 30){
-    const reach = (s.spacingKm * (s.rows - 1) / 2).toFixed(1);
+    const reach = (s.reachKm != null ? s.reachKm : s.spacingKm * (s.rows - 1) / 2).toFixed(1);
+    const edge = s.custom ? 'the furthest points you placed' : 'the edge of the grid';
     t.push({p:'high', title:'Rankings are bound to the pin, not the market',
-      body:'Visibility drops from ' + s.innerVis + '% near the centre to ' + s.outerVis + '% at the edge of the grid, roughly ' + reach + ' km out. Proximity cannot be edited, so the work is to earn relevance where the pin does not reach: a real page per outlying town with its own address details and an embedded map, reviews that name those towns in the text, and citations on directories that serve them. Where the outlying market matters most, a staffed second location is the only thing that moves the pin itself.',
+      body:'Visibility drops from ' + s.innerVis + '% near the centre to ' + s.outerVis + '% at ' + edge + ', roughly ' + reach + ' km out. Proximity cannot be edited, so the work is to earn relevance where the pin does not reach: a real page per outlying town with its own address details and an embedded map, reviews that name those towns in the text, and citations on directories that serve them. Where the outlying market matters most, a staffed second location is the only thing that moves the pin itself.',
       ev:'Centre ' + s.innerVis + '% visible  ·  edge ' + s.outerVis + '% visible'});
   }
 
@@ -14846,7 +15559,12 @@ function createScan(){
   const g = activeGbp(), kw = activeKeyword();
   if (!g){ setStatus('scanStatus', 'Pick a profile first.', 'err'); return null; }
   if (!g.bizName){ setStatus('scanStatus', 'Step one needs the business name — it\'s how the listing is recognised.', 'err'); openStep(1); return null; }
-  if (g.center.lat == null || g.center.lng == null){ setStatus('scanStatus', 'Step two needs a grid centre. Type the address and press Find.', 'err'); openStep(2); return null; }
+  /* Two ways to have been told where to read, and each has its own thing
+     missing when it hasn't been. */
+  const custom = g.areaMode === 'points';
+  const placed = custom ? (g.customPoints || []).filter(p => p && isFinite(p.lat) && isFinite(p.lng)) : [];
+  if (custom && !placed.length){ setStatus('scanStatus', 'Step two has no points yet — open the map and place the ones you want read.', 'err'); openStep(2); return null; }
+  if (!custom && (g.center.lat == null || g.center.lng == null)){ setStatus('scanStatus', 'Step two needs a grid centre. Type the address and press Find.', 'err'); openStep(2); return null; }
   if (!kw){ setStatus('scanStatus', 'Add a keyword on step three and click it to make it active.', 'err'); openStep(3); return null; }
   persistGbp();
 
@@ -14857,7 +15575,16 @@ function createScan(){
      with already matches the view it is about to be read at. Once it has been
      read, p.read supersedes this and the link is rebuilt from that instead. */
   const opts = {hl:region.hl, gl:region.gl, surface:g.surface, depth, zoom};
-  const pts = gridPoints(g.center.lat, g.center.lng, g.gridSize, g.spacingKm).map(p => ({
+  /* A hand-placed set has no lattice, so a row and a column are handed out
+     in placement order — purely so every reader downstream (the map, the
+     PDF matrix, the point-by-point table) keeps working without needing to
+     know the difference. */
+  const cols = custom ? Math.max(1, Math.ceil(Math.sqrt(placed.length))) : 0;
+  const base = custom
+    ? placed.map((p, i) => ({lat:Number(p.lat), lng:Number(p.lng), row:Math.floor(i / cols), col:i % cols}))
+    : gridPoints(g.center.lat, g.center.lng, g.gridSize, g.spacingKm);
+  const centre = areaCentre(g) || {lat:g.center.lat, lng:g.center.lng};
+  const pts = base.map(p => ({
     ...p, rank:null, matched:null, matchConfidence:null, matchedViaAd:false,
     adRank:null, adMatched:null, names:[], adNames:[], sparse:false, error:null, read:null,
     url: buildScanUrl(kw.text, p.lat, p.lng, opts),
@@ -14865,9 +15592,16 @@ function createScan(){
   }));
   const scan = {
     id:uid(), ts:Date.now(), keyword:kw.text, depth, zoom,
-    grid:{rows:g.gridSize, spacingKm:g.spacingKm},
+    /* spacingKm is the one unit everything downstream reads, so a circle of
+       radius r is recorded as the cell it is equivalent to. count, radiusKm
+       and custom are extra, and only the few places that word things
+       differently for a hand-placed scan look at them. */
+    grid: custom
+      ? {rows:cols, spacingKm:Math.round(pointSpacingKm(g.pointRadiusKm) * 100) / 100,
+         custom:true, count:placed.length, radiusKm:Number(g.pointRadiusKm) || 1.5}
+      : {rows:g.gridSize, spacingKm:g.spacingKm},
     surface:g.surface, region:region.label,
-    center:{lat:g.center.lat, lng:g.center.lng, label:g.center.label},
+    center:{lat:centre.lat, lng:centre.lng, label:(g.center && g.center.label) || ''},
     business:{name:g.bizName, phone:g.phone, website:g.website, cid:g.cid,
       placeId:g.placeId || null,
       listing: (g.listing && !g.listing.stale) ? {title:g.listing.title || null, address:g.listing.address || null,
@@ -14920,13 +15654,17 @@ $('autoScanBtn').addEventListener('click', async () => {
 async function runScan(scan){
   const g = activeGbp();
   const n = scan.grid && scan.grid.rows ? scan.grid.rows : Math.round(Math.sqrt(scan.points.length));
+  const shape = (scan.grid && scan.grid.custom)
+    ? scan.points.length + ' hand-placed point' + (scan.points.length === 1 ? '' : 's') +
+      ' \u00b7 ' + (scan.grid.radiusKm || 1.5) + ' km each'
+    : n + ' \u00d7 ' + n + ' grid \u00b7 ' + scan.points.length + ' map points';
   const card = $('mapCard');
   if (card && card.scrollIntoView) card.scrollIntoView({block:'nearest'});
   const ov = ScanOverlay.open({
     variant: 'dock', avoid: 'mapCard',
-    eyebrow: 'Grid scan in progress',
+    eyebrow: (scan.grid && scan.grid.custom) ? 'Scan in progress' : 'Grid scan in progress',
     title: 'Scanning \u201c' + (scan.keyword || '') + '\u201d',
-    sub: ((g && (g.bizName || g.name)) || 'This profile') + ' \u00b7 ' + n + ' \u00d7 ' + n + ' grid \u00b7 ' + scan.points.length + ' map points',
+    sub: ((g && (g.bizName || g.name)) || 'This profile') + ' \u00b7 ' + shape,
     total: scan.points.length, unit: 'points read',
     note: 'Watch the map fill in behind this card. Every point is saved the moment it is read \u2014 keep this tab open until it finishes.',
     onStop: () => { autoStop = true; setStatus('scanStatus', 'Stopping after this point\u2026', 'busy'); }
@@ -15779,7 +16517,9 @@ function updateAssist(){
     open.disabled = true; skip.disabled = true;
   } else {
     const p = currentScan.points[currentIdx];
-    $('assistPoint').textContent = 'Point ' + (currentIdx+1) + ' of ' + total + ' — row ' + (p.row+1) + ', column ' + (p.col+1) + ' · ' + done + ' done';
+    $('assistPoint').textContent = 'Point ' + (currentIdx+1) + ' of ' + total +
+      ((currentScan.grid && currentScan.grid.custom) ? '' : ' — row ' + (p.row+1) + ', column ' + (p.col+1)) +
+      ' · ' + done + ' done';
     open.disabled = false; skip.disabled = false;
   }
 }
@@ -17035,7 +17775,10 @@ $('pdfBtn').addEventListener('click', async () => {
     const doc = new jsPDF({unit:'pt', format:'a4'});
     const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight();
 
-    pdfHeader(doc, W, (g && g.bizName) || 'Business profile', (c ? c.name + '  ·  ' : '') + (scan.keyword || '') + '  ·  ' + scan.grid.rows + ' × ' + scan.grid.rows + ' grid, ' + scan.grid.spacingKm + ' km spacing');
+    const shapeLine = scan.grid.custom
+      ? (scan.grid.count || scan.points.length) + ' hand-placed points, ' + (scan.grid.radiusKm || 1.5) + ' km each'
+      : scan.grid.rows + ' × ' + scan.grid.rows + ' grid, ' + scan.grid.spacingKm + ' km spacing';
+    pdfHeader(doc, W, (g && g.bizName) || 'Business profile', (c ? c.name + '  ·  ' : '') + (scan.keyword || '') + '  ·  ' + shapeLine);
 
     const read = scan.points.filter(p => p.rank != null);
     const found = read.filter(p => p.rank >= 1);
@@ -17060,7 +17803,7 @@ $('pdfBtn').addEventListener('click', async () => {
     }
 
     doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(...PDF_INK);
-    doc.text('Position at every point', 40, y); y += 12;
+    doc.text(scan.grid.custom ? 'Position at every point, in the order you placed them' : 'Position at every point', 40, y); y += 12;
     y = pdfGrid(doc, 40, y, W - 80, scan, p => p.rank) + 20;
 
     const vb = $('verdictBox');
@@ -17111,8 +17854,8 @@ $('pdfBtn').addEventListener('click', async () => {
     if (y > H - 150){ doc.addPage(); y = 50; }
     doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(...PDF_INK);
     doc.text('Point by point', 40, y); y += 10;
-    const rows = scan.points.map(p => [
-      'R' + (p.row+1) + ' C' + (p.col+1),
+    const rows = scan.points.map((p, i) => [
+      scan.grid.custom ? ('Point ' + (i + 1)) : ('R' + (p.row+1) + ' C' + (p.col+1)),
       p.rank == null ? 'not read' : (p.rank === 0 ? 'absent' : '#' + p.rank),
       p.matched || '—',
       p.matchConfidence ? (CONF_TEXT[p.matchConfidence] || p.matchConfidence) : '—',

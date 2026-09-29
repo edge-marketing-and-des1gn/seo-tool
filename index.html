@@ -4488,6 +4488,65 @@ body.so-locked{overflow:hidden;}
 @media (max-width:700px){
   .pt-tools{left:8px; right:8px; bottom:8px; justify-content:center;}
 }
+
+/* ==========================================================================
+   SAVING THE MAP AS A PICTURE
+   ==========================================================================
+   The coverage map is the thing people actually want to send: into a slide,
+   an email, a client's inbox. Until now the only way out was the PDF, which
+   is the whole report when what was wanted was this one view, framed the way
+   it is on screen right now — this zoom, this pan, this keyword.
+
+   So the picture is taken of exactly what is on screen, and it is offered
+   three ways, because an embed lives inside someone else's iframe and any
+   one route can be shut off there: download, clipboard, and the image
+   itself, shown large enough to drag out or long-press. The last one needs
+   no permission from anybody, which is why the panel exists at all rather
+   than a button that silently does nothing.
+   ========================================================================== */
+.shot-acts{display:flex; gap:7px; flex-wrap:wrap;}
+/* Hidden, not removed: taking these out of the flow would change the card's
+   height, and the map would be captured at a size it was never drawn at. */
+.map-card.shooting .tools,
+.map-card.shooting .shot-acts,
+.map-card.shooting .leaflet-control-zoom,
+.map-card.shooting .leaflet-control-attribution{visibility:hidden;}
+.shot-backdrop{
+  position:fixed; inset:0; z-index:9200; display:none; place-items:center; padding:24px;
+  background:rgba(16,20,26,.62); -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px);
+}
+.shot-backdrop.on{display:grid;}
+.shot-panel{
+  width:min(920px, 100%); max-height:88vh; display:flex; flex-direction:column;
+  background:var(--card); border:1px solid var(--line); border-radius:var(--r-lg);
+  box-shadow:var(--sh-3); overflow:hidden;
+}
+.shot-head{
+  display:flex; align-items:flex-start; gap:12px;
+  padding:15px 18px 13px; border-bottom:1px solid var(--line-2);
+}
+.shot-head h3{font-family:var(--display); font-size:15px; font-weight:600; margin:0 0 3px; letter-spacing:-.012em;}
+.shot-head p{margin:0; font-size:12px; color:var(--ink-2); line-height:1.6;}
+.shot-x{
+  background:none; border:none; cursor:pointer; flex:none; padding:0 2px;
+  font-size:22px; line-height:1; color:var(--ink-3);
+}
+.shot-x:hover{color:var(--ink);}
+.shot-body{padding:16px 18px; overflow:auto; background:var(--wash); text-align:center;}
+.shot-body img{
+  max-width:100%; height:auto; border-radius:var(--r-md);
+  border:1px solid var(--line); box-shadow:var(--sh-2); background:#fff;
+}
+.shot-foot{
+  display:flex; align-items:center; gap:9px; flex-wrap:wrap;
+  padding:13px 18px; border-top:1px solid var(--line-2);
+}
+.shot-hint{flex:1; min-width:180px; font-size:11.5px; color:var(--ink-3); line-height:1.55;}
+.shot-busy{font-size:12.5px; color:var(--ink-2); padding:40px 0;}
+@media (max-width:640px){
+  .shot-panel{max-height:92vh;}
+  .shot-foot .btn{flex:1;}
+}
 </style>
 </head>
 <body>
@@ -5041,6 +5100,12 @@ body.so-locked{overflow:hidden;}
                     <select id="historySelect" style="width:auto;min-width:190px;font-size:12px;padding:7px 30px 7px 11px"></select>
                     <button class="btn btn-sm" id="expandMapBtn">Expand map</button>
                     <button class="btn btn-sm" id="pdfBtn">Download PDF</button>
+                  </div>
+                  <!-- Its own row, not part of .tools, because the embed hides
+                       the tools but a client looking at the map still has every
+                       reason to want a picture of it. -->
+                  <div class="shot-acts">
+                    <button class="btn btn-sm" id="mapShotBtn" type="button">Save image</button>
                   </div>
                 </div>
                 <div class="telemetry" id="telemetry">
@@ -6248,6 +6313,27 @@ custom home builder | Red Deer, AB; Calgary, AB"></textarea>
         <button type="button" class="btn" id="ptPickerCancel">Cancel</button>
         <button type="button" class="btn btn-go" id="ptPickerUse">Use these points</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== THE MAP, AS A PICTURE ==================== -->
+<div class="shot-backdrop" id="shotPanel">
+  <div class="shot-panel" role="dialog" aria-modal="true" aria-label="Save this map as an image">
+    <div class="shot-head">
+      <div style="min-width:0;flex:1">
+        <h3 id="shotTitle">Map image</h3>
+        <p id="shotLead">Exactly what was on screen, at the zoom and position you had it.</p>
+      </div>
+      <button type="button" class="shot-x" id="shotClose" aria-label="Close">&times;</button>
+    </div>
+    <div class="shot-body" id="shotBody">
+      <div class="shot-busy">Taking the picture…</div>
+    </div>
+    <div class="shot-foot">
+      <span class="shot-hint" id="shotHint">You can also drag the image out, or right-click it to save.</span>
+      <button type="button" class="btn btn-sm" id="shotCopy">Copy</button>
+      <button type="button" class="btn btn-sm btn-go" id="shotDownload">Download</button>
     </div>
   </div>
 </div>
@@ -9448,7 +9534,7 @@ try{ wireRefresh(); }catch(err){}
    does not match the build you uploaded, the host is serving an old file
    and no amount of re-publishing will change what the widget shows.
    ========================================================================== */
-const EDGE_BUILD = '2026-09-29 · hand-placed points + embed framing';
+const EDGE_BUILD = '2026-09-29b · hand-placed points, free zoom, save image';
 window.EDGE_BUILD = EDGE_BUILD;
 try{ console.log('%cEDGE SEO Reporter', 'font-weight:700', '— build ' + EDGE_BUILD); }catch(e){}
 
@@ -17691,6 +17777,163 @@ async function captureMap(el){
     return canvas.toDataURL('image/png');
   }catch(e){ return null; }
 }
+
+/* ==========================================================================
+   THE MAP AS A SHAREABLE PICTURE
+   ==========================================================================
+   The PDF exports the whole report. This exports the one view a person is
+   looking at — the keyword, the zoom, the pan, the legend — because that is
+   what actually gets pasted into a slide or sent to a client.
+
+   The tiles are already loaded with crossOrigin set, so the canvas comes out
+   clean rather than tainted, and the picture can be copied and saved rather
+   than only looked at.
+
+   Three routes out, because an embed runs inside somebody else's iframe: a
+   sandbox without allow-downloads kills the download, one without clipboard
+   permission kills the copy, and neither failure announces itself. The image
+   shown in the panel needs no permission at all, so there is always a way to
+   get it even when both buttons are refused.
+   ========================================================================== */
+let shotBlob = null, shotName = 'coverage-map.png', shotBusy = false;
+
+function shotFileName(){
+  const g = activeGbp(), kw = activeKeyword();
+  const slug = s => String(s || '').toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48);
+  const d = new Date();
+  const stamp = d.getFullYear() + '-' +
+    String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const parts = [slug(g && (g.bizName || g.name)), slug(kw && kw.text), stamp].filter(Boolean);
+  return (parts.join('-') || 'coverage-map') + '.png';
+}
+
+/* The card, minus its own furniture. The buttons and the zoom control are
+   hidden rather than removed: taking them out of the flow would change the
+   card's height, and Leaflet would be captured at a size it was never drawn
+   at — the picture would not match the screen it came from. */
+async function buildMapImage(){
+  const card = $('mapCard');
+  if (!card || !window.html2canvas) return null;
+  card.classList.add('shooting');
+  try{
+    await new Promise(r => requestAnimationFrame(() => setTimeout(r, 40)));
+    const canvas = await html2canvas(card, {
+      useCORS: true, backgroundColor: '#ffffff', logging: false, scale: 2,
+      /* The panel itself must never end up inside the picture. */
+      ignoreElements: el => el && el.id === 'shotPanel'
+    });
+    return await new Promise(res => {
+      try{ canvas.toBlob(b => res(b), 'image/png'); }catch(e){ res(null); }
+    });
+  }catch(e){ return null; }
+  finally{ card.classList.remove('shooting'); }
+}
+
+function shotSetHint(msg, tone){
+  const el = $('shotHint');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.color = tone === 'ok' ? 'var(--good)' : (tone === 'err' ? 'var(--alert)' : '');
+}
+
+async function openMapShot(){
+  if (shotBusy) return;
+  shotBusy = true;
+  const btn = $('mapShotBtn');
+  const was = btn ? btn.textContent : '';
+  if (btn){ btn.disabled = true; btn.textContent = 'Taking…'; }
+  const panel = $('shotPanel');
+  const body = $('shotBody');
+  if (body) body.innerHTML = '<div class="shot-busy">Taking the picture…</div>';
+  shotSetHint('You can also drag the image out, or right-click it to save.');
+  if (panel) panel.classList.add('on');
+
+  shotBlob = await buildMapImage();
+  shotName = shotFileName();
+
+  const kw = activeKeyword(), g = activeGbp();
+  const t = $('shotTitle');
+  if (t) t.textContent = (kw && kw.text) ? ('“' + kw.text + '”') : 'Map image';
+  const lead = $('shotLead');
+  if (lead){
+    lead.textContent = (g && (g.bizName || g.name))
+      ? ((g.bizName || g.name) + ' · exactly what was on screen, at the zoom and position you had it.')
+      : 'Exactly what was on screen, at the zoom and position you had it.';
+  }
+
+  if (!shotBlob){
+    if (body) body.innerHTML = '<div class="shot-busy">The picture couldn’t be taken here — ' +
+      'the map tiles wouldn’t release to the canvas. Try again once the map has finished drawing.</div>';
+    $('shotCopy').disabled = true;
+    $('shotDownload').disabled = true;
+  } else {
+    const url = URL.createObjectURL(shotBlob);
+    if (body){
+      body.innerHTML = '';
+      const img = document.createElement('img');
+      img.src = url;
+      img.alt = 'Coverage map for ' + ((kw && kw.text) || 'this keyword');
+      img.addEventListener('load', () => setTimeout(() => URL.revokeObjectURL(url), 30000));
+      body.appendChild(img);
+    }
+    $('shotDownload').disabled = false;
+    /* Writing an image to the clipboard is not universally available, and
+       inside an iframe it is often refused outright. Offered only where the
+       API exists; the download and the image itself cover everywhere else. */
+    const canCopy = !!(window.ClipboardItem && navigator.clipboard && navigator.clipboard.write);
+    $('shotCopy').hidden = !canCopy;
+    $('shotCopy').disabled = !canCopy;
+  }
+
+  if (btn){ btn.disabled = false; btn.textContent = was || 'Save image'; }
+  shotBusy = false;
+}
+
+function closeMapShot(){
+  const p = $('shotPanel');
+  if (p) p.classList.remove('on');
+}
+
+if ($('shotPanel')){
+  $('shotPanel').addEventListener('mousedown', e => { if (e.target === $('shotPanel')) closeMapShot(); });
+  $('shotClose').addEventListener('click', closeMapShot);
+  $('shotDownload').addEventListener('click', () => {
+    if (!shotBlob) return;
+    try{
+      const url = URL.createObjectURL(shotBlob);
+      const a = document.createElement('a');
+      a.href = url; a.download = shotName; a.rel = 'noopener';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 20000);
+      shotSetHint('Saved as ' + shotName + '. If nothing arrived, this report widget blocks downloads — ' +
+        'drag the image out instead, or open the link in its own tab.');
+    }catch(e){
+      shotSetHint('This widget won’t allow a download. Drag the image out, or right-click it to save.', 'err');
+    }
+  });
+  $('shotCopy').addEventListener('click', async () => {
+    if (!shotBlob) return;
+    const b = $('shotCopy');
+    b.disabled = true;
+    const was = b.textContent;
+    b.textContent = 'Copying…';
+    try{
+      await navigator.clipboard.write([new ClipboardItem({'image/png': shotBlob})]);
+      b.textContent = 'Copied';
+      shotSetHint('Copied — paste it straight into a slide, a doc or an email.', 'ok');
+      setTimeout(() => { b.textContent = was; b.disabled = false; }, 1600);
+    }catch(e){
+      b.textContent = was; b.disabled = false;
+      shotSetHint('The clipboard was refused here. Use Download, or drag the image out.', 'err');
+    }
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && $('shotPanel').classList.contains('on')) closeMapShot();
+  });
+}
+const mapShotBtnEl = $('mapShotBtn');
+if (mapShotBtnEl) mapShotBtnEl.addEventListener('click', openMapShot);
 function pdfLogo(doc, x, y, h){
   // The mark is charcoal and orange, so it sits on its own white chip wherever
   // the background behind it is dark.
@@ -19048,10 +19291,17 @@ function renderEmbedKeywordSwitch(){
    which is farmland between the towns, with every marker off-screen. The
    embed looked like it had loaded the wrong place.
 
-   So the floor is derived from the scan instead of assumed. Fit the points,
-   then allow two zoom levels of pulling back from whatever that took. A
-   tight grid still can't be zoomed out to the ocean; a province-wide set
-   frames itself. */
+   The first fix derived the floor from the scan and allowed two levels of
+   pulling back from it. That framed correctly but kept the cage, just a
+   looser one, and a cage is the wrong idea: someone looking at a coverage
+   map has every reason to pull back and see where these towns sit in the
+   province, or which market the gap on the left belongs to. Guessing how
+   far out that is allowed to go was never this code's business.
+
+   So the framing is derived from the scan, and the zooming is left alone.
+   The floor is a flat 2 — most of the globe — which exists only to stop the
+   degenerate view where the world is a single tile in the corner of a
+   widget. Everything a person would actually want to look at is reachable. */
 function embedFit(){
   try{ map.invalidateSize(); }catch(e){}
   const kw = activeKeyword();
@@ -19068,7 +19318,7 @@ function embedFit(){
      the map would slam to street level. Fall back to the zoom the scan was
      actually read at, which is the view that point stands for. */
   if (pts.length === 1) z = Math.min(z, (scan && scan.zoom) || 13);
-  map.setMinZoom(Math.max(2, z - 2));
+  map.setMinZoom(2);
   if (pts.length === 1) map.setView([pts[0].lat, pts[0].lng], z);
   else map.fitBounds(b, {padding:pad});
 }

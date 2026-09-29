@@ -14119,10 +14119,26 @@ if ($('ptPicker')){
   });
 }
 
+/* Padding is proportional, not a flat 36px. An embed widget is often short
+   and wide — 90px of height is normal in a report column — and 36px of
+   padding top and bottom leaves almost nothing to fit into, so Leaflet
+   answers by zooming out until the points are specks. Scaled to the
+   container, a short widget gets a small margin and still frames the
+   points; a full-screen map gets the roomy one it always had. */
+function fitPadding(m){
+  let s;
+  try{ s = m.getSize(); }catch(e){ s = null; }
+  const w = (s && s.x) || 600, h = (s && s.y) || 400;
+  return [
+    Math.max(6, Math.min(36, Math.round(w * 0.06))),
+    Math.max(6, Math.min(36, Math.round(h * 0.06)))
+  ];
+}
 function fitToPoints(m, pts){
   if (!pts || !pts.length) return;
   const b = L.latLngBounds(pts.map(p => [p.lat, p.lng]));
-  m.fitBounds(b, {padding:[36,36]});
+  const p = fitPadding(m);
+  m.fitBounds(b, {padding:p});
 }
 /* ==========================================================================
    SHOWING THE SEARCH AREA ON THE MAIN MAPS
@@ -18958,6 +18974,16 @@ function renderEmbedSnapshot(data){
     spacingKm: (scan && scan.grid && scan.grid.spacingKm) || 1.5,
     surface: (scan && scan.surface) || 'local',
     zoom: (scan && scan.zoom) || 14,
+    /* Read back off the scan rather than added to the published document, so
+       links shared before hand-placed points existed keep working untouched
+       and links shared since need no republishing. Without this the embed
+       would treat a hand-placed scan as a grid and drop a black centre dot
+       at the set's centre of mass — a point nobody chose, in a field. */
+    areaMode: (scan && scan.grid && scan.grid.custom) ? 'points' : 'grid',
+    pointRadiusKm: (scan && scan.grid && scan.grid.radiusKm) || 1.5,
+    customPoints: (scan && scan.grid && scan.grid.custom)
+      ? scan.points.map(p => ({id: uid(), lat: p.lat, lng: p.lng}))
+      : [],
     keywords: keywords, activeKeywordId: activeId
   });
   /* What the tool published about the business (links made before this
@@ -18985,11 +19011,50 @@ function renderEmbedKeywordSwitch(){
       g.activeKeywordId = k.id;
       save(); renderKeywords(); renderHistory();
       drawScan(k.scans.length ? k.scans[k.scans.length - 1] : null);
-      recenterMap();
+      /* Each keyword can have been read over a different set of points, so
+         switching refits rather than keeping the previous keyword's frame. */
+      embedFit();
     });
     wrap.appendChild(chip);
   });
 }
+/* ---- framing the embedded map ----
+   This used to be one line: fit the points, and clamp the map at zoom 11 so
+   a client could never pull back to a world map inside a report widget. That
+   floor was safe for as long as every scan was a square a few kilometres
+   across, where 11z is already wider than the whole grid.
+
+   A hand-placed scan broke it. Points spread from Grande Prairie to Calgary
+   need roughly 6z to fit; asked to fit them with a floor of 11, Leaflet does
+   the only thing it can and lands at 11, centred on the middle of the set —
+   which is farmland between the towns, with every marker off-screen. The
+   embed looked like it had loaded the wrong place.
+
+   So the floor is derived from the scan instead of assumed. Fit the points,
+   then allow two zoom levels of pulling back from whatever that took. A
+   tight grid still can't be zoomed out to the ocean; a province-wide set
+   frames itself. */
+function embedFit(){
+  try{ map.invalidateSize(); }catch(e){}
+  const kw = activeKeyword();
+  const scan = kw && kw.scans.length ? kw.scans[kw.scans.length - 1] : null;
+  const pts = scan && scan.points ? scan.points.filter(p => isFinite(p.lat) && isFinite(p.lng)) : [];
+  if (!pts.length){ recenterMap(); return; }
+  let b;
+  try{ b = L.latLngBounds(pts.map(p => [p.lat, p.lng])); }catch(e){ recenterMap(); return; }
+  const pad = fitPadding(map);
+  let z = 11;
+  try{ z = map.getBoundsZoom(b, false, L.point(pad[0], pad[1])); }catch(e){}
+  if (!isFinite(z)) z = 11;
+  /* A single point has no extent, so getBoundsZoom returns the maximum and
+     the map would slam to street level. Fall back to the zoom the scan was
+     actually read at, which is the view that point stands for. */
+  if (pts.length === 1) z = Math.min(z, (scan && scan.zoom) || 13);
+  map.setMinZoom(Math.max(2, z - 2));
+  if (pts.length === 1) map.setView([pts[0].lat, pts[0].lng], z);
+  else map.fitBounds(b, {padding:pad});
+}
+
 async function bootEmbedView(shareId){
   document.body.classList.add('embed-mode');
   if ($('loginScreen')) $('loginScreen').classList.remove('on');
@@ -19007,13 +19072,13 @@ async function bootEmbedView(shareId){
       showEmbedMessage('This report link is no longer available.');
       return;
     }
-    map.setMinZoom(11); // never zoom out past "neighbourhood" scale, whatever the widget's shape
     setAppVisible(true);
     if ($('mapCard')) $('mapCard').classList.add('fullscreen');
     document.body.classList.add('map-locked');
     map.invalidateSize();
     renderEmbedSnapshot(snap.data());
-    const refit = () => { map.invalidateSize(); recenterMap(); };
+    const refit = embedFit;
+    embedFit();
     setTimeout(refit, 260);
     // Embed widgets often resize asynchronously (after their own layout
     // settles) — keep re-fitting whenever the container's real size changes,

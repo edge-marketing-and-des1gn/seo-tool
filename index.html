@@ -9434,6 +9434,24 @@ try{ wireRefresh(); }catch(err){}
 /* ==========================================================================
    STATE
    ========================================================================== */
+/* ==========================================================================
+   WHICH BUILD IS ACTUALLY RUNNING
+   ==========================================================================
+   An embed link is served by whatever copy of this file is sitting on the
+   host, and a stale upload or a cached copy looks exactly like a bug that
+   was never fixed — the same wrong map, from code that no longer exists
+   anywhere else. There was no way to tell the two apart from the outside.
+
+   So the build says its own name, once, on every boot. Open any page of the
+   tool, or an embed link on its own, and the console's first line names the
+   build being served. `EDGE_BUILD` is readable in the console too. If it
+   does not match the build you uploaded, the host is serving an old file
+   and no amount of re-publishing will change what the widget shows.
+   ========================================================================== */
+const EDGE_BUILD = '2026-09-29 · hand-placed points + embed framing';
+window.EDGE_BUILD = EDGE_BUILD;
+try{ console.log('%cEDGE SEO Reporter', 'font-weight:700', '— build ' + EDGE_BUILD); }catch(e){}
+
 const STORE_KEY = 'meridian-console-v2';
 const LEGACY_KEY = 'meridian-grid-tracker-v1';
 const DEFAULTS = {

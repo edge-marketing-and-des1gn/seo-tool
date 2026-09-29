@@ -1691,6 +1691,24 @@ body.report-mode .kwr-root{display:block; font-family:var(--ui); color:var(--ink
 .seo-puball-vrow select{min-width:0;}
 @media (max-width:620px){ .seo-puball-vrow{grid-template-columns:1fr;} }
 
+/* ---- unpublished preview (Share dialog → Open preview) ----
+   Sits outside .kwr-root, so the report underneath is drawn exactly as the
+   published link draws it. Never printed. */
+.kwr-preview-pill{
+  position:fixed; left:50%; bottom:16px; transform:translateX(-50%); z-index:9000;
+  display:flex; align-items:center; gap:10px; max-width:calc(100% - 24px);
+  background:var(--console); color:var(--console-ink); border:1px solid var(--console-line);
+  border-radius:999px; padding:8px 8px 8px 15px; font-family:var(--ui); font-size:12px; font-weight:600;
+  box-shadow:0 8px 24px rgba(16,24,33,.28);
+}
+.kwr-preview-pill i{width:7px; height:7px; border-radius:50%; background:var(--brand); flex:none;}
+.kwr-preview-pill button{
+  border:0; background:var(--console-3); color:var(--console-ink); border-radius:999px;
+  width:24px; height:24px; font-size:14px; line-height:1; cursor:pointer; flex:none;
+}
+.kwr-preview-pill button:hover{background:#3a4552;}
+@media print{ .kwr-preview-pill{display:none !important;} }
+
 /* ==========================================================================
    ═══ PREMIUM LAYER ═══
    A finish pass over everything above. Nothing here changes behaviour, and
@@ -5982,7 +6000,8 @@ custom home builder | Red Deer, AB; Calgary, AB"></textarea>
     </div>
     <div class="acts">
       <button class="btn" id="seoShareCancel">Close</button>
-      <button class="btn" id="seoSharePreview" style="display:none">Open preview</button>
+      <button class="btn" id="seoShareDraftPreview" type="button" title="See exactly what the link will show with these settings, without publishing">Open preview</button>
+      <button class="btn" id="seoSharePreview" style="display:none">Open live link</button>
       <button class="btn btn-go" id="seoShareOk">Publish &amp; copy link</button>
     </div>
   </div>
@@ -18284,7 +18303,13 @@ const EMBED_ID = EMBED_QUERY_ID || (EMBED_HASH_ROUTE ? decodeURIComponent(EMBED_
    has already run by the time that module defines its renderer. */
 const REPORT_QUERY_ID = new URLSearchParams(location.search).get('report');
 const REPORT_HASH_ROUTE = location.hash.match(/^#\/report\/([^/?#]+)$/);
-const REPORT_ID = REPORT_QUERY_ID || (REPORT_HASH_ROUTE ? decodeURIComponent(REPORT_HASH_ROUTE[1]) : null);
+/* ?reportPreview=<key> is an unpublished preview opened from the Share
+   dialog. It takes the same no-login, read-only route as a report link, so
+   the page never signs in, syncs or saves; the draft itself is handed over by
+   the tab that opened it instead of being read from Firestore. */
+const REPORT_PREVIEW_KEY = new URLSearchParams(location.search).get('reportPreview');
+const REPORT_IS_PREVIEW = !REPORT_QUERY_ID && !REPORT_HASH_ROUTE && !!REPORT_PREVIEW_KEY;
+const REPORT_ID = REPORT_QUERY_ID || (REPORT_HASH_ROUTE ? decodeURIComponent(REPORT_HASH_ROUTE[1]) : null) || (REPORT_IS_PREVIEW ? 'preview' : null);
 
 if (EMBED_ID){
   bootEmbedView(EMBED_ID);
@@ -22472,6 +22497,44 @@ $('seoSharePreview').addEventListener('click', () => {
   const u = $('seoShareUrl').value;
   if (u) window.open(u, '_blank', 'noopener');
 });
+
+/* ---------- unpublished preview ----------
+   Builds the payload with exactly the call Publish makes -
+   buildSeoReportPayload() with the dialog's current settings - and opens it
+   in a tab that draws it with the published report's own renderer. Nothing
+   is written anywhere: not Firestore, not the client's saved settings, not
+   the version history. The same tab is reused, so pressing it again after
+   changing a tick simply redraws the preview. */
+const SEO_PREVIEW_STORE = 'edge-kwr-preview';
+function seoOpenReportPreview(payload){
+  const key = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  const box = window.__edgeKwrPreviews = window.__edgeKwrPreviews || {};
+  box[key] = payload;
+  Object.keys(box).slice(0, -5).forEach(k => { delete box[k]; });   /* the last few are plenty */
+  try{ localStorage.setItem(SEO_PREVIEW_STORE, JSON.stringify({key, payload})); }catch(e){ /* the hand-over above is the main route */ }
+  const url = location.origin + location.pathname + '?reportPreview=' + encodeURIComponent(key);
+  /* No noopener: the preview reads its draft from this tab. */
+  const win = window.open(url, 'edge-kwr-preview');
+  if (!win) return false;
+  try{ win.focus(); }catch(e){}
+  return true;
+}
+$('seoShareDraftPreview').addEventListener('click', () => {
+  const c = state.seoClients.find(x => x.id === seoShareClientId) || activeSeoClient();
+  if (!c) return;
+  const opts = seoShareReadOpts();
+  if (!opts.locKeys.length){ setStatus('seoShareStatus', 'Tick at least one location.', 'err'); return; }
+  const payload = buildSeoReportPayload(c, opts);
+  if (!payload.groups.length){
+    setStatus('seoShareStatus', 'Nothing to preview \u2014 those locations have no keywords left once the filters are applied.', 'err');
+    return;
+  }
+  if (!seoOpenReportPreview(payload)){
+    setStatus('seoShareStatus', 'Your browser blocked the preview tab. Allow pop-ups for this page and press Open preview again.', 'err');
+    return;
+  }
+  setStatus('seoShareStatus', 'Preview opened in a new tab \u2014 nothing has been published. Change a setting and press Open preview again to redraw it.', '');
+});
 function seoShareCopyField(inputId, btn){
   const el = $(inputId);
   el.select();
@@ -23565,6 +23628,49 @@ async function bootSeoReportView(shareId){
   }
 }
 
+/* The unpublished preview. Same body classes, same zoom, same renderer as
+   bootSeoReportView() - the only difference is where the data comes from:
+   the Share dialog that opened this tab, rather than the published document.
+   A copy in localStorage covers a browser that cuts the link between tabs. */
+function bootSeoReportPreview(key){
+  document.body.classList.add('embed-mode', 'report-mode');
+  applySeoReportZoom();
+  setAppVisible(false);
+  if ($('loginScreen')) $('loginScreen').classList.remove('on');
+  if ($('loadingScreen')) $('loadingScreen').classList.remove('on');
+  let data = null;
+  try{
+    const box = window.opener && window.opener.__edgeKwrPreviews;
+    /* Copied, so the preview keeps working if the tool's tab is closed. */
+    if (box && box[key]) data = JSON.parse(JSON.stringify(box[key]));
+  }catch(e){ data = null; }
+  if (!data){
+    try{
+      const rec = JSON.parse(localStorage.getItem(SEO_PREVIEW_STORE) || 'null');
+      if (rec && rec.key === key) data = rec.payload;
+    }catch(e){ data = null; }
+  }
+  try{ localStorage.removeItem(SEO_PREVIEW_STORE); }catch(e){}
+  if (!data || data.type !== 'kwreport'){
+    showEmbedMessage('This preview has expired. Open it again from the client\u2019s Share dialog.');
+    return;
+  }
+  renderSeoReport(data);
+  document.title = 'Preview \u2014 ' + (data.title || 'Keyword rankings');
+  const pill = document.createElement('div');
+  pill.className = 'kwr-preview-pill';
+  pill.setAttribute('role', 'status');
+  const dot = document.createElement('i');
+  const txt = document.createElement('span');
+  txt.textContent = 'Preview \u2014 not published. The client link hasn\u2019t changed.';
+  const x = document.createElement('button');
+  x.type = 'button'; x.textContent = '\u00d7'; x.title = 'Hide this note';
+  x.setAttribute('aria-label', 'Hide this note');
+  x.addEventListener('click', () => pill.remove());
+  pill.appendChild(dot); pill.appendChild(txt); pill.appendChild(x);
+  document.body.appendChild(pill);
+}
+
 /* What the live sync in the first script needs from this module: it redraws
    the SEO rail, the SEO screen, the recent searches and the hub counts when a
    teammate's changes arrive, and repairs SEO records the same way this module
@@ -23793,7 +23899,8 @@ fillRegions($('seoApplyLocRegion'));
 // Never take over either public view — both share the same #appShell, and the
 // report route is claimed here because its renderer lives in this module.
 if (typeof REPORT_ID !== 'undefined' && REPORT_ID){
-  bootSeoReportView(REPORT_ID);
+  if (typeof REPORT_IS_PREVIEW !== 'undefined' && REPORT_IS_PREVIEW) bootSeoReportPreview(REPORT_PREVIEW_KEY);
+  else bootSeoReportView(REPORT_ID);
 } else if (typeof EMBED_ID === 'undefined' || !EMBED_ID){
   bootWorkspace();
 }

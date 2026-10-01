@@ -9539,7 +9539,7 @@ try{ wireRefresh(); }catch(err){}
    does not match the build you uploaded, the host is serving an old file
    and no amount of re-publishing will change what the widget shows.
    ========================================================================== */
-const EDGE_BUILD = '2026-10-01a · report alias fr72z → 6n8sk';
+const EDGE_BUILD = '2026-10-01b · report aliases: fr72z → Window Masters, westwood-estates → Westwood';
 window.EDGE_BUILD = EDGE_BUILD;
 try{ console.log('%cEDGE SEO Reporter', 'font-weight:700', '— build ' + EDGE_BUILD); }catch(e){}
 
@@ -19501,7 +19501,13 @@ const REPORT_IS_PREVIEW = !REPORT_QUERY_ID && !REPORT_HASH_ROUTE && !!REPORT_PRE
    report is republished — so a link already sitting in a client's report
    fixes itself without anyone having to resend it. */
 const REPORT_ALIASES = {
-  'kwreport-id-mtuej5y4-fr72z': 'kwreport-id-mtuej5y4-6n8sk'
+  /* Window Masters: their digital report went out with Westwood's link, so
+     that link now opens Window Masters' report. */
+  'kwreport-id-mtuej5y4-fr72z': 'kwreport-id-mtuej5y4-6n8sk',
+  /* Westwood Estates: its own report, under a new link of its own, because
+     the original link now belongs to Window Masters. Aliases are looked up
+     once and never chained, so this opens Westwood's report directly. */
+  'kwreport-westwood-estates': 'kwreport-id-mtuej5y4-fr72z'
 };
 const REPORT_ID_RAW = REPORT_QUERY_ID || (REPORT_HASH_ROUTE ? decodeURIComponent(REPORT_HASH_ROUTE[1]) : null) || (REPORT_IS_PREVIEW ? 'preview' : null);
 const REPORT_ID = (REPORT_ID_RAW && Object.prototype.hasOwnProperty.call(REPORT_ALIASES, REPORT_ID_RAW)) ? REPORT_ALIASES[REPORT_ID_RAW] : REPORT_ID_RAW;

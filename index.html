@@ -9539,7 +9539,7 @@ try{ wireRefresh(); }catch(err){}
    does not match the build you uploaded, the host is serving an old file
    and no amount of re-publishing will change what the widget shows.
    ========================================================================== */
-const EDGE_BUILD = '2026-10-01b · report aliases: fr72z → Window Masters, westwood-estates → Westwood';
+const EDGE_BUILD = '2026-10-01c · fr72z routed by the AgencyAnalytics report embedding it';
 window.EDGE_BUILD = EDGE_BUILD;
 try{ console.log('%cEDGE SEO Reporter', 'font-weight:700', '— build ' + EDGE_BUILD); }catch(e){}
 
@@ -19510,7 +19510,33 @@ const REPORT_ALIASES = {
   'kwreport-westwood-estates': 'kwreport-id-mtuej5y4-fr72z'
 };
 const REPORT_ID_RAW = REPORT_QUERY_ID || (REPORT_HASH_ROUTE ? decodeURIComponent(REPORT_HASH_ROUTE[1]) : null) || (REPORT_IS_PREVIEW ? 'preview' : null);
-const REPORT_ID = (REPORT_ID_RAW && Object.prototype.hasOwnProperty.call(REPORT_ALIASES, REPORT_ID_RAW)) ? REPORT_ALIASES[REPORT_ID_RAW] : REPORT_ID_RAW;
+/* One link, two AgencyAnalytics reports. The fr72z link went out in both the
+   Window Masters and the Westwood Estates reports, so the address alone can't
+   say which client is looking. The report page that embeds it can: when the
+   browser passes along the embedding page's address, it is matched against
+   each report's number below and the right client's report opens. When it
+   doesn't, the alias above decides, exactly as before. */
+const REPORT_PARENT_ROUTES = {
+  'kwreport-id-mtuej5y4-fr72z': [
+    {inReport: '/report/15348729/', open: 'kwreport-id-mtuej5y4-fr72z'},  /* Westwood Estates */
+    {inReport: '/report/15348721/', open: 'kwreport-id-mtuej5y4-6n8sk'}   /* Window Masters */
+  ]
+};
+function reportParentRoute(raw){
+  if (!raw || !Object.prototype.hasOwnProperty.call(REPORT_PARENT_ROUTES, raw)) return null;
+  let ref = '';
+  try{ ref = String(document.referrer || ''); }catch(e){ ref = ''; }
+  /* Printed so it can be checked from the console which page the link was
+     opened from, and therefore whether this routing can work at all. */
+  try{ console.log('[EDGE report] ' + raw + ' opened from: ' + (ref || '(the browser did not say)')); }catch(e){}
+  const list = REPORT_PARENT_ROUTES[raw];
+  for (let i = 0; i < list.length; i++){
+    if (ref.indexOf(list[i].inReport) !== -1) return list[i].open;
+  }
+  return null;
+}
+const REPORT_ID = reportParentRoute(REPORT_ID_RAW) ||
+  ((REPORT_ID_RAW && Object.prototype.hasOwnProperty.call(REPORT_ALIASES, REPORT_ID_RAW)) ? REPORT_ALIASES[REPORT_ID_RAW] : REPORT_ID_RAW);
 
 if (EMBED_ID){
   bootEmbedView(EMBED_ID);

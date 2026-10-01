@@ -9539,7 +9539,7 @@ try{ wireRefresh(); }catch(err){}
    does not match the build you uploaded, the host is serving an old file
    and no amount of re-publishing will change what the widget shows.
    ========================================================================== */
-const EDGE_BUILD = '2026-09-29c · hand-placed points, free zoom, save image, pinned opening view';
+const EDGE_BUILD = '2026-10-01a · report alias fr72z → 6n8sk';
 window.EDGE_BUILD = EDGE_BUILD;
 try{ console.log('%cEDGE SEO Reporter', 'font-weight:700', '— build ' + EDGE_BUILD); }catch(e){}
 
@@ -19496,7 +19496,15 @@ const REPORT_HASH_ROUTE = location.hash.match(/^#\/report\/([^/?#]+)$/);
    the tab that opened it instead of being read from Firestore. */
 const REPORT_PREVIEW_KEY = new URLSearchParams(location.search).get('reportPreview');
 const REPORT_IS_PREVIEW = !REPORT_QUERY_ID && !REPORT_HASH_ROUTE && !!REPORT_PREVIEW_KEY;
-const REPORT_ID = REPORT_QUERY_ID || (REPORT_HASH_ROUTE ? decodeURIComponent(REPORT_HASH_ROUTE[1]) : null) || (REPORT_IS_PREVIEW ? 'preview' : null);
+/* Report links that went out pointing at the wrong report. Each old id on the
+   left opens the report on the right instead, and keeps following it as that
+   report is republished — so a link already sitting in a client's report
+   fixes itself without anyone having to resend it. */
+const REPORT_ALIASES = {
+  'kwreport-id-mtuej5y4-fr72z': 'kwreport-id-mtuej5y4-6n8sk'
+};
+const REPORT_ID_RAW = REPORT_QUERY_ID || (REPORT_HASH_ROUTE ? decodeURIComponent(REPORT_HASH_ROUTE[1]) : null) || (REPORT_IS_PREVIEW ? 'preview' : null);
+const REPORT_ID = (REPORT_ID_RAW && Object.prototype.hasOwnProperty.call(REPORT_ALIASES, REPORT_ID_RAW)) ? REPORT_ALIASES[REPORT_ID_RAW] : REPORT_ID_RAW;
 
 if (EMBED_ID){
   bootEmbedView(EMBED_ID);

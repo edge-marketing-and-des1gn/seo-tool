@@ -400,9 +400,9 @@ function donut(segs, opts){
 /* ==========================================================================
    DATA MODEL: turns the tracker feed into what both views draw
    ========================================================================== */
-function model(feed, period){
-  const end = addDays(today(), -1);
-  const since = addDays(end, -(period - 1));
+function model(feed, period){ if (period === 'lastMonth'){ const t0 = new Date(); period = {since: isoDay(new Date(Date.UTC(t0.getFullYear(), t0.getMonth() - 1, 1, 12))), end: isoDay(new Date(Date.UTC(t0.getFullYear(), t0.getMonth(), 0, 12)))}; } const RANGE = (period && typeof period === 'object') ? period : null; if (RANGE) period = Math.round((Date.parse(RANGE.end + 'T12:00:00Z') - Date.parse(RANGE.since + 'T12:00:00Z')) / 86400000) + 1;
+  const end = RANGE ? RANGE.end : addDays(today(), -1);
+  const since = RANGE ? RANGE.since : addDays(end, -(period - 1));
   const prevEnd = addDays(since, -1), prevSince = addDays(prevEnd, -(period - 1));
   const inCur = d => d >= since && d <= end, inPrev = d => d >= prevSince && d <= prevEnd;
   const weekly = period > 35;
@@ -628,7 +628,7 @@ function render(root, feed, opts){
         '<p class="aiv-foot">* Google AI impressions per page come from the newest Search Console export and cover everything since Google started recording (May 18, 2026).</p></section>' +
     '</div>';
 
-  root.querySelectorAll('[data-period] button').forEach(b => b.addEventListener('click', () => opts.onPeriod && opts.onPeriod(Number(b.dataset.p))));
+  root.querySelectorAll('[data-period] button').forEach(b => b.addEventListener('click', () => { const k = b.dataset.p; if (k === 'custom'){ root.querySelectorAll('[data-period] button').forEach(x => x.classList.toggle('on', x === b)); const cu = root.querySelector('[data-custom]'); if (cu) cu.style.display = 'flex'; return; } if (opts.onPeriod) opts.onPeriod(k === 'lastMonth' ? 'lastMonth' : Number(k)); })); const applyBtn = root.querySelector('[data-apply]'); if (applyBtn) applyBtn.addEventListener('click', () => { const f = root.querySelector('[data-from]').value, t = root.querySelector('[data-to]').value; if (f && t && f <= t && opts.onPeriod) opts.onPeriod({since: f, end: t}); });
 
   root.querySelectorAll('[data-kpi]').forEach(b => b.addEventListener('click', () => {
     if (b.classList.contains('off')) return;
@@ -891,13 +891,13 @@ function renderReport(root, feed, opts){
   const kpis = kpi('AI Visits', fmt(M.ai.s), delta(M.ai.s, M.ai.ps, M.ai.hasPrev), M.ai.series, '#eb6834') +
     kpi('Conversions from AI', fmt(M.ai.k), delta(M.ai.k, M.ai.pk, M.ai.hasPrev), M.ai.keySeries, '#2a78d6') +
     (M.google.imported ? kpi('Google AI Impressions', fmtK(M.google.n), delta(M.google.n, M.google.prev, M.google.prev > 0), M.google.series, '#1baf7a') : '') +
-    (M.aio.length ? kpi('AI Overview Mentions', pctTxt(mentioned, M.aio.length) + '<div style="font-size:12px;font-weight:500;color:#8593a0;margin-top:4px">' + fmt(mentioned) + ' of ' + fmt(M.aio.length) + ' tracked searches</div>', null, null) : '');
+    (M.aio.length && opts.showAio ? kpi('AI Overview Mentions', pctTxt(mentioned, M.aio.length) + '<div style="font-size:12px;font-weight:500;color:#8593a0;margin-top:4px">' + fmt(mentioned) + ' of ' + fmt(M.aio.length) + ' tracked searches</div>', null, null) : '');
 
-  const chans = ['AI'].concat(M.hasChannels ? ['Organic Search', 'Direct'] : []);
+  const SEGKEY = (opts.period && typeof opts.period === 'object') ? 'custom' : String(opts.period || 30); CHCOL['Google AI Impressions'] = CHCOL['Google AI Impressions'] || '#7b61ff'; const chans = ['AI'].concat(M.hasChannels ? ['Organic Search', 'Direct'] : []).concat(M.google.imported ? ['Google AI Impressions'] : []);
   root.innerHTML = '<div class="aia">' +
     '<div class="aia-panel aia-head"><div><h1 class="aia-title">' + esc(opts.title || ((feed.name || feed.domain) + ' — AI Visibility')) + '</h1>' +
       '<div class="aia-sub">' + esc(prettyDate(M.since)) + ' – ' + esc(prettyDate(M.end)) + '</div></div>' +
-      '<div class="aia-seg" data-period>' + [30, 90, 365].map(p => '<button type="button" data-p="' + p + '"' + (p === period ? ' class="on"' : '') + '>' + (p === 365 ? '12 Months' : p + ' Days') + '</button>').join('') + '</div></div>' +
+      '<div class="aia-periods"><div class="aia-seg" data-period>' + [['lastMonth', 'Last Month'], ['30', '30 Days'], ['90', '90 Days'], ['365', '12 Months'], ['custom', 'Custom']].map(([k, l]) => '<button type="button" data-p="' + k + '"' + (k === SEGKEY ? ' class="on"' : '') + '>' + l + '</button>').join('') + '</div><div data-custom style="display:' + (SEGKEY === 'custom' ? 'flex' : 'none') + ';gap:6px;align-items:center;justify-content:flex-end;margin-top:8px;font-size:12px;color:#5b6670"><input type="date" data-from value="' + M.since + '" style="border:1px solid #d7dde3;border-radius:6px;padding:4px 6px;font:inherit;color:#1f2a33"><span>to</span><input type="date" data-to value="' + M.end + '" style="border:1px solid #d7dde3;border-radius:6px;padding:4px 6px;font:inherit;color:#1f2a33"><button type="button" data-apply style="border:0;background:#eb6834;color:#fff;border-radius:6px;padding:5px 12px;font:inherit;font-weight:600;cursor:pointer">Apply</button></div></div></div>' +
     '<div class="aia-kpis">' + kpis + '</div>' +
     '<div class="aia-panel aia-row"><div class="aia-panel-head"><h2 class="aia-panel-title">Website Visits</h2><div class="aia-toggles" data-tg>' +
       chans.map(c => '<label class="aia-toggle" style="--c:' + CHCOL[c] + '"><input type="checkbox" data-c="' + c + '"' + (st.ch[c] ? ' checked' : '') + '><i></i>' + (c === 'AI' ? 'AI Assistants' : c) + '</label>').join('') +
@@ -907,15 +907,15 @@ function renderReport(root, feed, opts){
     '<div class="aiv-chart" data-main></div></div>' +
     '<div class="aia-grid2 aia-row">' +
       '<div class="aia-panel"><div class="aia-panel-head"><h2 class="aia-panel-title">AI Visits by Assistant</h2></div><div data-donut></div></div>' +
-      (M.google.imported ? '<div class="aia-panel"><div class="aia-panel-head"><h2 class="aia-panel-title">Google AI Impressions</h2></div><div class="aiv-chart" data-g></div></div>'
+      (M.google.imported && opts.showGoogleCard ? '<div class="aia-panel"><div class="aia-panel-head"><h2 class="aia-panel-title">Google AI Impressions</h2></div><div class="aiv-chart" data-g></div></div>'
         : '<div class="aia-panel"><div class="aia-panel-head"><h2 class="aia-panel-title">Top Pages from AI</h2></div><div data-pg></div></div>') +
     '</div>' +
-    (M.aio.length ? '<div class="aia-grid2 aia-row"><div class="aia-panel"><div class="aia-panel-head"><h2 class="aia-panel-title">Google AI Overviews · Tracked Searches</h2></div><div data-aio></div></div>' +
+    (M.aio.length && opts.showAio ? '<div class="aia-grid2 aia-row"><div class="aia-panel"><div class="aia-panel-head"><h2 class="aia-panel-title">Google AI Overviews · Tracked Searches</h2></div><div data-aio></div></div>' +
       (M.google.imported ? '<div class="aia-panel"><div class="aia-panel-head"><h2 class="aia-panel-title">Top Pages from AI</h2></div><div data-pg2></div></div>' : '<div></div>') + '</div>'
-      : (M.google.imported ? '<div class="aia-panel aia-row"><div class="aia-panel-head"><h2 class="aia-panel-title">Top Pages from AI</h2></div><div data-pg2></div></div>' : '')) +
+      : (M.google.imported && opts.showGoogleCard ? '<div class="aia-panel aia-row"><div class="aia-panel-head"><h2 class="aia-panel-title">Top Pages from AI</h2></div><div data-pg2></div></div>' : '')) +
     '<div class="aia-foot">' + esc(opts.foot || '') + '</div></div>';
 
-  root.querySelectorAll('[data-period] button').forEach(b => b.addEventListener('click', () => opts.onPeriod && opts.onPeriod(Number(b.dataset.p))));
+  root.querySelectorAll('[data-period] button').forEach(b => b.addEventListener('click', () => { const k = b.dataset.p; if (k === 'custom'){ root.querySelectorAll('[data-period] button').forEach(x => x.classList.toggle('on', x === b)); const cu = root.querySelector('[data-custom]'); if (cu) cu.style.display = 'flex'; return; } if (opts.onPeriod) opts.onPeriod(k === 'lastMonth' ? 'lastMonth' : Number(k)); })); const applyBtn = root.querySelector('[data-apply]'); if (applyBtn) applyBtn.addEventListener('click', () => { const f = root.querySelector('[data-from]').value, t = root.querySelector('[data-to]').value; if (f && t && f <= t && opts.onPeriod) opts.onPeriod({since: f, end: t}); });
 
   const drawMain = () => {
     const s = [];
@@ -923,7 +923,7 @@ function renderReport(root, feed, opts){
       const p = st.plat && M.plats.find(x => x.name === st.plat);
       s.push({name: p ? p.name : 'AI Assistants', color: p ? pcol(p.name) : CHCOL.AI, values: p ? p.series : M.ai.series, area: true});
     }
-    ['Organic Search', 'Direct'].forEach(c => { if (st.ch[c] && M.hasChannels) s.push({name: c, color: CHCOL[c], values: M.channels[c].series}); });
+    ['Organic Search', 'Direct'].forEach(c => { if (st.ch[c] && M.hasChannels) s.push({name: c, color: CHCOL[c], values: M.channels[c].series}); }); if (st.ch['Google AI Impressions'] && M.google.imported) s.push({name: 'Google AI impressions', color: CHCOL['Google AI Impressions'], values: M.google.series});
     lineChart(root.querySelector('[data-main]'), {labels: M.labels, weekly: M.weekly, height: 290, series: s, label: 'Website visits', empty: 'Tick a source to show it.'});
   };
   root.querySelectorAll('[data-tg] input').forEach(i => i.addEventListener('change', () => { st.ch[i.dataset.c] = i.checked; drawMain(); }));
@@ -940,7 +940,7 @@ function renderReport(root, feed, opts){
       segs.map(s => '<div><i style="background:' + s.color + '"></i>' + esc(s.label) + '<span>' + fmt(s.n) + '</span></div>').join('') + '</div></div>';
   } else dn.innerHTML = '<div class="aia-empty">No AI visits in this period.</div>';
 
-  if (M.google.imported) lineChart(root.querySelector('[data-g]'), {labels: M.labels, weekly: M.weekly, height: 200, series: [{name: 'AI impressions', color: '#1baf7a', values: M.google.series, area: true}]});
+  if (M.google.imported && opts.showGoogleCard) lineChart(root.querySelector('[data-g]'), {labels: M.labels, weekly: M.weekly, height: 200, series: [{name: 'AI impressions', color: '#1baf7a', values: M.google.series, area: true}]});
 
   const pagesBars = host => {
     if (!host) return;

@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="referrer" content="no-referrer"/>
+<meta name="robots" content="noindex"/>
+<title>AI Visibility Report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+/* Same palette as the SEO tool, so the embed matches the keyword reports. */
+:root{
+  --brand:#e87722; --brand-deep:#b8570f; --brand-wash:#fdf1e6;
+  --paper:#f3f6f8; --card:#ffffff; --card-2:#f7f9fa; --line:#e4e9ed; --line-2:#eef2f5;
+  --ink:#1b222a; --ink-2:#57646f; --ink-3:#8b98a3;
+  --good:#0f7a58; --good-wash:#e6f5ef; --alert:#b5352a;
+  --ui:"Inter",-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;
+  --display:"Poppins","Inter",Helvetica,Arial,sans-serif;
+  --mono:"JetBrains Mono","SFMono-Regular",Consolas,monospace;
+}
+html,body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--ui);-webkit-font-smoothing:antialiased;}
+#report{max-width:1180px;margin:0 auto;padding:24px 16px 40px;}
+.foot{max-width:1180px;margin:0 auto;padding:0 16px 28px;color:var(--ink-3);font-size:11.5px;}
+</style>
+</head>
+<body>
+<main id="report"></main>
+<div class="foot" id="foot"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="ai-visibility.js"></script>
+<script>
+(function(){
+  'use strict';
+  const root = document.getElementById('report');
+  const AIV = window.AIVis;
+  const id = new URLSearchParams(location.search).get('r') || '';
+
+  if (!AIV){ root.textContent = 'This report could not load.'; return; }
+  if (!/^aireport-[\w-]+$/.test(id)){
+    AIV.renderMessage(root, 'Report not found', 'This link is missing its report id.', true);
+    return;
+  }
+
+  let db = null;
+  try{
+    firebase.initializeApp({
+      apiKey: "AIzaSyA94BzMWcwqlK9Bpmclw6l0hSDiyPhQ_AA",
+      authDomain: "serp-79020.firebaseapp.com",
+      projectId: "serp-79020",
+      storageBucket: "serp-79020.firebasestorage.app",
+      messagingSenderId: "760216876354",
+      appId: "1:760216876354:web:27c96045159c7920af44db"
+    });
+    db = firebase.firestore();
+  }catch(e){ db = null; }
+
+  AIV.renderMessage(root, 'Loading report', 'Fetching the latest AI visibility data…');
+
+  (async () => {
+    if (!db) throw new Error('This report needs an internet connection to load.');
+    const snap = await db.collection('publicViews').doc(id).get();
+    if (!snap.exists) throw new Error('This report link is no longer available.');
+    const view = snap.data() || {};
+    if (view.type !== 'aireport' || !view.feedUrl || !view.token) throw new Error('This report link is not set up correctly.');
+
+    /* The token opens this one client's data, read-only. */
+    const feed = await AIV.apiGet(view.feedUrl, {action: 'feed', domain: view.domain, t: view.token});
+    document.title = (view.title || feed.name || feed.domain) + ' | AI Visibility';
+
+    let period = 30;
+    const draw = () => AIV.render(root, feed, {period, title: view.title, onPeriod: p => { period = p; draw(); }});
+    draw();
+    const when = new Date(feed.generatedAt || Date.now());
+    document.getElementById('foot').textContent = 'Data as of ' + when.toLocaleString('en-CA', {dateStyle: 'medium', timeStyle: 'short'}) + '. Updates automatically.';
+  })().catch(err => {
+    AIV.renderMessage(root, 'This report couldn’t load', String(err && err.message || err).replace(/[&<>]/g, ''), true);
+  });
+})();
+</script>
+</body>
+</html>

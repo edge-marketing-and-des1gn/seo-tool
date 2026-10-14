@@ -70,6 +70,7 @@ function injectStyles(){
 .aiv-tile-kind{display:inline-block;font-size:10px;font-weight:700;border-radius:20px;padding:2px 7px;margin-top:8px;}
 .aiv-kind-real{background:var(--aiv-goodw);color:var(--aiv-good);}
 .aiv-kind-sample{background:var(--aiv-wash);color:var(--aiv-deep);}
+.aiv-kind-none{background:var(--aiv-line2);color:var(--aiv-ink3);}
 .aiv-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;}
 .aiv-card{background:var(--aiv-card);border:1px solid var(--aiv-line);border-radius:16px;padding:18px 20px;min-width:0;}
 .aiv-card h3{font-family:var(--display,Poppins,Inter,sans-serif);font-size:15px;font-weight:600;letter-spacing:-.01em;margin:0 0 4px;}
@@ -245,12 +246,26 @@ function render(root, feed, opts){
   const tile = (label, val, note, kind) =>
     '<div class="aiv-tile"><div class="aiv-tile-label">' + esc(label) + '</div><div class="aiv-tile-val">' + val + '</div>' +
     '<div class="aiv-tile-note">' + note + '</div>' +
-    '<span class="aiv-tile-kind ' + (kind === 'sample' ? 'aiv-kind-sample">Sampled' : 'aiv-kind-real">Measured') + '</span></div>';
+    '<span class="aiv-tile-kind ' + (kind === 'sample' ? 'aiv-kind-sample">Sampled' : kind === 'none' ? 'aiv-kind-none">No data yet' : 'aiv-kind-real">Measured') + '</span></div>';
 
   const up = feed.updated || {};
+  const aioAll = ((feed.aio || {}).checks || []);
+  const aioRun = aioAll.reduce((m, c) => c.d > m ? c.d : m, '');
+  const aioLatest = (() => {
+    const seen = {};
+    return aioAll.filter(c => c.d === aioRun).filter(c => { const k = c.k + '|' + c.loc; if (seen[k]) return false; seen[k] = 1; return true; });
+  })();
   const tiles =
-    tile('Google AI impressions', fmt(gImp), 'AI Overviews &amp; AI Mode, from Search Console' + (up.google ? ' · to ' + esc(prettyDate(up.google)) : ' · not imported yet'), 'real') +
-    tile('Copilot / Bing citations', fmt(bCit), 'Times Bing AI cited the site' + (up.bing ? ' · to ' + esc(prettyDate(up.bing)) : ' · not imported yet'), 'real') +
+    (up.google
+      ? tile('Google AI impressions', fmt(gImp), 'AI Overviews &amp; AI Mode, from Search Console · to ' + esc(prettyDate(up.google)), 'real')
+      : tile('Google AI impressions', '—', 'Not imported yet. Search Console access is needed for this site.', 'none')) +
+    (up.bing
+      ? tile('Copilot / Bing citations', fmt(bCit), 'Times Bing AI cited the site · to ' + esc(prettyDate(up.bing)), 'real')
+      : tile('Copilot / Bing citations', '—', 'Not imported yet from Bing Webmaster Tools.', 'none')) +
+    (aioRun
+      ? tile('Google AI Overviews', aioLatest.filter(c => c.cited).length + ' / ' + aioLatest.length,
+          'Tracked searches whose AI Overview cites the site · named in ' + aioLatest.filter(c => c.named).length + ' · ' + aioLatest.filter(c => c.shown).length + ' showed an Overview · ' + esc(prettyDate(aioRun)), 'real')
+      : '') +
     tile('Clicks from AI', fmt(ga4Clicks), (feed.tracking.ga4 ? 'GA4 visits from AI assistants' + (ga4Conv ? ' · ' + fmt(ga4Conv) + ' key events' : '') : 'GA4 not connected for this site'), 'real') +
     tile('AI prompt citations', checks.length ? pct(cited, checks.length) : '—',
       checks.length ? fmt(cited) + ' of ' + fmt(checks.length) + ' test questions cited the site · named in ' + fmt(named) : (feed.tracking.llm ? 'First checks run on the next weekly cycle' : 'Prompt checks are off for this client'), 'sample') +
@@ -295,9 +310,9 @@ function render(root, feed, opts){
 
   const chartRange = since;
   const charts = [
-    ['Google AI impressions', bucketDaily(feed.google.daily, chartRange), 'Search Console, Generative AI report', 'impressions'],
-    ['Copilot / Bing citations', bucketDaily(feed.bing.daily, chartRange), 'Bing Webmaster Tools, AI Performance report', 'citations'],
-    ['Clicks from AI assistants', bucketDaily(feed.ga4.daily, chartRange, 's'), 'Google Analytics 4 sessions from AI sources', 'clicks']
+    ['Google AI impressions', bucketDaily(feed.google.daily, chartRange), 'Search Console, Generative AI report (Google records this from May 18, 2026)', 'impressions', !up.google],
+    ['Copilot / Bing citations', bucketDaily(feed.bing.daily, chartRange), 'Bing Webmaster Tools, AI Performance report', 'citations', !up.bing],
+    ['Clicks from AI assistants', bucketDaily(feed.ga4.daily, chartRange, 's'), 'Google Analytics 4 sessions from AI sources', 'clicks', !feed.tracking.ga4]
   ];
 
   root.innerHTML =
@@ -312,13 +327,21 @@ function render(root, feed, opts){
       (opts.topHtml || '') +
       '<div class="aiv-tiles">' + tiles + '</div>' +
       '<div class="aiv-grid">' + charts.map(c =>
-        '<section class="aiv-card"><h3>' + esc(c[0]) + '</h3><p class="aiv-cap">' + esc(c[2]) + (c[1].weekly ? ' · weekly totals' : ' · daily') + '</p>' + barChart(c[1], c[3]) + '</section>').join('') +
+        '<section class="aiv-card"><h3>' + esc(c[0]) + '</h3><p class="aiv-cap">' + esc(c[2]) + (c[1].weekly ? ' · weekly totals' : ' · daily') + '</p>' +
+        (c[4] ? '<div class="aiv-empty">Not imported yet, so this is unknown rather than zero.</div>' : barChart(c[1], c[3])) + '</section>').join('') +
         '<section class="aiv-card"><h3>Which AI platforms</h3><p class="aiv-cap">Clicks by platform (GA4), and how often each assistant cited the site in prompt checks</p>' +
           (platRows.length ? barList(platRows) : '<div class="aiv-empty">No AI clicks in this period.</div>') +
           (llmRows.length ? '<div style="margin-top:14px;border-top:1px solid var(--aiv-line2);padding-top:10px">' + barList(llmRows, 'Prompt checks citing the site, per assistant') + '</div>' : '') +
         '</section>' +
       '</div>' +
       '<section class="aiv-card" style="margin-bottom:16px"><h3>Month by month</h3><p class="aiv-cap">Every source, totalled per calendar month</p>' + monthTable + '</section>' +
+      '<section class="aiv-card" style="margin-bottom:16px"><h3>Google AI Overview mentions</h3>' +
+        '<p class="aiv-cap">The real Google results page for each tracked keyword and location: whether an AI Overview appeared, whether it cited ' + esc(domain) + ' as a source, and whether it named the business in the answer.</p>' +
+        '<div class="aiv-filters"><select data-aiv-a="c"><option value="">All searches</option><option value="cited">Cited the site</option><option value="named">Named the business</option>' +
+          '<option value="miss">AI Overview without the site</option><option value="none">No AI Overview</option></select>' +
+          '<input type="search" data-aiv-a="q" placeholder="Filter keywords"></div>' +
+        '<div data-aiv-aio></div>' +
+      '</section>' +
       '<section class="aiv-card" style="margin-bottom:16px"><h3>Prompt checks</h3>' +
         '<p class="aiv-cap">Each question asked of an AI assistant, and whether the answer cited ' + esc(domain) + '. These are samples, not counts of real users.</p>' +
         '<div class="aiv-filters"><select data-aiv-f="p"><option value="">All assistants</option>' +
@@ -356,6 +379,25 @@ function render(root, feed, opts){
         '<td>' + ((c.urls || []).map(linkCell).join('<br>') || '<span style="color:var(--aiv-ink3)">—</span>') + '</td></tr>').join('') +
       '</tbody></table></div>' + (rows.length > 300 ? '<div class="aiv-cap" style="margin:8px 0 0">Showing the newest 300 of ' + fmt(rows.length) + '.</div>' : '');
   };
+  const aBox = root.querySelector('[data-aiv-aio]'), aC = root.querySelector('[data-aiv-a="c"]'), aQ = root.querySelector('[data-aiv-a="q"]');
+  const drawAio = () => {
+    if (!aioLatest.length){
+      aBox.innerHTML = '<div class="aiv-empty">' + (aioAll.length ? 'No checks in this run.' : 'The first AI Overview check runs with the next weekly update.') + '</div>';
+      return;
+    }
+    const q = (aQ.value || '').toLowerCase(), f = aC.value;
+    const rows = aioLatest.filter(c => (!q || c.k.toLowerCase().indexOf(q) > -1 || c.loc.toLowerCase().indexOf(q) > -1) &&
+      (!f || (f === 'cited' && c.cited) || (f === 'named' && c.named) || (f === 'miss' && c.shown && !c.cited && !c.named) || (f === 'none' && !c.shown)))
+      .sort((a, b) => (b.cited + b.named) - (a.cited + a.named) || (b.shown - a.shown));
+    const pill = (on, yes, no) => '<span class="aiv-pill ' + (on ? 'aiv-yes">' + yes : 'aiv-no">' + no) + '</span>';
+    aBox.innerHTML = rows.length ? '<div class="aiv-scroll"><table class="aiv-table"><thead><tr><th>Keyword</th><th>Location</th><th>AI Overview</th><th>Cited</th><th>Named</th><th>Page cited</th><th>Other sites cited</th></tr></thead><tbody>' +
+      rows.map(c => '<tr><td>' + esc(c.k) + '</td><td>' + esc(c.loc || '—') + '</td><td>' + pill(c.shown, 'Shown', 'None') + '</td><td>' + pill(c.cited, 'Yes', 'No') +
+        '</td><td>' + pill(c.named, 'Yes', 'No') + '</td><td>' + ((c.urls || []).map(linkCell).join('<br>') || '<span style="color:var(--aiv-ink3)">—</span>') +
+        '</td><td style="color:var(--aiv-ink2)">' + esc((c.comp || []).slice(0, 4).join(', ')) + '</td></tr>').join('') +
+      '</tbody></table></div><div class="aiv-cap" style="margin:8px 0 0">Checked ' + esc(prettyDate(aioRun)) + ' · ' + fmt(rows.length) + ' of ' + fmt(aioLatest.length) + ' searches shown</div>'
+      : '<div class="aiv-empty">No searches match these filters.</div>';
+  };
+  aC.addEventListener('change', drawAio); aQ.addEventListener('input', drawAio); drawAio();
   [fP, fC].forEach(el => el.addEventListener('change', drawChecks));
   fQ.addEventListener('input', drawChecks);
   drawChecks();
@@ -489,11 +531,12 @@ function renderConnect(v, errMsg){
 async function register(s){
   const list = (state.seoClients || []).filter(c => normDomain(c.website).indexOf('.') > -1).map(c => ({
     id: c.id, name: c.name || '', website: c.website, status: c.status || '',
-    keywords: (c.keywords || []).slice(0, 25).map(k => ({text: k.text || '', location: ((k.locations || [])[0] || {}).label || ''}))
+    keywords: (c.keywords || []).slice(0, 60).map(k => ({text: k.text || '', location: ((k.locations || [])[0] || {}).label || '',
+      locations: (k.locations || []).slice(0, 5).map(l => ({label: l.label || '', lat: l.lat == null ? null : l.lat, lng: l.lng == null ? null : l.lng}))}))
   }));
-  const sig = JSON.stringify(list.map(c => [c.id, c.name, normDomain(c.website), c.status, c.keywords.length]));
+  const sig = JSON.stringify(list.map(c => [c.id, c.name, normDomain(c.website), c.status, c.keywords.length, c.keywords.reduce((t, k) => t + k.locations.length, 0)]));
   if (sig === registeredSig) return;
-  const res = await apiPost(s.url, {key: s.key, action: 'register', clients: list});
+  const res = await apiPost(s.url, {key: s.key, action: 'register', clients: list, url: s.url});
   registeredSig = sig;
   (res.clients || []).forEach(c => { tokens[c.domain] = c.token; llmOn[c.domain] = !!c.llm; });
 }

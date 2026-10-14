@@ -42,7 +42,8 @@
   btn.className = 'btn btn-sm'; btn.type = 'button'; btn.textContent = 'Choose widgets'; btn.style.display = 'none';
   acts.insertBefore(btn, acts.firstChild);
 
-  const current = () => { try { return seoCurrentDash(); } catch (e) { return null; } };
+  /* The toolbar always shows the open tab's full link, so read it from there. */
+  const current = () => { const u = (urlEl.textContent || '').trim(); return u ? { url: u } : null; };
   const isQueriesDash = d => !!(d && /search-queries/.test(d.url) && /[#&]feed=/.test(d.url));
   const sync = () => { btn.style.display = isQueriesDash(current()) ? '' : 'none'; };
   new MutationObserver(sync).observe(urlEl, { childList: true, characterData: true, subtree: true });

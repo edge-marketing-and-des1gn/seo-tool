@@ -45,7 +45,7 @@ const shortUrl = u => String(u || '').replace(/^https?:\/\/(www\.)?/i, '') || '/
 const pageKey = u => {
   let s = String(u || '').trim().toLowerCase();
   s = s.replace(/^https?:\/\/[^\/]+/, '').split(/[?#]/)[0] || '/';
-  if (s.length > 1) s = s.replace(/\/+$/, '');
+  if (s.length > 1) s = s.replace(/\/+$/, ''); if (s === '(not set)') return 'Landing page not recorded';
   return s || '/';
 };
 
@@ -405,7 +405,7 @@ function model(feed, period){
   const since = addDays(end, -(period - 1));
   const prevEnd = addDays(since, -1), prevSince = addDays(prevEnd, -(period - 1));
   const inCur = d => d >= since && d <= end, inPrev = d => d >= prevSince && d <= prevEnd;
-  const weekly = period > 95;
+  const weekly = period > 35;
   const bucket = d => { if (!weekly) return d; const t = new Date(d + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() - ((t.getUTCDay() + 6) % 7)); return isoDay(t); };
   /* GA4 AI rows: [date, platform, source, page, sessions, engaged, key events] */
   let rows = (feed.ga4 && feed.ga4.rows) || null;
@@ -891,7 +891,7 @@ function renderReport(root, feed, opts){
   const kpis = kpi('AI Visits', fmt(M.ai.s), delta(M.ai.s, M.ai.ps, M.ai.hasPrev), M.ai.series, '#eb6834') +
     kpi('Conversions from AI', fmt(M.ai.k), delta(M.ai.k, M.ai.pk, M.ai.hasPrev), M.ai.keySeries, '#2a78d6') +
     (M.google.imported ? kpi('Google AI Impressions', fmtK(M.google.n), delta(M.google.n, M.google.prev, M.google.prev > 0), M.google.series, '#1baf7a') : '') +
-    (M.aio.length ? kpi('AI Overview Mentions', pctTxt(mentioned, M.aio.length), null, null) : '');
+    (M.aio.length ? kpi('AI Overview Mentions', pctTxt(mentioned, M.aio.length) + '<div style="font-size:12px;font-weight:500;color:#8593a0;margin-top:4px">' + fmt(mentioned) + ' of ' + fmt(M.aio.length) + ' tracked searches</div>', null, null) : '');
 
   const chans = ['AI'].concat(M.hasChannels ? ['Organic Search', 'Direct'] : []);
   root.innerHTML = '<div class="aia">' +

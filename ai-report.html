@@ -20,7 +20,7 @@
   --display:"Poppins","Inter",Helvetica,Arial,sans-serif;
   --mono:"JetBrains Mono","SFMono-Regular",Consolas,monospace;
 }
-html,body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--ui);-webkit-font-smoothing:antialiased;}
+html,body{margin:0;background:#f2f4f7;color:var(--ink);font-family:var(--ui);-webkit-font-smoothing:antialiased;}
 #report{max-width:1180px;margin:0 auto;padding:24px 16px 40px;}
 .foot{max-width:1180px;margin:0 auto;padding:0 16px 28px;color:var(--ink-3);font-size:11.5px;}
 </style>
@@ -72,10 +72,12 @@ html,body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--ui
     document.title = (view.title || feed.name || feed.domain) + ' | AI Visibility';
 
     let period = 30;
-    const draw = () => AIV.render(root, feed, {period, title: view.title, onPeriod: p => { period = p; draw(); }});
-    draw();
     const when = new Date(feed.generatedAt || Date.now());
-    document.getElementById('foot').textContent = 'Data as of ' + when.toLocaleString('en-CA', {dateStyle: 'medium', timeStyle: 'short'}) + '. Updates automatically.';
+    const foot = 'Data as of ' + when.toLocaleString('en-CA', {dateStyle: 'medium', timeStyle: 'short'}) + ' · Updates automatically';
+    /* One state object, so the ticked sources and assistant filter survive a period change. */
+    const ui = {ch: {AI: true, 'Organic Search': false, Direct: false}, plat: ''};
+    const draw = () => AIV.renderReport(root, feed, {period, title: view.title, foot, state: ui, onPeriod: p => { period = p; draw(); }});
+    draw();
   })().catch(err => {
     AIV.renderMessage(root, 'This report couldn’t load', String(err && err.message || err).replace(/[&<>]/g, ''), true);
   });

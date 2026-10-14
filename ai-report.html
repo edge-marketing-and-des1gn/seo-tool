@@ -71,7 +71,7 @@ html,body{margin:0;background:#f2f4f7;color:var(--ink);font-family:var(--ui);-we
     const feed = await AIV.apiGet(view.feedUrl, {action: 'feed', domain: view.domain, t: view.token});
     document.title = (view.title || feed.name || feed.domain) + ' | AI Visibility';
 
-    let period = 30;
+    let period = 'lastMonth';
     const when = new Date(feed.generatedAt || Date.now());
     const foot = 'Data as of ' + when.toLocaleString('en-CA', {dateStyle: 'medium', timeStyle: 'short'}) + ' · Updates automatically';
     /* One state object, so the ticked sources and assistant filter survive a period change. */

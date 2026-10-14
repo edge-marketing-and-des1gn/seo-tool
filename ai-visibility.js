@@ -202,54 +202,60 @@ function injectStyles(){
 @keyframes aivfade{from{opacity:0;}}
 @media (max-width:760px){.aiv-grid2{grid-template-columns:1fr !important;}}
 
-/* ---------- shared report: AgencyAnalytics skin (same values as the keyword report) ---------- */
-.aia{--aa-bg:#f2f4f7;--aa-surface:#fff;--aa-surface-2:#f7f9fa;--aa-line:#e2e7ec;--aa-line-2:#edf1f4;--aa-ink:#26313c;--aa-ink-2:#56646f;
-  --aa-ink-3:#8795a1;--aa-num:#555555;--a-line2:#edf1f4;--a-ink3:#8795a1;--a-ink:#26313c;
-  font-family:var(--ui,Inter,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif);color:var(--aa-ink);font-size:13px;}
+/* ---------- shared report: AgencyAnalytics style ----------
+   Sampled from the EDGE AgencyAnalytics reports: Geist, white widgets with a
+   hairline #EBEDF0 border and 6px corners, sentence-case widget titles,
+   bold #555 numerals, black lines and bars on grey tracks, AA donut colours. */
+.aia{--aa-line:#EBEDF0;--aa-line-2:#F2F3F5;--aa-track:#E4E4E7;--aa-ink:#222A30;--aa-ink-2:#55606A;--aa-ink-3:#8A949C;--aa-num:#555555;--aa-black:#171614;
+  --a-line2:#F0F0F0;--a-ink3:#6b7280;--a-ink:#222A30;
+  font-family:'Geist','Helvetica Neue',Helvetica,Arial,sans-serif;color:var(--aa-ink);font-size:13px;-webkit-font-smoothing:antialiased;}
 .aia *{box-sizing:border-box;}
-.aia-panel{background:var(--aa-surface);border:1px solid var(--aa-line);border-radius:10px;box-shadow:0 1px 2px rgba(38,49,60,.05);padding:18px 20px;margin-bottom:12px;min-width:0;}
+.aia .aiv-chart .ax,.aia svg text{font-family:inherit;}
+.aia-panel{background:#fff;border:0.8px solid var(--aa-line);border-radius:6px;box-shadow:none;padding:14px 16px 16px;margin-bottom:12px;min-width:0;}
 .aia-head{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;}
-.aia-title{font-family:var(--display,Poppins,Inter,sans-serif);font-size:20px;font-weight:600;letter-spacing:-.02em;margin:0;}
-.aia-sub{font-size:12.5px;color:var(--aa-ink-2);margin-top:3px;}
-.aia-seg{display:inline-flex;border:1px solid var(--aa-line);border-radius:6px;overflow:hidden;}
-.aia-seg button{border:0;border-left:1px solid var(--aa-line);background:var(--aa-surface);font:600 12px var(--ui,Inter,sans-serif);color:var(--aa-ink-2);padding:7px 12px;cursor:pointer;}
+.aia-title{font-family:inherit;font-size:20px;font-weight:600;letter-spacing:-.01em;margin:0;color:var(--aa-ink);}
+.aia-sub{font-size:12.5px;color:var(--aa-ink-3);margin-top:2px;}
+.aia-seg{display:inline-flex;border:1px solid var(--aa-track);border-radius:5px;overflow:hidden;}
+.aia-seg button{border:0;border-left:1px solid var(--aa-track);background:#fff;font-family:inherit;font-size:12.5px;font-weight:500;color:var(--aa-ink-2);padding:7px 12px;cursor:pointer;}
 .aia-seg button:first-child{border-left:0;}
-.aia-seg button.on{background:var(--aa-surface-2);color:var(--aa-ink);box-shadow:inset 0 -2px 0 #eb6834;}
+.aia-seg button.on{background:var(--aa-black);color:#fff;box-shadow:none;}
 .aia-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:12px;}
-.aia-kpi{background:var(--aa-surface);border:1px solid var(--aa-line);border-radius:10px;box-shadow:0 1px 2px rgba(38,49,60,.05);
-  padding:20px 18px 14px;text-align:center;display:flex;flex-direction:column;align-items:center;min-width:0;}
-.aia-kpi-label{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--aa-ink-3);font-weight:700;}
-.aia-kpi-val{font-family:var(--display,Poppins,Inter,sans-serif);font-size:44px;line-height:1.1;font-weight:500;color:var(--aa-num);margin:10px 0 6px;letter-spacing:-.02em;}
-.aia-kpi-delta{font-size:12px;font-weight:600;color:var(--aa-ink-3);}
-.aia-kpi-delta.up{color:#2e8540;}
-.aia-kpi-delta.down{color:#c0392b;}
+.aia-kpi{background:#fff;border:0.8px solid var(--aa-line);border-radius:6px;box-shadow:none;
+  padding:12px 16px 14px;text-align:center;display:flex;flex-direction:column;align-items:center;min-width:0;}
+.aia-kpi-label{align-self:flex-start;font-size:14px;font-weight:500;letter-spacing:.01em;text-transform:none;color:var(--aa-ink);}
+.aia-kpi-val{font-family:inherit;font-size:52px;line-height:1;font-weight:700;color:var(--aa-num);margin:22px 0 10px;letter-spacing:-.01em;}
+.aia-kpi-delta{font-size:12.5px;font-weight:600;color:var(--aa-ink-3);}
+.aia-kpi-delta.up{color:#2E8540;}
+.aia-kpi-delta.down{color:#C0392B;}
 .aia-kpi svg{display:block;width:100%;height:30px;margin-top:10px;}
-.aia-panel-title{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--aa-ink-2);font-weight:700;margin:0;}
+.aia-panel-title{font-family:inherit;font-size:14px;font-weight:500;letter-spacing:.01em;text-transform:none;color:var(--aa-ink);margin:0;}
 .aia-panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;}
 .aia-toggles{display:flex;gap:14px;flex-wrap:wrap;align-items:center;}
-.aia-toggle{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--aa-ink);cursor:pointer;user-select:none;}
+.aia-toggle{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--aa-ink-2);cursor:pointer;user-select:none;}
 .aia-toggle input{position:absolute;opacity:0;pointer-events:none;}
 .aia-toggle i{width:14px;height:14px;border-radius:3px;border:2px solid var(--c);display:inline-block;position:relative;}
 .aia-toggle input:checked + i{background:var(--c);}
 .aia-toggle input:checked + i::after{content:'';position:absolute;left:3px;top:0;width:4px;height:8px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg);}
 .aia-toggle input:focus-visible + i{outline:2px solid var(--aa-ink);outline-offset:2px;}
 .aia-chips{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px;}
-.aia-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--aa-line);background:var(--aa-surface);border-radius:4px;
-  padding:5px 10px;font:600 11.5px var(--ui,Inter,sans-serif);color:var(--aa-ink-2);cursor:pointer;}
+.aia-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--aa-track);background:#fff;border-radius:5px;
+  padding:5px 10px;font-family:inherit;font-size:12px;font-weight:500;color:var(--aa-ink-2);cursor:pointer;}
 .aia-chip i{width:8px;height:8px;border-radius:50%;}
-.aia-chip.sel{background:var(--aa-ink);border-color:var(--aa-ink);color:#fff;}
+.aia-chip.sel{background:var(--aa-black);border-color:var(--aa-black);color:#fff;}
 .aia-grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;}
 .aia-grid2 > .aia-panel{margin-bottom:0;}
 .aia-row{margin-bottom:12px;}
 .aia-ring{display:flex;align-items:center;gap:22px;flex-wrap:wrap;justify-content:center;}
-.aia-ring svg{width:150px;height:150px;flex:none;}
-.aia-ring-legend{display:flex;flex-direction:column;gap:8px;min-width:170px;}
-.aia-ring-legend div{display:flex;align-items:center;gap:8px;font-size:12.5px;}
-.aia-ring-legend i{width:10px;height:10px;border-radius:2px;flex:none;}
-.aia-ring-legend span{margin-left:auto;font-weight:700;color:var(--aa-num);padding-left:12px;}
-.aia-empty{color:var(--aa-ink-3);font-size:12.5px;text-align:center;padding:30px 0;}
-.aia-foot{text-align:center;font-size:11px;color:var(--aa-ink-3);margin-top:6px;}
-@media (max-width:760px){.aia-grid2{grid-template-columns:1fr;}.aia-kpi-val{font-size:36px;}}
+.aia-ring svg{width:170px;height:170px;flex:none;}
+.aia-ring-legend{display:flex;flex-direction:column;gap:7px;min-width:170px;}
+.aia-ring-legend div{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--aa-ink-2);}
+.aia-ring-legend i{width:9px;height:9px;border-radius:50%;flex:none;}
+.aia-ring-legend span{margin-left:auto;font-weight:600;color:var(--aa-ink);padding-left:12px;}
+.aia .aiv-bar{height:12px !important;background:var(--aa-track);border-radius:999px;}
+.aia .aiv-bar i{border-radius:999px 0 0 999px;min-width:6px;}
+.aia-empty{color:var(--aa-ink-3);font-size:13px;text-align:center;padding:30px 0;}
+.aia-foot{text-align:center;font-size:11.5px;color:var(--aa-ink-3);margin-top:6px;}
+@media (max-width:760px){.aia-grid2{grid-template-columns:1fr;}.aia-kpi-val{font-size:40px;}}
 `;
   const st = document.createElement('style');
   st.id = 'aivStyles';
@@ -881,6 +887,11 @@ function openDay(M, domain, d){
 function renderReport(root, feed, opts){
   opts = opts || {};
   injectStyles();
+  /* AgencyAnalytics colours for the published report only (the tool keeps its own) */
+  const ACH = {AI: '#171614', 'Organic Search': '#5CBAE6', Direct: '#B6D957', 'Google AI Impressions': '#FAC364'};
+  const AAP = {ChatGPT: '#5CBAE6', Gemini: '#B6D957', Copilot: '#FAC364', Perplexity: '#8CD3FF', Claude: '#D97757'};
+  const AAX = ['#E39FC6', '#9DA8B3', '#7FC8A9', '#C3A6E6'];
+  const acol = n => AAP[n] || AAX[Math.abs([...String(n)].reduce((h, c) => h * 31 + c.charCodeAt(0) | 0, 0)) % AAX.length];
   const period = opts.period || 30;
   const M = model(feed, period);
   const st = opts.state || (opts.state = {ch: {AI: true, 'Organic Search': false, Direct: false}, plat: ''});
@@ -888,22 +899,22 @@ function renderReport(root, feed, opts){
   const kpi = (label, val, d, spark, color) => '<div class="aia-kpi"><div class="aia-kpi-label">' + esc(label) + '</div><div class="aia-kpi-val">' + val + '</div>' +
     '<div class="aia-kpi-delta ' + (d && d.cls || '') + '">' + (d && d.txt ? esc(d.txt) + ' vs previous period' : '&nbsp;') + '</div>' + (spark ? sparkline(spark, color) : '') + '</div>';
   const mentioned = M.aio.filter(c => c.cited || c.named).length;
-  const kpis = kpi('AI Visits', fmt(M.ai.s), delta(M.ai.s, M.ai.ps, M.ai.hasPrev), M.ai.series, '#eb6834') +
-    kpi('Conversions from AI', fmt(M.ai.k), delta(M.ai.k, M.ai.pk, M.ai.hasPrev), M.ai.keySeries, '#2a78d6') +
-    (M.google.imported ? kpi('Google AI Impressions', fmtK(M.google.n), delta(M.google.n, M.google.prev, M.google.prev > 0), M.google.series, '#1baf7a') : '') +
+  const kpis = kpi('AI Visits', fmt(M.ai.s), delta(M.ai.s, M.ai.ps, M.ai.hasPrev), M.ai.series, '#171614') +
+    kpi('Conversions from AI', fmt(M.ai.k), delta(M.ai.k, M.ai.pk, M.ai.hasPrev), M.ai.keySeries, '#5CBAE6') +
+    (M.google.imported ? kpi('Google AI Impressions', fmtK(M.google.n), delta(M.google.n, M.google.prev, M.google.prev > 0), M.google.series, '#B6D957') : '') +
     (M.aio.length && opts.showAio ? kpi('AI Overview Mentions', pctTxt(mentioned, M.aio.length) + '<div style="font-size:12px;font-weight:500;color:#8593a0;margin-top:4px">' + fmt(mentioned) + ' of ' + fmt(M.aio.length) + ' tracked searches</div>', null, null) : '');
 
-  const SEGKEY = (opts.period && typeof opts.period === 'object') ? 'custom' : String(opts.period || 30); CHCOL['Google AI Impressions'] = CHCOL['Google AI Impressions'] || '#7b61ff'; const chans = ['AI'].concat(M.hasChannels ? ['Organic Search', 'Direct'] : []).concat(M.google.imported ? ['Google AI Impressions'] : []);
+  const SEGKEY = (opts.period && typeof opts.period === 'object') ? 'custom' : String(opts.period || 30); const chans = ['AI'].concat(M.hasChannels ? ['Organic Search', 'Direct'] : []).concat(M.google.imported ? ['Google AI Impressions'] : []);
   root.innerHTML = '<div class="aia">' +
     '<div class="aia-panel aia-head"><div><h1 class="aia-title">' + esc(opts.title || ((feed.name || feed.domain) + ' — AI Visibility')) + '</h1>' +
       '<div class="aia-sub">' + esc(prettyDate(M.since)) + ' – ' + esc(prettyDate(M.end)) + '</div></div>' +
-      '<div class="aia-periods"><div class="aia-seg" data-period>' + [['lastMonth', 'Last Month'], ['30', '30 Days'], ['90', '90 Days'], ['365', '12 Months'], ['custom', 'Custom']].map(([k, l]) => '<button type="button" data-p="' + k + '"' + (k === SEGKEY ? ' class="on"' : '') + '>' + l + '</button>').join('') + '</div><div data-custom style="display:' + (SEGKEY === 'custom' ? 'flex' : 'none') + ';gap:6px;align-items:center;justify-content:flex-end;margin-top:8px;font-size:12px;color:#5b6670"><input type="date" data-from value="' + M.since + '" style="border:1px solid #d7dde3;border-radius:6px;padding:4px 6px;font:inherit;color:#1f2a33"><span>to</span><input type="date" data-to value="' + M.end + '" style="border:1px solid #d7dde3;border-radius:6px;padding:4px 6px;font:inherit;color:#1f2a33"><button type="button" data-apply style="border:0;background:#eb6834;color:#fff;border-radius:6px;padding:5px 12px;font:inherit;font-weight:600;cursor:pointer">Apply</button></div></div></div>' +
+      '<div class="aia-periods"><div class="aia-seg" data-period>' + [['lastMonth', 'Last Month'], ['30', '30 Days'], ['90', '90 Days'], ['365', '12 Months'], ['custom', 'Custom']].map(([k, l]) => '<button type="button" data-p="' + k + '"' + (k === SEGKEY ? ' class="on"' : '') + '>' + l + '</button>').join('') + '</div><div data-custom style="display:' + (SEGKEY === 'custom' ? 'flex' : 'none') + ';gap:6px;align-items:center;justify-content:flex-end;margin-top:8px;font-size:12px;color:#5b6670"><input type="date" data-from value="' + M.since + '" style="border:1px solid #d7dde3;border-radius:6px;padding:4px 6px;font:inherit;color:#1f2a33"><span>to</span><input type="date" data-to value="' + M.end + '" style="border:1px solid #d7dde3;border-radius:6px;padding:4px 6px;font:inherit;color:#1f2a33"><button type="button" data-apply style="border:0;background:#171614;color:#fff;border-radius:5px;padding:5px 12px;font:inherit;font-weight:600;cursor:pointer">Apply</button></div></div></div>' +
     '<div class="aia-kpis">' + kpis + '</div>' +
     '<div class="aia-panel aia-row"><div class="aia-panel-head"><h2 class="aia-panel-title">Website Visits</h2><div class="aia-toggles" data-tg>' +
-      chans.map(c => '<label class="aia-toggle" style="--c:' + CHCOL[c] + '"><input type="checkbox" data-c="' + c + '"' + (st.ch[c] ? ' checked' : '') + '><i></i>' + (c === 'AI' ? 'AI Assistants' : c) + '</label>').join('') +
+      chans.map(c => '<label class="aia-toggle" style="--c:' + ACH[c] + '"><input type="checkbox" data-c="' + c + '"' + (st.ch[c] ? ' checked' : '') + '><i></i>' + (c === 'AI' ? 'AI Assistants' : c) + '</label>').join('') +
     '</div></div>' +
     (M.plats.length > 1 ? '<div class="aia-chips" data-pf><button type="button" class="aia-chip' + (!st.plat ? ' sel' : '') + '" data-p="">All AI</button>' +
-      M.plats.map(p => '<button type="button" class="aia-chip' + (st.plat === p.name ? ' sel' : '') + '" data-p="' + esc(p.name) + '"><i style="background:' + pcol(p.name) + '"></i>' + esc(p.name) + '</button>').join('') + '</div>' : '') +
+      M.plats.map(p => '<button type="button" class="aia-chip' + (st.plat === p.name ? ' sel' : '') + '" data-p="' + esc(p.name) + '"><i style="background:' + acol(p.name) + '"></i>' + esc(p.name) + '</button>').join('') + '</div>' : '') +
     '<div class="aiv-chart" data-main></div></div>' +
     '<div class="aia-grid2 aia-row">' +
       '<div class="aia-panel"><div class="aia-panel-head"><h2 class="aia-panel-title">AI Visits by Assistant</h2></div><div data-donut></div></div>' +
@@ -921,9 +932,9 @@ function renderReport(root, feed, opts){
     const s = [];
     if (st.ch.AI){
       const p = st.plat && M.plats.find(x => x.name === st.plat);
-      s.push({name: p ? p.name : 'AI Assistants', color: p ? pcol(p.name) : CHCOL.AI, values: p ? p.series : M.ai.series, area: true});
+      s.push({name: p ? p.name : 'AI Assistants', color: p ? acol(p.name) : ACH.AI, values: p ? p.series : M.ai.series, area: !!p});
     }
-    ['Organic Search', 'Direct'].forEach(c => { if (st.ch[c] && M.hasChannels) s.push({name: c, color: CHCOL[c], values: M.channels[c].series}); }); if (st.ch['Google AI Impressions'] && M.google.imported) s.push({name: 'Google AI impressions', color: CHCOL['Google AI Impressions'], values: M.google.series});
+    ['Organic Search', 'Direct'].forEach(c => { if (st.ch[c] && M.hasChannels) s.push({name: c, color: ACH[c], values: M.channels[c].series}); }); if (st.ch['Google AI Impressions'] && M.google.imported) s.push({name: 'Google AI impressions', color: ACH['Google AI Impressions'], values: M.google.series});
     lineChart(root.querySelector('[data-main]'), {labels: M.labels, weekly: M.weekly, height: 290, series: s, label: 'Website visits', empty: 'Tick a source to show it.'});
   };
   root.querySelectorAll('[data-tg] input').forEach(i => i.addEventListener('change', () => { st.ch[i.dataset.c] = i.checked; drawMain(); }));
@@ -935,19 +946,19 @@ function renderReport(root, feed, opts){
 
   const dn = root.querySelector('[data-donut]');
   if (M.plats.some(p => p.s)){
-    const segs = M.plats.filter(p => p.s).map(p => ({key: p.name, label: p.name, n: p.s, color: pcol(p.name)}));
+    const segs = M.plats.filter(p => p.s).map(p => ({key: p.name, label: p.name, n: p.s, color: acol(p.name)}));
     dn.innerHTML = '<div class="aia-ring">' + donut(segs, {cls: 'aia-donut', sub: 'AI visits'}) + '<div class="aia-ring-legend">' +
       segs.map(s => '<div><i style="background:' + s.color + '"></i>' + esc(s.label) + '<span>' + fmt(s.n) + '</span></div>').join('') + '</div></div>';
   } else dn.innerHTML = '<div class="aia-empty">No AI visits in this period.</div>';
 
-  if (M.google.imported && opts.showGoogleCard) lineChart(root.querySelector('[data-g]'), {labels: M.labels, weekly: M.weekly, height: 200, series: [{name: 'AI impressions', color: '#1baf7a', values: M.google.series, area: true}]});
+  if (M.google.imported && opts.showGoogleCard) lineChart(root.querySelector('[data-g]'), {labels: M.labels, weekly: M.weekly, height: 200, series: [{name: 'AI impressions', color: '#171614', values: M.google.series}]});
 
   const pagesBars = host => {
     if (!host) return;
     const top = pagesOf(M.cur).sort((a, b) => b.s - a.s).slice(0, 6);
     const max = Math.max(1, ...top.map(t => t.s));
-    host.innerHTML = top.length ? top.map(t => '<div style="margin:9px 0"><div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;margin-bottom:4px"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(t.key) + '</span><b style="color:#555">' + fmt(t.s) + '</b></div>' +
-      '<div class="aiv-bar" style="height:8px"><i style="width:' + (t.s / max * 100).toFixed(1) + '%;background:#eb6834"></i></div></div>').join('') : '<div class="aia-empty">No AI visits in this period.</div>';
+    host.innerHTML = top.length ? top.map(t => '<div style="margin:9px 0"><div style="display:flex;justify-content:space-between;gap:10px;font-size:13px;margin-bottom:5px"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(t.key) + '</span><b style="color:#222A30;font-weight:600">' + fmt(t.s) + '</b></div>' +
+      '<div class="aiv-bar" style="height:8px"><i style="width:' + (t.s / max * 100).toFixed(1) + '%;background:#171614"></i></div></div>').join('') : '<div class="aia-empty">No AI visits in this period.</div>';
   };
   pagesBars(root.querySelector('[data-pg]'));
   pagesBars(root.querySelector('[data-pg2]'));
@@ -955,8 +966,8 @@ function renderReport(root, feed, opts){
   const ah = root.querySelector('[data-aio]');
   if (ah){
     const segs = [
-      {key: 'cited', label: 'Cited as a source', color: '#1baf7a'}, {key: 'named', label: 'Named in the answer', color: '#2a78d6'},
-      {key: 'miss', label: 'Not mentioned', color: '#eb6834'}, {key: 'none', label: 'No AI Overview', color: '#c9d1d8'}
+      {key: 'cited', label: 'Cited as a source', color: '#B6D957'}, {key: 'named', label: 'Named in the answer', color: '#5CBAE6'},
+      {key: 'miss', label: 'Not mentioned', color: '#FAC364'}, {key: 'none', label: 'No AI Overview', color: '#E4E4E7'}
     ].map(s => Object.assign(s, {n: M.aio.filter(c => M.aioState(c) === s.key).length}));
     ah.innerHTML = '<div class="aia-ring">' + donut(segs, {cls: 'aia-donut', center: mentioned + ' / ' + M.aio.length, sub: 'mentioned'}) + '<div class="aia-ring-legend">' +
       segs.map(s => '<div><i style="background:' + s.color + '"></i>' + esc(s.label) + '<span>' + s.n + '</span></div>').join('') + '</div></div>';

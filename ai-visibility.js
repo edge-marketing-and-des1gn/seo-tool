@@ -490,8 +490,14 @@ function model(feed, period){ if (period === 'lastMonth'){ const t0 = new Date()
   ((feed.bing && feed.bing.pages) || []).forEach(r => { const o = pg(r.u); o.b += r.n; if (safeUrl(r.u)) o.u = r.u; });
   aio.forEach(c => (c.urls || []).forEach(u => { const o = pg(u); o.aio++; if (safeUrl(u)) o.u = u; }));
 
+  /* Key events by name: [date, platform, landing page, event name, count]. Older
+     trackers don't send this list; `known` tells the views to say so. */
+  const evAll = (feed.ga4 && feed.ga4.events) || null;
+  const evCur = evAll ? evAll.filter(r => inCur(r[0]) && (Number(r[4]) || 0) > 0) : [];
+
   return {
     period, since, end, labels, weekly, cur, slot,
+    keyEv: {known: !!evAll, rows: evCur},
     ai: {s: sum(cur, 4), e: sum(cur, 5), k: sum(cur, 6), ps: sum(prev, 4), pk: sum(prev, 6), series: aiSeries, keySeries: aiKeySeries,
       hasPrev: rows.some(r => r[0] < since)},
     plats: platList, channels: ch, hasChannels: chDaily.length > 0,
@@ -501,6 +507,40 @@ function model(feed, period){ if (period === 'lastMonth'){ const t0 = new Date()
     pages: Object.values(pages).filter(p => p.s || p.g || p.b || p.aio)
   };
 }
+
+/* ---------- key events ----------
+   GA4 names key events by their event name (generate_lead, form_submit…). The
+   common ones get a plain-English label; anything custom is tidied up
+   ("book_call_click" → "Book call click"). The internal views also show the
+   raw name, so the team can match it to GA4. */
+const KEY_EVENT_LABELS = {
+  generate_lead: 'Lead submitted', form_submit: 'Form submitted', form_start: 'Form started',
+  submit_lead_form: 'Lead form submitted', contact: 'Contact', contact_form: 'Contact form',
+  phone_call: 'Phone call', phone_click: 'Phone number clicked', click_to_call: 'Phone number clicked', call_click: 'Phone number clicked',
+  email_click: 'Email link clicked', mailto_click: 'Email link clicked', book_appointment: 'Appointment booked', schedule: 'Appointment booked',
+  purchase: 'Purchase', begin_checkout: 'Checkout started', add_to_cart: 'Added to cart', sign_up: 'Sign-up', login: 'Login',
+  file_download: 'File downloaded', qualify_lead: 'Lead qualified', close_convert_lead: 'Lead converted', working_lead: 'Lead in progress',
+  get_directions: 'Directions requested', directions_click: 'Directions requested', whatsapp_click: 'WhatsApp clicked', chat_start: 'Chat started'
+};
+const keLabel = n => {
+  const k = String(n || '').trim();
+  if (KEY_EVENT_LABELS[k.toLowerCase()]) return KEY_EVENT_LABELS[k.toLowerCase()];
+  const s = k.replace(/[_\-]+/g, ' ').replace(/\s+/g, ' ').trim();
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : 'Key event';
+};
+/* Groups event rows by name: [{name, label, n, plats: {name: n}, pages: {key: n}}], biggest first. */
+function keyEventsOf(rows){
+  const m = {};
+  rows.forEach(r => {
+    const n = Number(r[4]) || 0; if (!n) return;
+    const o = m[r[3]] = m[r[3]] || {name: r[3], label: keLabel(r[3]), n: 0, plats: {}, pages: {}};
+    o.n += n;
+    o.plats[r[1]] = (o.plats[r[1]] || 0) + n;
+    const pk = pageKey(r[2]); o.pages[pk] = (o.pages[pk] || 0) + n;
+  });
+  return Object.values(m).sort((a, b) => b.n - a.n || a.label.localeCompare(b.label));
+}
+const topOf = (obj, max) => Object.keys(obj).sort((a, b) => obj[b] - obj[a]).slice(0, max || 3);
 
 function delta(cur, prev, hasPrev){
   if (!hasPrev || (!prev && !cur)) return {cls: 'flat', txt: ''};
@@ -586,7 +626,11 @@ function render(root, feed, opts){
   const aioCited = M.aio.filter(c => c.cited).length, aioShown = M.aio.filter(c => c.shown).length;
   const kpis =
     kpi('visits', 'AI visits', fmt(M.ai.s), delta(M.ai.s, M.ai.ps, M.ai.hasPrev), 'Visitors sent by AI assistants', M.ai.series, '#eb6834') +
-    kpi('keys', 'Key events from AI', fmt(M.ai.k), delta(M.ai.k, M.ai.pk, M.ai.hasPrev), M.ai.s ? 'From ' + fmt(M.ai.s) + ' AI visits' : 'Conversions by AI visitors', M.ai.keySeries, '#2a78d6') +
+    kpi('keys', 'Key events from AI', fmt(M.ai.k), delta(M.ai.k, M.ai.pk, M.ai.hasPrev), (() => {
+      const top = keyEventsOf(M.keyEv.rows);
+      if (top.length) return esc(top[0].label) + (top[0].n > 1 ? ' ×' + top[0].n : '') + (top.length > 1 ? ' + ' + (top.length - 1) + ' more type' + (top.length > 2 ? 's' : '') : '');
+      return M.ai.s ? 'From ' + fmt(M.ai.s) + ' AI visits' : 'Conversions by AI visitors';
+    })(), M.ai.keySeries, '#2a78d6') +
     (M.google.imported
       ? kpi('google', 'Google AI impressions', fmt(M.google.n), delta(M.google.n, M.google.prev, M.google.prev > 0), 'AI Overviews &amp; AI Mode · to ' + esc(shortDate(M.google.latest)), M.google.series, '#1baf7a')
       : kpi('google', 'Google AI impressions', '—', null, 'Not imported yet. Needs Search Console access.', null, '', true)) +
@@ -740,6 +784,28 @@ function pageTable(host, M, domain, rows, color){
     {key: 'k', label: 'Key events', num: true, fmt: r => fmt(r.k)}
   ], {sort: 's', empty: 'No visits in this period.', onRow: r => { const full = M.pages.find(p => p.key === r.key); if (full) openPage(M, domain, full); }});
 }
+/* "Which key events" card for the drill-downs. rows = M.keyEv.rows, already
+   narrowed to the assistant / page / day the drawer is about. */
+const keyEventCardHtml = (cap) => '<div class="aiv-card"><h3>Which key events</h3><p class="aiv-cap" style="margin-bottom:8px">' + cap + '</p><div data-ke></div></div>';
+function keyEventTable(host, M, domain, rows, opts){
+  opts = opts || {};
+  if (!host) return;
+  if (!M.keyEv.known){
+    host.innerHTML = '<div class="aiv-empty">The tracker isn’t sending key event names yet, only the count. Once it does (tracker/key-events.gs in the repo), each one shows here by name.</div>';
+    return;
+  }
+  const list = keyEventsOf(rows);
+  const max = Math.max(1, ...list.map(e => e.n));
+  const cols = [
+    {key: 'label', label: 'Key event', fmt: r => '<b style="font-weight:600">' + esc(r.label) + '</b>' + (r.label !== r.name ? ' <span class="aiv-page" style="color:var(--a-ink3);font-size:11px">' + esc(r.name) + '</span>' : ''), sort: r => r.label},
+    {key: 'n', label: 'Count', num: true, fmt: r => barCell(r.n, max, '#2a78d6')}
+  ];
+  if (!opts.noPlat) cols.push({key: 'pl', label: 'From', fmt: r => topOf(r.plats).map(p => dotName(p + ' ' + r.plats[p], pcol(p))).join(' &nbsp;'), sort: r => Object.keys(r.plats).length});
+  if (!opts.noPage) cols.push({key: 'pg', label: 'Landing page', fmt: r => topOf(r.pages, 2).map(k => '<span class="aiv-page">' + esc(k) + '</span>' + (Object.keys(r.pages).length > 1 ? ' (' + r.pages[k] + ')' : '')).join('<br>') +
+    (Object.keys(r.pages).length > 2 ? '<br><span style="color:var(--a-ink3)">+' + (Object.keys(r.pages).length - 2) + ' more</span>' : ''), sort: r => Object.keys(r.pages).length});
+  table(host, list, cols, {sort: 'n', empty: 'No key events in this period.'});
+}
+
 function seriesFor(M, rows, col){
   const s = M.labels.map(() => 0);
   rows.forEach(r => { const i = M.slot(r[0]); if (i != null) s[i] += r[col]; });
@@ -750,6 +816,7 @@ function openAllAi(M, domain, focus){
   openDrawer('All AI visits · ' + periodName(M.period), '#eb6834', body => {
     body.innerHTML = statsRow([['Visits', fmt(M.ai.s)], ['Engaged', fmt(M.ai.e), pctTxt(M.ai.e, M.ai.s) + ' engagement rate'], ['Key events', fmt(M.ai.k), 'From ' + fmt(M.ai.s) + ' visits']]) +
       '<div class="aiv-card"><h3>Visits and key events</h3><div class="aiv-chart" data-c style="margin-top:10px"></div></div>' +
+      keyEventCardHtml('What AI visitors did that counts as a key event in GA4, which assistant sent them and where they landed.') +
       '<div class="aiv-card"><h3>By assistant</h3><p class="aiv-cap" style="margin-bottom:10px">Click one for its detail.</p><div data-p></div></div>' +
       '<div class="aiv-card"><h3>Landing pages</h3><div data-pg style="margin-top:8px"></div></div>';
     lineChart(body.querySelector('[data-c]'), {labels: M.labels, weekly: M.weekly, height: 200,
@@ -761,7 +828,10 @@ function openAllAi(M, domain, focus){
       {key: 'e', label: 'Engaged', num: true, fmt: r => fmt(r.e)},
       {key: 'k', label: 'Key events', num: true, fmt: r => fmt(r.k)}
     ], {sort: focus === 'keys' ? 'k' : 's', onRow: r => openPlatform(M, domain, r.name)});
+    keyEventTable(body.querySelector('[data-ke]'), M, domain, M.keyEv.rows);
     pageTable(body.querySelector('[data-pg]'), M, domain, pagesOf(M.cur), '#eb6834');
+    const keCard = focus === 'keys' && body.querySelector('[data-ke]').closest('.aiv-card');
+    if (keCard && keCard.scrollIntoView) keCard.scrollIntoView({block: 'start'});
   });
 }
 
@@ -776,11 +846,13 @@ function openPlatform(M, domain, name){
       '<div class="aiv-note"><b>What was typed?</b> ' + esc(NO_PROMPTS[name] || (name + ' does not pass on what people asked. You can see where its visitors landed and what they did.')) + '</div>' +
       statsRow([['Visits', fmt(p.s), d.txt ? esc(d.txt) + ' vs previous period' : ''], ['Engaged', fmt(p.e), pctTxt(p.e, p.s) + ' engagement rate'], ['Key events', fmt(p.k), 'From ' + fmt(p.s) + ' visits']]) +
       '<div class="aiv-card"><h3>Visits and key events</h3><div class="aiv-chart" data-c style="margin-top:10px"></div></div>' +
+      (p.k || !M.keyEv.known ? keyEventCardHtml('The key events ' + esc(name) + ' visitors triggered, and the page they landed on.') : '') +
       '<div class="aiv-card"><h3>Where ' + esc(name) + ' sent people</h3><p class="aiv-cap" style="margin-bottom:8px">Landing pages and what those visitors did. Click a page for its full picture.</p><div data-pg></div></div>' +
       (name === 'Copilot' && M.bing.imported ? '<div class="aiv-card"><h3>Questions Copilot cited the site for</h3><div data-q style="margin-top:8px"></div></div>' : '') +
       '<div class="aiv-card"><h3>Referrer recorded by GA4</h3><p class="aiv-cap">' + srcs.map(s => esc(s) + ' (' + fmt(p.sources[s]) + ')').join(' · ') + '</p></div>';
     lineChart(body.querySelector('[data-c]'), {labels: M.labels, weekly: M.weekly, height: 200,
       series: [{name: 'Visits', color: pcol(name), values: p.series, area: true}, {name: 'Key events', color: '#26313c', values: p.keySeries, dash: true}]});
+    keyEventTable(body.querySelector('[data-ke]'), M, domain, M.keyEv.rows.filter(r => r[1] === name), {noPlat: true});
     pageTable(body.querySelector('[data-pg]'), M, domain, pagesOf(rows), pcol(name));
     const qh = body.querySelector('[data-q]');
     if (qh) bingQueries(qh, M);
@@ -855,11 +927,13 @@ function openPage(M, domain, p){
     body.innerHTML = '<p class="aiv-cap" style="margin-bottom:12px">' + linkTo(domain, safeUrl(p.u) ? p.u : p.key) + '</p>' +
       statsRow([['AI visits', fmt(p.s), esc(periodName(M.period))], ['Key events', fmt(p.k), ''], ['Google AI impr.', M.google.imported ? fmt(p.g) : '—', M.google.imported ? 'since May 18' : 'not imported'], ['AI Overview cites', fmt(p.aio), 'tracked searches']]) +
       (p.s ? '<div class="aiv-card"><h3>AI visits to this page</h3><div class="aiv-chart" data-c style="margin-top:10px"></div></div>' : '') +
+      (p.k ? keyEventCardHtml('Key events by AI visitors who landed on this page.') : '') +
       (plats.length ? '<div class="aiv-card"><h3>Which assistants sent them</h3><div style="margin-top:10px">' + plats.map(n =>
         '<div style="display:grid;grid-template-columns:110px 1fr 50px;gap:10px;align-items:center;margin:6px 0;font-size:12.5px"><span>' + esc(n) + '</span><div class="aiv-bar"><i style="width:' + (p.plats[n] / p.s * 100).toFixed(1) + '%;background:' + pcol(n) + '"></i></div><span style="text-align:right;font-weight:700">' + fmt(p.plats[n]) + '</span></div>').join('') + '</div></div>' : '') +
       (kws.length ? '<div class="aiv-card"><h3>Tracked searches where Google’s AI cited this page</h3><div data-k style="margin-top:8px"></div></div>' : '');
     if (p.s) lineChart(body.querySelector('[data-c]'), {labels: M.labels, weekly: M.weekly, height: 180,
       series: [{name: 'AI visits', color: '#eb6834', values: seriesFor(M, rows, 4), area: true}, {name: 'Key events', color: '#26313c', values: seriesFor(M, rows, 6), dash: true}]});
+    keyEventTable(body.querySelector('[data-ke]'), M, domain, M.keyEv.rows.filter(r => pageKey(r[2]) === p.key), {noPage: true});
     if (kws.length) table(body.querySelector('[data-k]'), kws, [
       {key: 'k', label: 'Keyword', fmt: r => esc(r.k), sort: r => r.k}, {key: 'loc', label: 'Location', fmt: r => esc(r.loc || '—'), sort: r => r.loc}
     ], {sort: 'k', asc: true, onRow: r => openKeyword(M, domain, r)});
@@ -871,7 +945,9 @@ function openDay(M, domain, d){
   const rows = M.cur.filter(r => r[0] >= d && r[0] <= end);
   openDrawer((M.weekly ? 'Week of ' : '') + prettyDate(d), '#eb6834', body => {
     const s = rows.reduce((t, r) => t + r[4], 0), k = rows.reduce((t, r) => t + r[6], 0);
-    body.innerHTML = statsRow([['AI visits', fmt(s)], ['Key events', fmt(k)]]) + '<div class="aiv-card"><h3>Visits</h3><div data-t style="margin-top:8px"></div></div>';
+    body.innerHTML = statsRow([['AI visits', fmt(s)], ['Key events', fmt(k)]]) + '<div class="aiv-card"><h3>Visits</h3><div data-t style="margin-top:8px"></div></div>' +
+      (k ? keyEventCardHtml('Key events on this ' + (M.weekly ? 'week' : 'day') + '.') : '');
+    keyEventTable(body.querySelector('[data-ke]'), M, domain, M.keyEv.rows.filter(r => r[0] >= d && r[0] <= end));
     table(body.querySelector('[data-t]'), rows.map(r => ({d: r[0], p: r[1], key: pageKey(r[3]), s: r[4], k: r[6]})), [
       {key: 'd', label: 'Date', fmt: r => esc(shortDate(r.d))},
       {key: 'p', label: 'Assistant', fmt: r => dotName(r.p, pcol(r.p))},
@@ -904,6 +980,7 @@ function renderReport(root, feed, opts){
     (M.google.imported ? kpi('Google AI Impressions', fmtK(M.google.n), delta(M.google.n, M.google.prev, M.google.prev > 0), M.google.series, '#B6D957') : '') +
     (M.aio.length && opts.showAio ? kpi('AI Overview Mentions', pctTxt(mentioned, M.aio.length) + '<div style="font-size:12px;font-weight:500;color:#8593a0;margin-top:4px">' + fmt(mentioned) + ' of ' + fmt(M.aio.length) + ' tracked searches</div>', null, null) : '');
 
+  const keyList = keyEventsOf(M.keyEv.rows), keyTotal = keyList.reduce((t, e) => t + e.n, 0);
   const SEGKEY = (opts.period && typeof opts.period === 'object') ? 'custom' : String(opts.period || 30); const chans = ['AI'].concat(M.hasChannels ? ['Organic Search', 'Direct'] : []).concat(M.google.imported ? ['Google AI Impressions'] : []);
   root.innerHTML = '<div class="aia">' +
     '<div class="aia-panel aia-head"><div><h1 class="aia-title">' + esc(opts.title || ((feed.name || feed.domain) + ' — AI Visibility')) + '</h1>' +
@@ -921,6 +998,9 @@ function renderReport(root, feed, opts){
       (M.google.imported && opts.showGoogleCard ? '<div class="aia-panel"><div class="aia-panel-head"><h2 class="aia-panel-title">Google AI Impressions</h2></div><div class="aiv-chart" data-g></div></div>'
         : '<div class="aia-panel"><div class="aia-panel-head"><h2 class="aia-panel-title">Top Pages from AI</h2></div><div data-pg></div></div>') +
     '</div>' +
+    /* Only when key events were recorded in this period; no empty widget otherwise. */
+    (keyList.length ? '<div class="aia-panel aia-row"><div class="aia-panel-head"><h2 class="aia-panel-title">Conversions from AI by Type</h2>' +
+      '<span style="font-size:12px;color:#8593a0">' + fmt(keyTotal) + ' key event' + (keyTotal === 1 ? '' : 's') + ' from AI visitors</span></div><div data-ke></div></div>' : '') +
     (M.aio.length && opts.showAio ? '<div class="aia-grid2 aia-row"><div class="aia-panel"><div class="aia-panel-head"><h2 class="aia-panel-title">Google AI Overviews · Tracked Searches</h2></div><div data-aio></div></div>' +
       (M.google.imported ? '<div class="aia-panel"><div class="aia-panel-head"><h2 class="aia-panel-title">Top Pages from AI</h2></div><div data-pg2></div></div>' : '<div></div>') + '</div>'
       : (M.google.imported && opts.showGoogleCard ? '<div class="aia-panel aia-row"><div class="aia-panel-head"><h2 class="aia-panel-title">Top Pages from AI</h2></div><div data-pg2></div></div>' : '')) +
@@ -963,6 +1043,18 @@ function renderReport(root, feed, opts){
   pagesBars(root.querySelector('[data-pg]'));
   pagesBars(root.querySelector('[data-pg2]'));
 
+  const ke = root.querySelector('[data-ke]');
+  if (ke){
+    const max = Math.max(1, ...keyList.map(e => e.n));
+    ke.innerHTML = keyList.slice(0, 8).map(e => {
+      const via = topOf(e.plats).map(p => '<span style="display:inline-flex;align-items:center;gap:5px;margin-right:10px"><i style="width:8px;height:8px;border-radius:50%;background:' + acol(p) + ';display:inline-block"></i>' + esc(p) + '</span>').join('');
+      return '<div style="margin:10px 0"><div style="display:flex;justify-content:space-between;gap:10px;font-size:13px;margin-bottom:5px"><span>' + esc(e.label) +
+        '</span><b style="color:#222A30;font-weight:600">' + fmt(e.n) + '</b></div>' +
+        '<div class="aiv-bar" style="height:8px"><i style="width:' + (e.n / max * 100).toFixed(1) + '%;background:#171614"></i></div>' +
+        '<div style="font-size:11.5px;color:#8593a0;margin-top:5px">' + via + '</div></div>';
+    }).join('');
+  }
+
   const ah = root.querySelector('[data-aio]');
   if (ah){
     const segs = [
@@ -999,7 +1091,35 @@ async function apiPost(base, body){
   return json;
 }
 
-window.AIVis = {render, renderReport, renderMessage, apiGet, normDomain};
+/* ---------- feed cache ----------
+   The tracker is an Apps Script web app: 5 s warm, 30–40 s cold. The numbers
+   only change when the tracker imports (daily at most), so the last feed is
+   kept in this browser and drawn at once, then swapped for the fresh one when
+   it arrives. Per browser only; the shared report also gets a copy stored on
+   its Firestore doc (see publishSnap). */
+const CACHE_V = 1, CACHE_PREFIX = 'aivFeed:';
+function cacheGet(id){
+  try{
+    const o = JSON.parse(localStorage.getItem(CACHE_PREFIX + id) || 'null');
+    return o && o.v === CACHE_V && o.feed ? o : null;
+  }catch(e){ return null; }
+}
+function cachePut(id, feed){
+  const val = JSON.stringify({v: CACHE_V, at: Date.now(), feed});
+  try{ localStorage.setItem(CACHE_PREFIX + id, val); return; }catch(e){}
+  /* Storage full: drop the other cached feeds (oldest first) and try once more. */
+  try{
+    const keys = [];
+    for (let i = 0; i < localStorage.length; i++){ const k = localStorage.key(i); if (k && k.indexOf(CACHE_PREFIX) === 0 && k !== CACHE_PREFIX + id) keys.push(k); }
+    keys.map(k => { let at = 0; try{ at = JSON.parse(localStorage.getItem(k)).at || 0; }catch(e){} return [k, at]; })
+      .sort((a, b) => a[1] - b[1]).forEach(([k]) => localStorage.removeItem(k));
+    localStorage.setItem(CACHE_PREFIX + id, val);
+  }catch(e){}
+}
+/* Same data, ignoring the request timestamp, so an unchanged feed doesn't redraw. */
+const feedSig = f => { try{ const c = Object.assign({}, f); delete c.generatedAt; return JSON.stringify(c); }catch(e){ return String(Math.random()); } };
+
+window.AIVis = {render, renderReport, renderMessage, apiGet, normDomain, cacheGet, cachePut, feedSig};
 
 /* ==========================================================================
    SEO TOOL TAB
@@ -1077,10 +1197,10 @@ document.addEventListener('click', e => {
 
 new MutationObserver(() => {
   placeButton();
+  const c = activeClient();
   if (active){
-    const c = activeClient();
     if ((c ? c.id : null) !== loadedFor){ closeDrawer(); load(false); }
-  }
+  } else prefetch(c);
 }).observe(document.getElementById('seoModes'), {childList: true});
 placeButton();
 
@@ -1145,15 +1265,29 @@ async function load(force){
     return;
   }
   const forId = c.id;
-  renderMessage(v, 'Loading AI visibility', '<span class="aiv-spin"></span>Reading ' + esc(domain) + ' from the tracker…');
+  /* Draw the last copy straight away (memory, then this browser's cache), then refresh. */
+  const cached = memFeed[domain] || cacheGet(domain);
+  let shownSig = null;
+  if (cached){
+    shownSig = feedSig(cached.feed);
+    draw(v, c, cached.feed, {stale: true, at: cached.at});
+  } else {
+    renderMessage(v, 'Loading AI visibility', '<span class="aiv-spin"></span>Reading ' + esc(domain) + ' from the tracker…' +
+      '<div style="margin-top:8px;font-size:12px;color:var(--a-ink3)">The first load for a client can take up to 40 seconds. After that it opens instantly.</div>');
+  }
   /* The client-list sync runs alongside the feed, so a slow sync never holds the page. */
   register(s).catch(() => { registeredSig = null; });
   try{
-    const feed = await apiGet(s.url, {action: 'feed', domain, key: s.key, _: force ? Date.now() : ''});
-    if (loadedFor !== forId) return;
-    draw(v, c, feed);
+    const feed = await fetchFeed(s, domain, force);
+    if (loadedFor !== forId || !active) return;
+    const fresh = memFeed[domain];
+    if (feedSig(feed) !== shownSig) draw(v, c, feed, {at: fresh.at});
+    else setFreshness(v, {at: fresh.at});
+    publishSnap(c, feed);
   }catch(err){
     if (loadedFor !== forId) return;
+    /* With a cached copy on screen, a failed refresh is a note, not an error page. */
+    if (cached){ setFreshness(v, {stale: true, at: cached.at, err: err.message}); return; }
     if (/key/.test(err.message)){ renderConnect(v, err.message); return; }
     if (/unknown client/.test(err.message)){
       renderMessage(v, 'Not in the tracker yet', esc(domain) + ' hasn’t reached the tracker yet. It is added automatically; try again in a moment.' +
@@ -1170,6 +1304,58 @@ async function load(force){
   }
 }
 
+/* One request per client at a time: the tab, a prefetch and a retry share it. */
+const memFeed = {}, inFlight = {};
+function fetchFeed(s, domain, force){
+  if (inFlight[domain] && !force) return inFlight[domain];
+  const p = apiGet(s.url, {action: 'feed', domain, key: s.key, _: force ? Date.now() : ''})
+    .then(feed => { const o = {at: Date.now(), feed}; memFeed[domain] = o; cachePut(domain, feed); return feed; })
+    .finally(() => { if (inFlight[domain] === p) delete inFlight[domain]; });
+  inFlight[domain] = p;
+  return p;
+}
+/* Opening a client warms its feed, so the AI Visibility tab is usually ready
+   by the time someone clicks it. At most once every 10 minutes per client. */
+function prefetch(c){
+  const s = settings();
+  if (!c || !s.url || !s.key) return;
+  const domain = normDomain(c.website);
+  if (domain.indexOf('.') < 0 || inFlight[domain]) return;
+  const have = memFeed[domain] || cacheGet(domain);
+  if (have && Date.now() - have.at < 10 * 60 * 1000) return;
+  fetchFeed(s, domain, false).then(feed => publishSnap(c, feed)).catch(() => {});
+}
+/* Keeps a copy of the feed on the shared report's Firestore doc, so the public
+   page draws in a fraction of a second and then checks the tracker for newer
+   numbers. update() only touches reports that were already shared, and the
+   copy is skipped when nothing changed. Stored as a string: Firestore can't
+   hold the nested arrays the GA4 rows use. */
+const snapSig = {};
+function publishSnap(c, feed){
+  try{
+    if (typeof fbDb === 'undefined' || !fbDb || !c) return;
+    const sig = feedSig(feed);
+    if (snapSig[c.id] === sig) return;
+    const snap = JSON.stringify(feed);
+    if (snap.length > 900000) return;   /* Firestore's 1 MB document limit */
+    snapSig[c.id] = sig;
+    fbDb.collection('publicViews').doc(reportId(c)).update({snap, snapAt: Date.now()}).catch(() => { delete snapSig[c.id]; });
+  }catch(e){}
+}
+const ago = at => {
+  const m = Math.round((Date.now() - at) / 60000);
+  return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' d ago';
+};
+function setFreshness(v, f){
+  const el = v.querySelector('[data-aiv-fresh]');
+  if (!el) return;
+  el.className = 'aiv-status' + (f.err ? ' err' : '');
+  el.innerHTML = f.err ? 'Couldn’t refresh (' + esc(f.err) + '). Showing data from ' + esc(ago(f.at)) + '.'
+    : f.stale ? '<span class="aiv-spin"></span>Checking for newer data…'
+    : 'Up to date';
+  el.title = f.at ? 'Loaded ' + new Date(f.at).toLocaleString('en-CA') : '';
+}
+
 function reportId(c){ return 'aireport-' + c.id; }
 function reportUrl(c){
   const base = location.origin + location.pathname.replace(/[^\/]*$/, '');
@@ -1179,10 +1365,12 @@ function embedCode(url){
   return '<iframe src="' + url + '" style="width:100%;height:1500px;border:0" loading="lazy" title="AI visibility"></iframe>';
 }
 
-function draw(v, c, feed){
+function draw(v, c, feed, info){
+  info = info || {};
   const domain = feed.domain;
   const tracking = feed.tracking || {};
   const actions =
+    '<span class="aiv-status" data-aiv-fresh></span>' +
     (tracking.ga4 ? '<button class="aiv-btn" type="button" data-aiv-refresh title="Pull the latest GA4 data for this client now">Refresh GA4</button>' : '') +
     '<button class="aiv-btn go" type="button" data-aiv-share>Share report</button>' +
     '<button class="aiv-btn" type="button" data-aiv-conn title="Tracker connection" aria-label="Tracker connection">⚙</button>';
@@ -1192,8 +1380,9 @@ function draw(v, c, feed){
 
   render(v, feed, {
     period, actionsHtml: actions, topHtml: top,
-    onPeriod: p => { period = p; closeDrawer(); draw(v, c, feed); }
+    onPeriod: p => { period = p; closeDrawer(); draw(v, c, feed, info); }
   });
+  setFreshness(v, info);
 
   const s = settings();
   const ref = v.querySelector('[data-aiv-refresh]');
@@ -1222,11 +1411,15 @@ async function share(v, c, domain){
       (cl.clients || []).forEach(x => { tokens[x.domain] = x.token; });
     }
     if (!tokens[domain]) throw new Error('The tracker has no token for ' + domain + '.');
-    await fbDb.collection('publicViews').doc(reportId(c)).set({
+    const doc = {
       type: 'aireport', clientName: c.name || domain, domain,
       title: (c.name || domain) + ' — AI Visibility',
       feedUrl: s.url, token: tokens[domain], updatedAt: Date.now()
-    });
+    };
+    /* Ship the current numbers with the link so the report opens instantly. */
+    const have = memFeed[domain] || cacheGet(domain);
+    if (have){ const snap = JSON.stringify(have.feed); if (snap.length <= 900000){ doc.snap = snap; doc.snapAt = have.at; snapSig[c.id] = feedSig(have.feed); } }
+    await fbDb.collection('publicViews').doc(reportId(c)).set(doc);
     const url = reportUrl(c);
     box.innerHTML = '<div class="aiv-share"><label>Report link</label><input readonly value="' + esc(url) + '">' +
       '<label>Embed code</label><textarea readonly rows="2">' + esc(embedCode(url)) + '</textarea>' +

@@ -67,17 +67,29 @@ html,body{margin:0;background:#fafafa;color:var(--ink);font-family:var(--ui);-we
     const view = snap.data() || {};
     if (view.type !== 'aireport' || !view.feedUrl || !view.token) throw new Error('This report link is not set up correctly.');
 
-    /* The token opens this one client's data, read-only. */
-    const feed = await AIV.apiGet(view.feedUrl, {action: 'feed', domain: view.domain, t: view.token});
-    document.title = (view.title || feed.name || feed.domain) + ' | AI Visibility';
-
-    let period = 'lastMonth';
-    const when = new Date(feed.generatedAt || Date.now());
-    const foot = 'Data as of ' + when.toLocaleString('en-CA', {dateStyle: 'medium', timeStyle: 'short'}) + ' · Updates automatically';
-    /* One state object, so the ticked sources and assistant filter survive a period change. */
+    let period = 'lastMonth', feed = null;
+    /* One state object, so the ticked sources and assistant filter survive a period change and a data refresh. */
     const ui = {ch: {AI: true, 'Organic Search': false, Direct: false}, plat: ''};
-    const draw = () => AIV.renderReport(root, feed, {period, title: view.title, foot, state: ui, onPeriod: p => { period = p; draw(); }});
-    draw();
+    const footFor = f => 'Data as of ' + new Date(f.generatedAt || Date.now()).toLocaleString('en-CA', {dateStyle: 'medium', timeStyle: 'short'}) + ' · Updates automatically';
+    const draw = () => AIV.renderReport(root, feed, {period, title: view.title, foot: footFor(feed), state: ui, onPeriod: p => { period = p; draw(); }});
+    const show = f => { feed = f; document.title = (view.title || f.name || f.domain) + ' | AI Visibility'; draw(); };
+
+    /* The tracker can take 30+ seconds to answer, so draw the newest copy we
+       already have (this browser's, or the one stored with the link) at once. */
+    let stored = null;
+    try{ if (view.snap) stored = {at: view.snapAt || 0, feed: JSON.parse(view.snap)}; }catch(e){}
+    const local = AIV.cacheGet && AIV.cacheGet(id);
+    const first = [stored, local].filter(Boolean).sort((a, b) => b.at - a.at)[0];
+    if (first) show(first.feed);
+
+    /* The token opens this one client's data, read-only. */
+    try{
+      const live = await AIV.apiGet(view.feedUrl, {action: 'feed', domain: view.domain, t: view.token});
+      if (AIV.cachePut) AIV.cachePut(id, live);
+      if (!feed || AIV.feedSig(live) !== AIV.feedSig(feed)) show(live);
+    }catch(err){
+      if (!feed) throw err;   /* a copy is on screen; keep it */
+    }
   })().catch(err => {
     AIV.renderMessage(root, 'This report couldn’t load', String(err && err.message || err).replace(/[&<>]/g, ''), true);
   });

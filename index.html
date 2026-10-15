@@ -817,6 +817,11 @@ kbd{font-family:var(--mono);font-size:10.5px;background:#fff;border:1px solid va
 .pop-warn.stale{color:var(--brand-deep);}
 .leaflet-popup-content ol li.hit{background:var(--brand-wash);border-radius:4px;margin-left:-4px;padding-left:4px;}
 .leaflet-popup-content ol li.hit a{font-weight:700;color:var(--brand-deep);}
+.leaflet-popup-content ol li.hit span{font-weight:700;color:var(--brand-deep);}
+.cpop-say{font-size:13px;line-height:1.45;color:var(--ink);margin:4px 0 2px;}
+.cpop-when{font-size:11px;color:var(--ink-3);margin-bottom:2px;}
+.cpop ol{max-height:190px;overflow:auto;}
+.cpop-note{font-size:11px;color:var(--ink-3);margin-top:8px;line-height:1.5;}
 
 /* progress bar during scan */
 .prog{height:4px;background:var(--line-2);border-radius:20px;overflow:hidden;margin-top:11px;}
@@ -15490,7 +15495,102 @@ function refreshHighlight(prev){
 function rankColorVar(rank){
   return RANK_VARS[rankClass(rank)] || 'var(--ink-3)';
 }
+/* ==========================================================================
+   THE CLIENT'S POINT POP-UP
+   ==========================================================================
+   A client opening their report should never be sent to live Google to
+   check a number. Their own Google is signed in and personalised — owners
+   look at their own listing all the time, so it ranks higher for them than
+   for a stranger — and no web page can open a private window for them. So
+   the client pop-up is the reading itself, in plain words: where they came,
+   when it was checked, and the full list a new customer standing on that
+   spot was shown, with their business highlighted and scrolled into view.
+   No coordinates, no request details, no buttons that change anything.
+   ========================================================================== */
+function clientDotPopup(p, idx, scan){
+  const d = document.createElement('div');
+  d.className = 'cpop';
+  const head = document.createElement('div');
+  head.className = 'pop-h';
+  head.textContent = (scan && scan.grid && scan.grid.custom)
+    ? ('Point ' + (idx + 1) + ' of ' + scan.points.length)
+    : ('Row ' + (p.row+1) + ', column ' + (p.col+1));
+  d.appendChild(head);
+
+  const total = (p.names && p.names.length) || p.total || 0;
+  const r = document.createElement('div');
+  r.className = 'pop-r';
+  r.style.color = rankColorVar(p.rank);
+  r.textContent = p.rank == null ? 'Not checked yet'
+    : (p.rank === 0 ? 'Not in the top ' + (total || 20) : '#' + p.rank);
+  d.appendChild(r);
+
+  const say = document.createElement('div');
+  say.className = 'cpop-say';
+  const kw = (scan && scan.keyword) ? '\u201c' + scan.keyword + '\u201d' : 'this search';
+  say.textContent = p.rank == null ? 'This spot has not been checked yet.'
+    : (p.rank === 0
+        ? 'Someone here searching ' + kw + ' on Google Maps would not find you in the first ' + (total || 20) + ' businesses.'
+        : 'Someone here searching ' + kw + ' on Google Maps sees you at position ' + p.rank + (total ? ' of ' + total : '') + '.');
+  d.appendChild(say);
+
+  const when = (p.read && p.read.ts) || (scan && scan.ts);
+  if (when){
+    const w = document.createElement('div');
+    w.className = 'cpop-when';
+    w.textContent = 'Checked ' + new Date(when).toLocaleString([], {month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit'});
+    d.appendChild(w);
+  }
+
+  const hitIdx = (p.rank >= 1 && !p.matchedViaAd) ? p.rank - 1 : -1;
+  if (p.names && p.names.length){
+    const det = document.createElement('details');
+    det.open = true;
+    const sum = document.createElement('summary');
+    sum.textContent = 'What Google Maps showed here (' + p.names.length + ')';
+    det.appendChild(sum);
+    const ol = document.createElement('ol');
+    let hitLi = null;
+    p.names.forEach((n, i) => {
+      const li = document.createElement('li');
+      const sp = document.createElement('span');
+      sp.textContent = n;
+      li.appendChild(sp);
+      if (i === hitIdx){ li.className = 'hit'; hitLi = li; sp.textContent = n + '  \u2190 you'; }
+      ol.appendChild(li);
+    });
+    det.appendChild(ol);
+    d.appendChild(det);
+    /* Bring their own line into view inside the list once the pop-up is
+       laid out, so nobody has to scroll forty names to find it. */
+    if (hitLi) setTimeout(() => {
+      try{ ol.scrollTop = Math.max(0, hitLi.offsetTop - ol.offsetTop - 40); }catch(e){}
+    }, 60);
+  }
+  if (p.adNames && p.adNames.length){
+    const det = document.createElement('details');
+    const sum = document.createElement('summary');
+    sum.textContent = 'Paid ads shown here (' + p.adNames.length + ')';
+    det.appendChild(sum);
+    const ol = document.createElement('ol');
+    p.adNames.forEach(n => { const li = document.createElement('li'); li.textContent = n; ol.appendChild(li); });
+    det.appendChild(ol);
+    d.appendChild(det);
+  }
+
+  if (p.rank != null){
+    const note = document.createElement('div');
+    note.className = 'cpop-note';
+    note.textContent = 'This is what a new customer standing on this spot saw. If you search on your own phone or computer, ' +
+      'your business may show a few places higher, because Google personalises results for people who have searched for ' +
+      'or visited it before.';
+    d.appendChild(note);
+  }
+  return d;
+}
+
 function dotPopup(p, idx, scan){
+  if (isPublicView()) return clientDotPopup(p, idx, scan);
   const g = activeGbp();
   const d = document.createElement('div');
   const head = document.createElement('div');

@@ -770,6 +770,10 @@ kbd{font-family:var(--mono);font-size:10.5px;background:#fff;border:1px solid va
    evidence rather than a headline. */
 .pop-links{display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 12px; margin:2px 0 4px;}
 .pop-link-main{font-weight:700; color:var(--brand-deep);}
+.pop-link-priv{font:inherit; font-size:12px; font-weight:600; padding:3px 9px; border-radius:999px; border:1px solid var(--line); background:transparent; color:var(--ink-2); cursor:pointer;}
+.pop-link-priv:hover{border-color:var(--brand-deep); color:var(--brand-deep);}
+.pop-priv-help{margin:6px 0 2px; font-size:12px; line-height:1.5; color:var(--ink-2); background:var(--paper-2, rgba(0,0,0,.04)); border-radius:8px; padding:7px 9px;}
+.pop-priv-help kbd{font:600 11px/1 ui-monospace,monospace; padding:2px 5px; border:1px solid var(--line); border-radius:4px; background:#fff; color:#222;}
 .pop-link-alt{font-size:11px; color:var(--ink-3); text-decoration:underline; text-decoration-color:var(--line);}
 .pop-link-alt:hover{color:var(--ink-2);}
 .pop-sent{
@@ -15655,7 +15659,39 @@ function dotPopup(p, idx, scan){
     ? 'The Google results page at this point, the same search this number was read from.'
     : 'Google Maps at the exact coordinate and zoom this number was read at. Use a private window, and do not move the map before counting.';
   links.appendChild(openLink);
+
+  /* A signed-in Google account personalises Maps: a business the team opens
+     every day ranks a few places higher for the team than for a customer.
+     The scan reads signed out, so the fair comparison is a private window.
+     A web page is not allowed to open one (browsers keep that to the
+     person), so this button does the rest: it copies the exact link and
+     says which keys open the window and paste it. */
+  const privBtn = document.createElement('button');
+  privBtn.type = 'button';
+  privBtn.className = 'pop-link-priv';
+  privBtn.textContent = 'Check in Incognito';
+  privBtn.title = 'Copies this exact link for a private (signed-out) window, which shows what a customer sees.';
+  const isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+  const privHelp = document.createElement('div');
+  privHelp.className = 'pop-priv-help';
+  privHelp.hidden = true;
+  privBtn.addEventListener('click', async () => {
+    const url = openLink.href;
+    let copied = false;
+    try{ await navigator.clipboard.writeText(url); copied = true; }catch(e){
+      try{ const t = document.createElement('textarea'); t.value = url; document.body.appendChild(t); t.select(); copied = document.execCommand('copy'); t.remove(); }catch(err){}
+    }
+    const mod = isMac ? '\u2318' : 'Ctrl';
+    privHelp.innerHTML = copied
+      ? '<b>Link copied.</b> Press <kbd>' + mod + '</kbd>+<kbd>Shift</kbd>+<kbd>N</kbd> to open an Incognito window, then <kbd>' + mod + '</kbd>+<kbd>V</kbd> and <kbd>Enter</kbd>. Scroll the list without moving the map.'
+      : 'Couldn\u2019t copy automatically. Right-click \u201c' + esc(openLink.textContent) + '\u201d, choose <b>Open link in incognito window</b>.';
+    privHelp.hidden = false;
+    privBtn.textContent = copied ? 'Link copied' : 'Check in Incognito';
+    setTimeout(() => { privBtn.textContent = 'Check in Incognito'; }, 2500);
+  });
+  links.appendChild(privBtn);
   d.appendChild(links);
+  d.appendChild(privHelp);
 
   /* The list below is the reading. The number above is an index into it, so
      the two agree by construction - including after a manual pick, which
@@ -15682,8 +15718,9 @@ function dotPopup(p, idx, scan){
     const note = document.createElement('div');
     if (p.read){
       note.className = 'pop-warn';
-      note.textContent = 'The link above opens the same search as the request above. Google still ' +
-        'serves live results, so the order can move between then and now \u2014 the list above ' +
+      note.textContent = 'This was read signed out, the way a customer sees Google. Your own signed-in ' +
+        'Google Maps is personalised and usually ranks a business you visit often a few places higher, ' +
+        'so compare with \u201cCheck in Incognito\u201d. Google also re-sorts live, so the list above ' +
         'is the record of what was actually read.';
     } else {
       note.className = 'pop-warn stale';

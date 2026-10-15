@@ -43,7 +43,8 @@ const shortDate = d => { const t = new Date(d + 'T12:00:00'); return isNaN(t) ? 
 const shortUrl = u => String(u || '').replace(/^https?:\/\/(www\.)?/i, '') || '/';
 /* One key for a page whether it came from GA4 (a path) or Search Console / Bing (a full URL). */
 const pageKey = u => {
-  let s = String(u || '').trim().toLowerCase();
+  /* Paths never contain spaces; anything after one is button text copied along with a Search Console export. */
+  let s = String(u || '').trim().toLowerCase().split(/\s/)[0];
   s = s.replace(/^https?:\/\/[^\/]+/, '').split(/[?#]/)[0] || '/';
   if (s.length > 1) s = s.replace(/\/+$/, ''); if (s === '(not set)') return 'Landing page not recorded';
   return s || '/';
@@ -255,6 +256,27 @@ function injectStyles(){
 .aia .aiv-bar i{border-radius:999px 0 0 999px;min-width:6px;}
 .aia-empty{color:var(--aa-ink-3);font-size:13px;text-align:center;padding:30px 0;}
 .aia-foot{text-align:center;font-size:11.5px;color:var(--aa-ink-3);margin-top:6px;}
+.aia-trio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:0.8px solid var(--aa-line);border-radius:6px;margin-bottom:16px;}
+.aia-trio > div{padding:12px 16px 14px;border-left:0.8px solid var(--aa-line);min-width:0;}
+.aia-trio > div:first-child{border-left:0;}
+.aia-trio-label{font-size:12.5px;color:var(--aa-ink-2);}
+.aia-trio-val{font-size:30px;font-weight:700;color:var(--aa-num);line-height:1.1;margin-top:8px;letter-spacing:-.01em;}
+.aia-trio-sub{font-size:11.5px;color:var(--aa-ink-3);margin-top:4px;}
+.aia-arrow{color:var(--aa-ink-3);font-weight:400;margin:0 2px;}
+.aia-table{width:100%;border-collapse:collapse;font-size:13px;}
+.aia-table th{text-align:left;font-weight:500;font-size:12px;color:var(--aa-ink-3);padding:0 0 8px;border-bottom:0.8px solid var(--aa-line);}
+.aia-table td{padding:9px 0;border-bottom:0.8px solid var(--aa-line-2);color:var(--aa-ink);}
+.aia-table th.num,.aia-table td.num{text-align:right;padding-left:14px;white-space:nowrap;}
+.aia-table td.num{font-weight:600;color:var(--aa-num);font-variant-numeric:tabular-nums;}
+.aia-table td.pg{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0;width:55%;}
+.aia-note{font-size:11.5px;color:var(--aa-ink-3);margin-top:12px;line-height:1.5;}
+.aia-types{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--aa-ink-2);margin-top:12px;}
+.aia-types b{color:var(--aa-ink);font-weight:600;}
+.aia-table .s{display:none;}
+@media (max-width:560px){.aia-table .l{display:none;}.aia-table .s{display:inline;}
+  .aia-table td.pg{white-space:normal;word-break:break-word;max-width:none;width:auto;}
+  .aia-table th.num,.aia-table td.num{padding-left:10px;}}
+@media (max-width:760px){.aia-trio{grid-template-columns:1fr;}.aia-trio > div{border-left:0;border-top:0.8px solid var(--aa-line);}.aia-trio > div:first-child{border-top:0;}}
 @media (max-width:760px){.aia-grid2{grid-template-columns:1fr;}.aia-kpi-val{font-size:40px;}}
 `;
   const st = document.createElement('style');
@@ -495,9 +517,25 @@ function model(feed, period){ if (period === 'lastMonth'){ const t0 = new Date()
   const evAll = (feed.ga4 && feed.ga4.events) || null;
   const evCur = evAll ? evAll.filter(r => inCur(r[0]) && (Number(r[4]) || 0) > 0) : [];
 
+  /* Google organic visits to the pages Google's AI showed (feed.gorg). Google doesn't say which of its
+     clicks came from AI Overviews / AI Mode, so this is the closest honest view, labelled as such.
+     rows [date, page, sessions, engaged, key events]; events [date, page, event name, count]. */
+  const go = feed.gorg || null;
+  const mergePages = list => { const m = {}; (list || []).forEach(r => { const k = pageKey(r.u); m[k] = m[k] || {key: k, u: r.u, n: 0}; m[k].n += Number(r.n) || 0; }); return Object.values(m).sort((a, b) => b.n - a.n); };
+  const goAll = go ? go.rows || [] : [], goEvAll = go ? go.events || [] : [];
+  const goCur = goAll.filter(r => inCur(r[0])), goEvCur = goEvAll.filter(r => inCur(r[0]) && (Number(r[3]) || 0) > 0);
+  const goPages = mergePages(go && go.aiPages ? go.aiPages : (feed.google && feed.google.pages)).map(p => {
+    const rs = goAll.filter(r => pageKey(r[1]) === p.key);
+    return Object.assign(p, {s: rs.reduce((t, r) => t + (Number(r[2]) || 0), 0), k: rs.reduce((t, r) => t + (Number(r[4]) || 0), 0)});
+  });
+
   return {
     period, since, end, labels, weekly, cur, slot,
     keyEv: {known: !!evAll, rows: evCur},
+    gorg: {known: !!go, pages: goPages, s: goCur.reduce((t, r) => t + (Number(r[2]) || 0), 0), e: goCur.reduce((t, r) => t + (Number(r[3]) || 0), 0),
+      k: goCur.reduce((t, r) => t + (Number(r[4]) || 0), 0),
+      /* in the [date, platform, page, name, count] shape the key event helpers use */
+      events: goEvCur.map(r => [r[0], 'Google', r[1], r[2], Number(r[3]) || 0])},
     ai: {s: sum(cur, 4), e: sum(cur, 5), k: sum(cur, 6), ps: sum(prev, 4), pk: sum(prev, 6), series: aiSeries, keySeries: aiKeySeries,
       hasPrev: rows.some(r => r[0] < since)},
     plats: platList, channels: ch, hasChannels: chDaily.length > 0,
@@ -797,7 +835,7 @@ function keyEventTable(host, M, domain, rows, opts){
   const list = keyEventsOf(rows);
   const max = Math.max(1, ...list.map(e => e.n));
   const cols = [
-    {key: 'label', label: 'Key event', fmt: r => '<b style="font-weight:600">' + esc(r.label) + '</b>' + (r.label !== r.name ? ' <span class="aiv-page" style="color:var(--a-ink3);font-size:11px">' + esc(r.name) + '</span>' : ''), sort: r => r.label},
+    {key: 'label', label: 'Key event', fmt: r => '<b style="font-weight:600">' + esc(r.label) + '</b>' + (r.label.toLowerCase() !== String(r.name).toLowerCase().replace(/[_\-]+/g, ' ').trim() ? ' <span class="aiv-page" style="color:var(--a-ink3);font-size:11px">' + esc(r.name) + '</span>' : ''), sort: r => r.label},
     {key: 'n', label: 'Count', num: true, fmt: r => barCell(r.n, max, '#2a78d6')}
   ];
   if (!opts.noPlat) cols.push({key: 'pl', label: 'From', fmt: r => topOf(r.plats).map(p => dotName(p + ' ' + r.plats[p], pcol(p))).join(' &nbsp;'), sort: r => Object.keys(r.plats).length});
@@ -875,17 +913,29 @@ function openGoogle(M, domain){
       statsRow([['AI impressions', M.google.imported ? fmt(M.google.n) : '—', esc(periodName(M.period))],
         ['Tracked searches cited', M.aio.length ? cited + ' / ' + M.aio.length : '—', M.aio.length ? named + ' named the business' : ''],
         ['Showed an AI Overview', M.aio.length ? shown + ' / ' + M.aio.length : '—', '']]) +
+      (M.google.imported && M.gorg.known ? '<div class="aiv-card"><h3>Google visits to the pages AI showed</h3>' +
+        '<p class="aiv-cap" style="margin-bottom:10px">Google doesn’t report which of its clicks came from AI Overviews or AI Mode, so no tool can count them on their own. ' +
+        'This is the closest real measure: every visit from Google search (GA4, google / organic) that landed on a page Google’s AI showed. Some of these people clicked an ordinary result.</p>' +
+        statsRow([['Google visits', fmt(M.gorg.s), 'to those pages · ' + esc(periodName(M.period))], ['Engaged', fmt(M.gorg.e), pctTxt(M.gorg.e, M.gorg.s) + ' engagement rate'],
+          ['Key events', fmt(M.gorg.k), M.gorg.s ? 'From ' + fmt(M.gorg.s) + ' visits' : '']]) +
+        '<h3 style="margin-top:6px">What those visitors did</h3><div data-gke style="margin-top:8px"></div></div>' : '') +
       (M.google.imported ? '<div class="aiv-card"><h3>Google AI impressions</h3><p class="aiv-cap">Search Console, Generative AI report. Google records this from May 18, 2026.</p><div class="aiv-chart" data-c style="margin-top:10px"></div></div>' +
-        '<div class="aiv-card"><h3>Pages Google’s AI showed</h3><p class="aiv-cap" style="margin-bottom:8px">Impressions since May 18, 2026, from the newest export.</p><div data-pg></div></div>' : '') +
+        '<div class="aiv-card"><h3>Pages Google’s AI showed</h3><p class="aiv-cap" style="margin-bottom:8px">All since May 18, 2026: AI impressions from the newest Search Console export' +
+        (M.gorg.known ? ', and the Google search visits and key events those pages got' : '') + '.</p><div data-pg></div></div>' : '') +
       '<div class="aiv-card"><h3>Tracked searches</h3><div data-a style="margin-top:8px"></div></div>';
     if (M.google.imported){
       lineChart(body.querySelector('[data-c]'), {labels: M.labels, weekly: M.weekly, height: 200, series: [{name: 'AI impressions', color: '#1baf7a', values: M.google.series, area: true}]});
-      const rows = M.google.pages.map(r => ({key: pageKey(r.u), u: r.u, n: r.n}));
+      /* One row per page: www / non-www and http / https copies of a URL are merged. */
+      const rows = M.gorg.pages;
       const max = Math.max(1, ...rows.map(r => r.n));
       table(body.querySelector('[data-pg]'), rows, [
         {key: 'key', label: 'Page', fmt: r => '<span class="aiv-page">' + esc(r.key) + '</span>', sort: r => r.key},
-        {key: 'n', label: 'Impressions', num: true, fmt: r => barCell(r.n, max, '#1baf7a')}
-      ], {sort: 'n', onRow: r => { const full = M.pages.find(p => p.key === r.key); if (full) openPage(M, domain, full); }});
+        {key: 'n', label: 'AI impressions', num: true, fmt: r => barCell(r.n, max, '#1baf7a')}
+      ].concat(M.gorg.known ? [
+        {key: 's', label: 'Google visits', num: true, fmt: r => fmt(r.s)},
+        {key: 'k', label: 'Key events', num: true, fmt: r => fmt(r.k)}
+      ] : []), {sort: 'n', onRow: r => { const full = M.pages.find(p => p.key === r.key); if (full) openPage(M, domain, full); }});
+      if (M.gorg.known) keyEventTable(body.querySelector('[data-gke]'), M, domain, M.gorg.events, {noPlat: true});
     }
     drawAio(body.querySelector('[data-a]'), M, domain, false);
   });
@@ -981,6 +1031,27 @@ function renderReport(root, feed, opts){
     (M.aio.length && opts.showAio ? kpi('AI Overview Mentions', pctTxt(mentioned, M.aio.length) + '<div style="font-size:12px;font-weight:500;color:#8593a0;margin-top:4px">' + fmt(mentioned) + ' of ' + fmt(M.aio.length) + ' tracked searches</div>', null, null) : '');
 
   const keyList = keyEventsOf(M.keyEv.rows), keyTotal = keyList.reduce((t, e) => t + e.n, 0);
+  const showGoogleFlow = M.google.imported && M.gorg.known && M.gorg.pages.length > 0;
+  const googleFlowHtml = () => {
+    const G = M.gorg, types = keyEventsOf(G.events);
+    const top = G.pages.slice(0, 6);
+    const stat = (label, val, sub) => '<div><div class="aia-trio-label">' + label + '</div><div class="aia-trio-val">' + val + '</div><div class="aia-trio-sub">' + sub + '</div></div>';
+    return '<div class="aia-panel aia-row"><div class="aia-panel-head"><h2 class="aia-panel-title">From Google AI Search to the Website</h2>' +
+      '<span style="font-size:12px;color:#8593a0">' + esc(prettyDate(M.since)) + ' – ' + esc(prettyDate(M.end)) + '</span></div>' +
+      '<div class="aia-trio">' +
+        stat('Google AI Impressions', fmtK(M.google.n), 'Times Google’s AI showed the site') +
+        stat('<span class="aia-arrow">→</span> Visits from Google', fmt(G.s), 'To the pages its AI showed') +
+        stat('<span class="aia-arrow">→</span> Conversions', fmt(G.k), G.s ? pctTxt(G.k, G.s) + ' of those visits' : '&nbsp;') +
+      '</div>' +
+      '<table class="aia-table"><thead><tr><th><span class="l">Page Google’s AI showed</span><span class="s">Page</span></th>' +
+        '<th class="num"><span class="l">AI Impressions</span><span class="s">AI impr.</span></th><th class="num"><span class="l">Visits from Google</span><span class="s">Visits</span></th>' +
+        '<th class="num"><span class="l">Conversions</span><span class="s">Conv.</span></th></tr></thead><tbody>' +
+        top.map(p => '<tr><td class="pg" title="' + esc(p.key) + '">' + esc(p.key) + '</td><td class="num">' + fmt(p.n) + '</td><td class="num">' + fmt(p.s) + '</td><td class="num">' + fmt(p.k) + '</td></tr>').join('') +
+      '</tbody></table>' +
+      (types.length ? '<div class="aia-types"><span>Conversions in this period:</span>' + types.slice(0, 5).map(e => '<span><b>' + fmt(e.n) + '</b> ' + esc(e.label) + '</span>').join('') + '</div>' : '') +
+      '<div class="aia-note">Page figures cover May 18, 2026 onward, when Google began reporting AI impressions. ' +
+        'Google doesn’t say which of its visits came from AI Overviews or AI Mode, so visits and conversions include everyone who reached these pages from Google search.</div></div>';
+  };
   const SEGKEY = (opts.period && typeof opts.period === 'object') ? 'custom' : String(opts.period || 30); const chans = ['AI'].concat(M.hasChannels ? ['Organic Search', 'Direct'] : []).concat(M.google.imported ? ['Google AI Impressions'] : []);
   root.innerHTML = '<div class="aia">' +
     '<div class="aia-panel aia-head"><div><h1 class="aia-title">' + esc(opts.title || ((feed.name || feed.domain) + ' — AI Visibility')) + '</h1>' +
@@ -1001,6 +1072,8 @@ function renderReport(root, feed, opts){
     /* Only when key events were recorded in this period; no empty widget otherwise. */
     (keyList.length ? '<div class="aia-panel aia-row"><div class="aia-panel-head"><h2 class="aia-panel-title">Conversions from AI by Type</h2>' +
       '<span style="font-size:12px;color:#8593a0">' + fmt(keyTotal) + ' key event' + (keyTotal === 1 ? '' : 's') + ' from AI visitors</span></div><div data-ke></div></div>' : '') +
+    /* Google AI Search → website: only once the tracker sends Google landings and Search Console has AI pages. */
+    (showGoogleFlow ? googleFlowHtml() : '') +
     (M.aio.length && opts.showAio ? '<div class="aia-grid2 aia-row"><div class="aia-panel"><div class="aia-panel-head"><h2 class="aia-panel-title">Google AI Overviews · Tracked Searches</h2></div><div data-aio></div></div>' +
       (M.google.imported ? '<div class="aia-panel"><div class="aia-panel-head"><h2 class="aia-panel-title">Top Pages from AI</h2></div><div data-pg2></div></div>' : '<div></div>') + '</div>'
       : (M.google.imported && opts.showGoogleCard ? '<div class="aia-panel aia-row"><div class="aia-panel-head"><h2 class="aia-panel-title">Top Pages from AI</h2></div><div data-pg2></div></div>' : '')) +

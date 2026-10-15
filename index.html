@@ -15698,7 +15698,7 @@ function dotPopup(p, idx, scan){
   paste.textContent = 'Paste for this point';
   paste.addEventListener('click', () => {
     const prev = currentIdx;
-    currentScan = scan; currentIdx = idx; lastFocused = 'single';
+    currentScan = scan; currentIdx = idx; lastFocused = 'single'; assistOn = true;
     refreshHighlight(prev); updateAssist(); map.closePopup();
     $('assistPanel').style.display = 'block';
     $('pasteBox').focus();
@@ -16146,7 +16146,7 @@ $('buildBtn').addEventListener('click', async () => {
   const scan = createScan();
   if (!scan) return;
   setStatus('scanStatus', 'Grid ready — ' + scan.points.length + ' points. Walk them with the paste loop below the map.', 'ok');
-  $('assistPanel').style.display = 'block';
+  assistOn = true; updateAssist();
   setTimeout(() => $('assistPanel').scrollIntoView({behavior:'smooth', block:'center'}), 120);
 });
 $('stopAutoBtn').addEventListener('click', () => { autoStop = true; setStatus('scanStatus', 'Stopping after this point…', 'busy'); });
@@ -17116,9 +17116,17 @@ async function resolvePoint(keyword, p, region, target, cfg){
    PASTE MODE
    ========================================================================== */
 let lastFocused = null;
+/* The paste helper is for walking points by hand. It opens when someone
+   starts paste mode or asks to paste one point, and closes itself once every
+   point has a reading — an API scan, or a finished paste walk, has nothing
+   left for it to do, and leaving it under the map only crowded the page. */
+var assistOn = false;
 function updateAssist(){
   const panel = $('assistPanel');
-  if (!currentScan){ panel.style.display = 'none'; return; }
+  if (!currentScan || !assistOn || currentIdx == null){
+    if (currentScan && currentIdx == null) assistOn = false;
+    panel.style.display = 'none'; return;
+  }
   panel.style.display = 'block';
   const total = currentScan.points.length;
   const done = currentScan.points.filter(p => p.rank != null).length;
@@ -19652,7 +19660,7 @@ function embedUrlFor(shareId){
    newest scan of every keyword always goes in.
    ========================================================================== */
 const PUB_SCANS_PER_KEYWORD = 12;
-const PUB_MAX_BYTES = 900000;
+const PUB_MAX_BYTES = 800000;
 const PUB_POINT_DROP = new Set(['adNames','wideNames','busy','_mt']);
 
 /* A scan with nothing read yet (one that has just started) is not shown to
@@ -19699,6 +19707,34 @@ function unpackGbpSnapshot(packed){
     }))
   }));
 }
+/* Links already sit inside client reports, and a browser that last opened
+   one before this release can keep running the old page for a few minutes.
+   That page reads `keywords` (the latest scan of each), not `gbpSnap`, so the
+   old field is still written alongside — as many keywords as fit in what is
+   left of the document — and an old copy keeps showing the map instead of
+   an empty frame until it picks up the new code. */
+function legacyKeywords(g, budget){
+  const out = [];
+  let used = 0;
+  g.keywords.forEach(k => {
+    const ss = pubScans(k);
+    if (!ss.length) return;
+    const s = ss[ss.length - 1];
+    const scan = {};
+    Object.keys(s).forEach(key => { if (key !== 'points') scan[key] = s[key]; });
+    scan.points = s.points.map(p => {
+      const q = {};
+      Object.keys(p).forEach(key => { if (!PUB_POINT_DROP.has(key) && p[key] !== undefined) q[key] = p[key]; });
+      return q;
+    });
+    const item = JSON.parse(JSON.stringify({id: k.id, text: k.text, scan}));
+    const size = JSON.stringify(item).length;
+    if (used + size > budget) return;
+    used += size;
+    out.push(item);
+  });
+  return out;
+}
 function buildGbpSnapshot(g){
   for (let n = PUB_SCANS_PER_KEYWORD; n >= 1; n = n > 4 ? n - 4 : n - 1){
     const json = JSON.stringify(packGbpSnapshot(g, n));
@@ -19723,6 +19759,7 @@ async function publishGbpView(g, opts){
       activeKeywordId: g.activeKeywordId || null,
       gbpSnap: built.json,
       scansPerKw: built.scansPerKw,
+      keywords: legacyKeywords(g, 920000 - built.json.length),
       view: (g.embedView && isFinite(g.embedView.lat)) ? {
         lat: Number(g.embedView.lat), lng: Number(g.embedView.lng), zoom: Number(g.embedView.zoom)
       } : null,
@@ -19753,13 +19790,31 @@ function gbpPublishStale(g){ return !!(g && g.publishedAt && g.publishedSig !== 
    republishes it. */
 var pubTimer = null;
 function autoRepublish(g){
-  if (!g || !g.publishedAt || isPublicView()) return;
+  if (!g || isPublicView()) return;
+  if (!g.publishedAt){ upgradeOldLink(g); return; }
   clearTimeout(pubTimer);
   pubTimer = setTimeout(() => {
     if (gbpPublishStale(g)) publishGbpView(g, {quiet: true});
   }, 1500);
 }
 
+/* Profiles shared before the Publish button existed have a live client link
+   (the old map-only snapshot, written whenever the map was expanded) but no
+   publish record here. The first time one is opened, the link is checked;
+   if it exists it is republished as the full client view and from then on
+   kept current like any other — the URL the client has does not change. */
+var upgradeChecked = new Set();
+async function upgradeOldLink(g){
+  if (!g || g.publishedAt || !fbDb || !fbUid || upgradeChecked.has(g.id)) return;
+  upgradeChecked.add(g.id);
+  try{
+    const snap = await fbDb.collection('publicViews').doc(g.id).get();
+    if (!snap.exists) return;
+    const d = snap.data() || {};
+    if (d.gbpSnap) { g.publishedAt = d.updatedAt || Date.now(); g.publishedSig = ''; save(); }
+    await publishGbpView(g, {quiet: true});
+  }catch(e){ /* stays as it was; Publish for client still works */ }
+}
 function renderPublishState(){
   const el = $('publishState'), btn = $('publishBtn');
   if (!el || !btn) return;
@@ -19767,6 +19822,7 @@ function renderPublishState(){
   const has = !!(g && g.keywords.some(k => k.scans.length));
   btn.disabled = !has;
   btn.title = has ? 'Publish this profile’s results as a read-only page for the client' : 'Run a scan first';
+  if (g && !g.publishedAt && !isPublicView()) upgradeOldLink(g);
   if (!g || !g.publishedAt){ el.hidden = true; btn.textContent = 'Publish for client'; return; }
   el.hidden = false;
   const stale = gbpPublishStale(g);

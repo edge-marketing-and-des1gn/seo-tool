@@ -19922,7 +19922,11 @@ function seoNormalizeDfsOrganic(data){
     title: it.title || '',
     domain: it.domain || (it.url ? cleanDomain(it.url) : null),
     url: it.url || null,
-    position: (typeof it.rank_group === 'number' ? it.rank_group : null)
+    position: (typeof it.rank_group === 'number' ? it.rank_group : null),
+    /* The Google results page this result was actually on. Page one rarely
+       holds ten organic results (ads, the map pack and "People also ask"
+       take room), so the page can't be worked out from the position. */
+    page: (typeof it.page === 'number' && it.page > 0 ? it.page : null)
   }));
   /* A featured snippet and its own organic twin are the same result twice,
      so the lower of the two positions wins and the duplicate is dropped. */
@@ -20237,7 +20241,7 @@ async function seoSerperRead(keyword, p, region, o){
       if (link) seen.add(link);
       /* Counted across pages rather than trusting the per-page position,
          which restarts at 1 on every page. */
-      organic.push({title: x.title || '', domain: link ? cleanDomain(link) : null, url: link || null, position: organic.length + 1});
+      organic.push({title: x.title || '', domain: link ? cleanDomain(link) : null, url: link || null, position: organic.length + 1, page: page});
     });
     if (o.match && organic.some(o.match)) break;
   }
@@ -20337,6 +20341,7 @@ function seoRecordGsc(loc, r, mode, live, liveErr){
   loc.matchedTitle = null;
   loc.matchedDomain = r.none ? null : gscPropertyLabel(r.property);
   loc.matchedBy = r.none ? null : 'site';
+  loc.page = null;   /* an average position over many searches has no page */
   loc.precision = 'gsc';
   loc.gsc = {
     mode: mode, property: r.property, none: !!r.none,
@@ -20467,6 +20472,7 @@ async function seoScanOne(client, kw, loc, hooks){
     loc.rank = found ? (found.position != null ? found.position : idx + 1) : 0;
     loc.matchedTitle = found ? found.title : null;
     loc.matchedDomain = found ? found.domain : null;
+    loc.page = found && found.page ? found.page : null;
     /* 'site' needs no explanation. Anything else does, and the row gives it
        one rather than presenting a guess as a measurement. */
     loc.matchedBy = found ? how : null;
@@ -20495,7 +20501,7 @@ async function seoScanOne(client, kw, loc, hooks){
     loc.manual = false;
     loc.error = null;
     loc.history = loc.history || [];
-    loc.history.push({rank: loc.rank, checkedAt: loc.checkedAt});
+    loc.history.push(loc.page ? {rank: loc.rank, checkedAt: loc.checkedAt, page: loc.page} : {rank: loc.rank, checkedAt: loc.checkedAt});
     if (loc.history.length > 60) loc.history.shift();
     return 'ok';
   }catch(err){
@@ -21334,14 +21340,30 @@ $('seoDeleteClientBtn').addEventListener('click', () => {
    pagination would have dropped it and answered from the real location.
 -------------------------------------------------------------------------- */
 function seoRankPage(loc){
-  if (!loc || !(Number(loc.rank) > 10)) return 1;
-  return Math.ceil(Number(loc.rank) / 10);
+  const r = Number(loc && loc.rank);
+  if (!(r > 0)) return 1;
+  /* The page Google actually put it on, recorded by the scan. */
+  if (loc.page > 0 && loc.precision !== 'gsc') return loc.page;
+  /* Older readings have no page. Page one usually holds about nine organic
+     results (tested Oct 2026 across eight keywords: eight or nine every time)
+     and later pages ten, which places a rank far better than rank / 10 did. */
+  return r <= 9 ? 1 : 2 + Math.floor((r - 10) / 10);
+}
+/* The pinned search, opened at the page the result is on, with a text
+   fragment naming the matched domain. Chrome and Edge use the fragment to
+   scroll to and highlight the client's result when the link is clicked;
+   other browsers ignore it and simply open the page. */
+function seoRankLink(url, rank, page, domain){
+  if (!url) return null;
+  let u = String(url).split('#')[0].replace(/&start=\d+/, '');
+  if (page > 1) u += (u.indexOf('?') === -1 ? '?' : '&') + 'start=' + ((page - 1) * 10);
+  const d = String(domain || '').toLowerCase().replace(/^www\./, '');
+  if (rank > 0 && /^[a-z0-9.-]+\.[a-z]{2,}$/.test(d)) u += '#:~:text=' + encodeURIComponent(d).replace(/-/g, '%2D');
+  return u;
 }
 function seoRankPageUrl(loc){
-  const page = seoRankPage(loc);
-  if (page < 2 || !loc.sourceUrl) return null;
-  if (/[?&]start=/.test(loc.sourceUrl)) return loc.sourceUrl;
-  return loc.sourceUrl + (loc.sourceUrl.indexOf('?') === -1 ? '?' : '&') + 'start=' + ((page - 1) * 10);
+  if (!loc || !loc.sourceUrl) return null;
+  return seoRankLink(loc.sourceUrl, Number(loc.rank) || 0, seoRankPage(loc), loc.matchedDomain);
 }
 function seoCopyLink(url, btnEl){
   const isTextBtn = btnEl && btnEl.classList && btnEl.classList.contains('seo-copy-link-btn');
@@ -21574,13 +21596,13 @@ function seoLocGroupRow(c, k, loc){
     statusEl.innerHTML = esc(fmtWhen(loc.checkedAt)) +
       (loc.precision === 'country' ? ' \u00b7 <b title="The pinned search was refused, so this position was read for the whole country instead of from this city.">country-wide reading</b>' : '') +
       via + miss + reads +
-      ' \u00b7 <a href="' + esc(loc.sourceUrl) + '" target="_blank" rel="noopener">view the search</a>';
+      ' \u00b7 <a href="' + esc(seoRankPageUrl(loc) || loc.sourceUrl) + '" target="_blank" rel="noopener">view the search' + (seoRankPage(loc) > 1 ? ' (page ' + seoRankPage(loc) + ')' : '') + '</a>';
     const copyLinkBtn = document.createElement('button');
     copyLinkBtn.type = 'button';
     copyLinkBtn.className = 'seo-copy-link-btn';
     copyLinkBtn.textContent = 'Copy link';
     copyLinkBtn.title = 'Copy this link \u2014 browsers don\u2019t let a webpage force Incognito/Private mode, but you can paste this into one yourself with Ctrl+Shift+N (Cmd+Shift+N on Mac) for an unpersonalized view';
-    copyLinkBtn.addEventListener('click', () => seoCopyLink(loc.sourceUrl, copyLinkBtn));
+    copyLinkBtn.addEventListener('click', () => seoCopyLink(seoRankPageUrl(loc) || loc.sourceUrl, copyLinkBtn));
     statusEl.appendChild(document.createTextNode(' '));
     statusEl.appendChild(copyLinkBtn);
   }
@@ -21725,7 +21747,7 @@ function seoLocGroupRow(c, k, loc){
     if (v === '') return;
     const n = parseInt(v, 10);
     if (isNaN(n) || n < 0){ toast('Enter a whole number \u2014 0 means not ranking', 'err'); rankInput.value = ''; return; }
-    loc.prevRank = loc.rank; loc.rank = n; loc.manual = true; loc.checkedAt = Date.now(); loc.error = null;
+    loc.prevRank = loc.rank; loc.rank = n; loc.manual = true; loc.checkedAt = Date.now(); loc.error = null; loc.page = null;
     loc.history = loc.history || []; loc.history.push({rank:n, checkedAt:loc.checkedAt, manual:true});
     save(); renderSeoKeywords();
     toast('Rank set manually');
@@ -21872,7 +21894,7 @@ function seoMergeLocInto(keep, drop){
   if ((drop.checkedAt || 0) > (keep.checkedAt || 0)){
     ['rank','prevRank','matchedTitle','matchedDomain','sourceUrl','checkedAt','manual','error','precision',
      'matchedBy','readCount','topDomains','partial','depthRead','exhausted',
-     'reads','readsMax','failedReads','gsc','depthAsked'].forEach(f => { keep[f] = drop[f]; });
+     'reads','readsMax','failedReads','gsc','depthAsked','page'].forEach(f => { keep[f] = drop[f]; });
   }
   if (keep.lat == null && drop.lat != null){ keep.lat = drop.lat; keep.lng = drop.lng; }
   keep.history = Array.from(hist.values()).sort((x, y) => (x.checkedAt || 0) - (y.checkedAt || 0)).slice(-60);
@@ -22709,7 +22731,7 @@ function seoBuildRows(clients){
           Cell: seoMonitoringCell(loc.rank),
           PrevRank: loc.prevRank == null ? '' : (loc.prevRank === 0 ? 'Not in top results' : loc.prevRank),
           LastChecked: loc.checkedAt ? new Date(loc.checkedAt).toLocaleString() : '',
-          MatchedPage: loc.matchedDomain || '', SourceLink: loc.sourceUrl || '',
+          MatchedPage: loc.matchedDomain || '', SourceLink: seoRankPageUrl(loc) || loc.sourceUrl || '',
           Manual: loc.manual ? 'Yes' : ''
         });
       });
@@ -23471,6 +23493,8 @@ function seoLocRankAsOf(loc, asOf){
       prevRank: loc.prevRank == null ? null : loc.prevRank,
       checkedAt: loc.checkedAt || null,
       manual: !!loc.manual,
+      page: loc.page || null,
+      precision: loc.precision || null,
       history: (loc.history || []).filter(h => h && h.rank != null)
     };
   }
@@ -23482,7 +23506,7 @@ function seoLocRankAsOf(loc, asOf){
        chosen run it's still the truth at that moment; otherwise this
        keyword simply hadn't been checked yet. */
     if (loc.checkedAt && loc.checkedAt <= asOf){
-      return {rank: loc.rank, prevRank: null, checkedAt: loc.checkedAt, manual: !!loc.manual, history: []};
+      return {rank: loc.rank, prevRank: null, checkedAt: loc.checkedAt, manual: !!loc.manual, page: loc.page || null, precision: loc.precision || null, history: []};
     }
     return {rank: null, prevRank: null, checkedAt: null, manual: false, history: []};
   }
@@ -23493,6 +23517,8 @@ function seoLocRankAsOf(loc, asOf){
     prevRank: prev ? prev.rank : null,
     checkedAt: cur.checkedAt,
     manual: !!cur.manual,
+    page: cur.page || null,
+    precision: cur.src === 'gsc' ? 'gsc' : null,
     history: hist
   };
 }
@@ -23520,7 +23546,11 @@ function buildSeoReportPayload(c, opts){
             prevRank: opts.showDelta && snap.prevRank != null ? snap.prevRank : null,
             manual: !!snap.manual,
             checkedAt: opts.showDates && snap.checkedAt ? snap.checkedAt : null,
-            sourceUrl: opts.showLinks && loc.sourceUrl ? loc.sourceUrl : null,
+            /* Opened at the page the rank was read on, not page one: a #14
+               is on page two, and page one can't show it. */
+            sourceUrl: opts.showLinks && loc.sourceUrl
+              ? seoRankLink(loc.sourceUrl, Number(snap.rank) || 0, seoRankPage({rank: snap.rank, page: snap.page, precision: snap.precision}), loc.matchedDomain)
+              : null,
             /* How deep the scan looked before reporting a miss. Additive and
                optional: a report published before today simply omits it and
                its unranked rows read "Not found" rather than a depth. */
@@ -24748,9 +24778,19 @@ function renderSeoReport(data){
     /* The link only — the date each rank was checked is deliberately not
        printed here (see the header note). */
     if (k.sourceUrl){
+      /* Reports published before links carried the page still point at page
+         one; for those, the page is estimated from the rank so a #14 opens
+         page two. Newer links already carry it and are used as they are. */
+      let href = k.sourceUrl, pg = 1;
+      const st = /[?&]start=(\d+)/.exec(href);
+      if (st) pg = Math.floor(Number(st[1]) / 10) + 1;
+      else if (k.rank > 9 && href.indexOf('#') === -1){
+        pg = 2 + Math.floor((k.rank - 10) / 10);
+        href += (href.indexOf('?') === -1 ? '?' : '&') + 'start=' + ((pg - 1) * 10);
+      }
       const meta = document.createElement('div');
       meta.className = 'kwr-meta';
-      meta.innerHTML = '<a href="' + esc(k.sourceUrl) + '" target="_blank" rel="noopener">view the search</a>';
+      meta.innerHTML = '<a href="' + esc(href) + '" target="_blank" rel="noopener">view the search' + (k.rank > 0 && pg > 1 ? ' (page ' + pg + ')' : '') + '</a>';
       row.appendChild(meta);
     }
     return row;

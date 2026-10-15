@@ -5060,6 +5060,8 @@ body.so-locked{overflow:hidden;}
                   </div>
                   <label class="sw" style="margin-bottom:6px"><input type="checkbox" id="seoDeepChase"/><i></i><span>After the last miss, look as deep as result 700</span></label>
                   <div class="hint" style="margin-bottom:14px">Off by default. DataForSEO bills every page of ten results, so one deep look at a keyword that isn't there costs about seven times a top-100 read. Leave it off unless a client needs positions past 100.</div>
+                  <label class="sw" style="margin-bottom:6px"><input type="checkbox" id="seoConfirmFound"/><i></i><span>Confirm every position with a second read</span></label>
+                  <div class="hint" style="margin-bottom:14px">On by default. Live Google results shift a little from one search to the next, so a position is only saved once a second read agrees with it (within two places). If the two disagree, a third read decides and the middle position is saved. Each row says how many reads agreed. It roughly doubles the cost of keywords that are found; misses cost the same as before.</div>
                   <div class="f">
                     <label for="gscClientId">Google OAuth client ID <span class="opt">for Search Console</span></label>
                     <input id="gscClientId" type="text" placeholder="1234567890-abc123.apps.googleusercontent.com" autocomplete="off"/>
@@ -9556,7 +9558,9 @@ const DEFAULTS = {
      'hybrid' adds a free Search Console second opinion on every miss, and
      'gsc' reads Search Console only. seoMissRetries is how many reads a
      keyword gets before it is saved as not found. */
-  seoRankSource:'live', seoMissRetries:5, seoDeepChase:false, gscClientId:''
+  seoRankSource:'live', seoMissRetries:5, seoDeepChase:false, gscClientId:'',
+  /* A found position is read again before it is saved (see seoLiveCheck). */
+  seoConfirmFound:true
 };
 let state = { clients:[], activeClientId:null, activeGbpId:null, view:'focus', settings:{...DEFAULTS} };
 let memoryStore = null;
@@ -12675,6 +12679,7 @@ function hydrateSettings(){
   $('seoRankSource').value = ['live','hybrid','gsc'].indexOf(s.seoRankSource) === -1 ? 'live' : s.seoRankSource;
   $('seoMissRetries').value = String([1,3,5].indexOf(Number(s.seoMissRetries)) === -1 ? 5 : Number(s.seoMissRetries));
   $('seoDeepChase').checked = !!s.seoDeepChase;
+  $('seoConfirmFound').checked = s.seoConfirmFound !== false;
   $('gscClientId').value = s.gscClientId || '';
   if ($('gscOriginHint') && /^https?:$/.test(location.protocol)) $('gscOriginHint').textContent = location.origin;
   /* Loaded ahead of time so the sign-in popup can open straight off the
@@ -12715,6 +12720,7 @@ bindSetting('confirmListing','confirmListing', el => el.checked);
 bindSetting('seoRankSource','seoRankSource');
 bindSetting('seoMissRetries','seoMissRetries', el => parseInt(el.value,10) || 5);
 bindSetting('seoDeepChase','seoDeepChase', el => el.checked);
+bindSetting('seoConfirmFound','seoConfirmFound', el => el.checked);
 bindSetting('gscClientId','gscClientId', el => el.value.trim());
 $('seoRankSource').addEventListener('change', gscRenderStatus);
 $('gscClientId').addEventListener('change', () => {
@@ -20279,6 +20285,67 @@ async function seoLiveCheck(keyword, p, region, opts){
   const keep = out => { if (!best || out.organic.length > best.organic.length) best = out; };
   const answer = (out, extra) => Object.assign(out, {reads, readsMax: maxReads, failedReads: failed}, extra);
 
+  /* SECOND-READ CONFIRMATION.
+     Live Google answers the same search slightly differently from one
+     request to the next (tested Oct 2026: the same keyword at the same pin
+     read #5, #5 and #33 in a row). Saving the first read that found the site
+     let one odd read stick, and that is the number a client then fails to
+     find when they open the link. So a found position is read again: if the
+     second read agrees within two places it stands; if not, a third read
+     decides and the middle position of the reads that found the site is
+     saved. The read that supplied the saved position is returned, so its
+     page (and the link built from it) matches the number shown. */
+  const posOf = r => {
+    const it = r.organic.find(match);
+    return it ? (it.position != null ? it.position : r.organic.indexOf(it) + 1) : 0;
+  };
+  const confirmFound = async first => {
+    if (!o.confirm) return first;
+    const runs = [{out: first, pos: posOf(first)}];
+    const another = async () => {
+      for (let attempt = 0; attempt < 2; attempt++){
+        if (stopped()) return false;
+        if (o.onRead){ try{ o.onRead(reads + 1, maxReads, 'confirm'); }catch(e){} }
+        try{
+          const r = await readOnce(shapes[tries++ % 2], depth, 'coordinate');
+          runs.push({out: r, pos: hit(r) ? posOf(r) : 0});
+          return true;
+        }catch(err){
+          if (err && err.fatal) throw err;
+          await seoDelay(1000 + Math.round(Math.random() * 1000));
+        }
+      }
+      return false;
+    };
+    await seoDelay(800 + Math.round(Math.random() * 800));
+    await another();
+    const a = runs[0].pos, b = runs[1] ? runs[1].pos : 0;
+    if (!(b > 0 && Math.abs(b - a) <= 2)){
+      await seoDelay(800 + Math.round(Math.random() * 800));
+      await another();
+    }
+    const found = runs.filter(r => r.pos > 0).sort((x, y) => x.pos - y.pos);
+    const median = found[Math.floor((found.length - 1) / 2)];
+    /* Two reads within two places of each other agree. Of the closest such
+       pair, the one nearer the overall middle is saved; with no agreeing
+       pair, the middle position of the reads that found the site is. */
+    let pair = null;
+    for (let i = 0; i + 1 < found.length; i++){
+      const gap = found[i + 1].pos - found[i].pos;
+      if (gap <= 2 && (!pair || gap < pair.gap)) pair = {gap, a: found[i], b: found[i + 1]};
+    }
+    const pick = pair
+      ? (Math.abs(pair.a.pos - median.pos) <= Math.abs(pair.b.pos - median.pos) ? pair.a : pair.b)
+      : median;
+    pick.out.confirm = {
+      positions: runs.map(r => r.pos),
+      foundIn: found.length,
+      of: runs.length,
+      agreed: !!pair
+    };
+    return pick.out;
+  };
+
   /* Each read that comes back counts towards maxReads; an attempt that errors
      doesn't, but attempts are capped so a provider that is down can't loop. */
   while (reads < maxReads && tries < maxReads * 2){
@@ -20296,7 +20363,7 @@ async function seoLiveCheck(keyword, p, region, opts){
       continue;
     }
     reads++;
-    if (hit(out)) return answer(out, {found: true});
+    if (hit(out)) return answer(await confirmFound(out), {found: true});
     keep(out);
     /* A short, slightly uneven pause before the next read, so it lands on a
        fresh request rather than a replay of the one that just missed. */
@@ -20342,6 +20409,7 @@ function seoRecordGsc(loc, r, mode, live, liveErr){
   loc.matchedDomain = r.none ? null : gscPropertyLabel(r.property);
   loc.matchedBy = r.none ? null : 'site';
   loc.page = null;   /* an average position over many searches has no page */
+  loc.confirm = null;
   loc.precision = 'gsc';
   loc.gsc = {
     mode: mode, property: r.property, none: !!r.none,
@@ -20419,6 +20487,7 @@ async function seoScanOne(client, kw, loc, hooks){
         target: seoStopTarget(client),
         countryCode: seoCountryLocationCode(region),
         match: r => !!seoIdentifyResult(r, client) || seoTitleMatchesResult(r, client),
+        confirm: state.settings.seoConfirmFound !== false,
         onRead: h.onRead, shouldStop: h.shouldStop, meter: h.meter
       });
     }catch(err){
@@ -20473,6 +20542,7 @@ async function seoScanOne(client, kw, loc, hooks){
     loc.matchedTitle = found ? found.title : null;
     loc.matchedDomain = found ? found.domain : null;
     loc.page = found && found.page ? found.page : null;
+    loc.confirm = found && data.confirm ? data.confirm : null;
     /* 'site' needs no explanation. Anything else does, and the row gives it
        one rather than presenting a guess as a measurement. */
     loc.matchedBy = found ? how : null;
@@ -21590,6 +21660,17 @@ function seoLocGroupRow(c, k, loc){
       if (loc.rank > 0 && loc.reads > 1) reads = ' \u00b7 found on read ' + loc.reads + ' of ' + (loc.readsMax || loc.reads);
       else if (loc.rank === 0) reads = ' \u00b7 missed in ' + loc.reads + ' separate read' + (loc.reads === 1 ? '' : 's');
       if (loc.failedReads) reads += ' (' + loc.failedReads + ' more errored and ' + (loc.failedReads === 1 ? 'was' : 'were') + ' retried)';
+      /* What the confirming reads said, so a position that wobbled is never
+         presented with more certainty than it has. */
+      const cf = loc.rank > 0 && loc.confirm;
+      if (cf && cf.positions && cf.positions.length > 1){
+        const list = cf.positions.map(x => x > 0 ? '#' + x : 'not found').join(', ');
+        reads += cf.agreed && cf.of === 2
+          ? ' \u00b7 <span title="A second read agreed within two places before this position was saved.">confirmed by 2 reads (' + list + ')</span>'
+          : cf.agreed
+            ? ' \u00b7 <span title="The first two reads were more than two places apart, so a third read was taken and the middle position saved.">confirmed on a 3rd read (' + list + ')</span>'
+            : ' \u00b7 <b title="The reads did not agree. The middle position of the reads that found the site was saved. Google is shuffling this keyword, so what a client sees may differ from one search to the next.">reads differed (' + list + '), saved the middle one</b>';
+      }
       if (loc.rank === 0 && loc.gsc && loc.gsc.none) reads += ' \u00b7 Search Console shows no impressions either';
       else if (loc.rank === 0 && loc.gsc && loc.gsc.error) reads += ' \u00b7 Search Console couldn\u2019t double-check: ' + esc(loc.gsc.error);
     }
@@ -21747,7 +21828,7 @@ function seoLocGroupRow(c, k, loc){
     if (v === '') return;
     const n = parseInt(v, 10);
     if (isNaN(n) || n < 0){ toast('Enter a whole number \u2014 0 means not ranking', 'err'); rankInput.value = ''; return; }
-    loc.prevRank = loc.rank; loc.rank = n; loc.manual = true; loc.checkedAt = Date.now(); loc.error = null; loc.page = null;
+    loc.prevRank = loc.rank; loc.rank = n; loc.manual = true; loc.checkedAt = Date.now(); loc.error = null; loc.page = null; loc.confirm = null;
     loc.history = loc.history || []; loc.history.push({rank:n, checkedAt:loc.checkedAt, manual:true});
     save(); renderSeoKeywords();
     toast('Rank set manually');
@@ -21894,7 +21975,7 @@ function seoMergeLocInto(keep, drop){
   if ((drop.checkedAt || 0) > (keep.checkedAt || 0)){
     ['rank','prevRank','matchedTitle','matchedDomain','sourceUrl','checkedAt','manual','error','precision',
      'matchedBy','readCount','topDomains','partial','depthRead','exhausted',
-     'reads','readsMax','failedReads','gsc','depthAsked','page'].forEach(f => { keep[f] = drop[f]; });
+     'reads','readsMax','failedReads','gsc','depthAsked','page','confirm'].forEach(f => { keep[f] = drop[f]; });
   }
   if (keep.lat == null && drop.lat != null){ keep.lat = drop.lat; keep.lng = drop.lng; }
   keep.history = Array.from(hist.values()).sort((x, y) => (x.checkedAt || 0) - (y.checkedAt || 0)).slice(-60);

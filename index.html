@@ -4550,6 +4550,155 @@ body.so-locked{overflow:hidden;}
   .shot-panel{max-height:92vh;}
   .shot-foot .btn{flex:1;}
 }
+
+/* ==========================================================================
+   GBP PROFILE WORKSPACE — Results / Setup
+   The profile page used to be one long column: four setup steps, then the
+   run buttons, then the map 2,000px down, then the findings. The team set a
+   profile up once and looked at its results every week after that, so the
+   page now opens on Results (keywords on the left, the map beside them, the
+   findings underneath) and keeps the four steps behind a Setup tab. The
+   published client link is this same Results view, read-only.
+   ========================================================================== */
+#focusView{container-type:inline-size;container-name:ws;}
+.ws-bar{
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 16px;padding:8px 8px 8px 8px;
+  background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--sh-1);
+}
+.ws-seg{display:inline-flex;padding:3px;border-radius:12px;background:var(--card-2);border:1px solid var(--line-2);gap:2px;}
+.ws-seg button{
+  border:0;background:none;cursor:pointer;font-family:var(--ui);font-size:12.5px;font-weight:650;color:var(--ink-3);
+  padding:7px 16px;border-radius:9px;transition:all .16s var(--ease);
+}
+.ws-seg button:hover{color:var(--ink);}
+.ws-seg button.on{background:var(--card);color:var(--ink);box-shadow:var(--sh-1);}
+.ws-meta{flex:1;min-width:180px;font-size:12px;color:var(--ink-3);line-height:1.45;}
+.ws-meta b{color:var(--ink);font-weight:650;}
+.ws-meta .ws-title{display:block;font-family:var(--display);font-size:15px;font-weight:600;color:var(--ink);letter-spacing:-.01em;}
+.ws-acts{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.ws-live{
+  display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:650;color:var(--good);
+  background:var(--good-wash,#e6f4ee);padding:5px 10px;border-radius:20px;white-space:nowrap;
+}
+.ws-live::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;box-shadow:0 0 0 3px rgba(15,122,88,.15);}
+.ws-live.stale{color:var(--brand-deep);background:var(--brand-wash);}
+.ws-live.stale::before{box-shadow:0 0 0 3px rgba(232,119,34,.15);}
+.ws-publish{background:var(--console) !important;color:#fff !important;border-color:var(--console) !important;}
+.ws-publish:hover{filter:brightness(1.15);}
+
+/* results mode */
+#focusView.ws-results .steps{display:none;}
+#focusView.ws-results .setup{grid-template-columns:minmax(0,1fr);}
+#focusView.ws-results .runbar{
+  position:static;margin:0;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:flex-start;
+  gap:8px;padding:10px 12px;box-shadow:var(--sh-1);border-radius:14px;
+}
+#focusView.ws-results .runbar > .btn-full{width:auto;flex:none;padding-inline:20px;}
+#focusView.ws-results .runbar .row{margin:0;}
+#focusView.ws-results .runbar .prog{order:9;flex-basis:100%;}
+#focusView.ws-results .runbar .status{order:10;flex-basis:100%;}
+#focusView.ws-results .runbar .status:empty{display:none;}
+#focusView.ws-setup .kw-rail,
+#focusView.ws-setup .ws-lower{display:none !important;}
+
+.ws-split{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start;}
+.ws-main{display:flex;flex-direction:column;gap:16px;min-width:0;}
+.ws-lower{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start;}
+.ws-lower > .verdict{grid-column:1/-1;}
+@container ws (min-width:860px){
+  #focusView.ws-results .ws-split{grid-template-columns:250px minmax(0,1fr);}
+  #focusView.ws-results .kw-rail{position:sticky;top:calc(var(--topnav-h,0px) + 76px);}
+}
+@container ws (min-width:1080px){
+  .ws-lower{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);}
+}
+
+/* keyword rail */
+.kw-rail{
+  background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--sh-1);
+  padding:10px;display:flex;flex-direction:column;gap:4px;min-width:0;
+}
+.kw-rail-h{display:flex;align-items:center;justify-content:space-between;padding:4px 6px 8px;}
+.kw-rail-h span{font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--ink-3);}
+.kw-rail-h em{font-style:normal;font-family:var(--mono);font-size:11px;color:var(--ink-3);}
+.kw-list{display:flex;flex-direction:column;gap:4px;}
+.kw-item{
+  display:grid;grid-template-columns:38px minmax(0,1fr);gap:4px 10px;align-items:center;text-align:left;
+  width:100%;border:1px solid transparent;background:none;border-radius:12px;padding:9px 9px;cursor:pointer;
+  font-family:var(--ui);color:var(--ink);transition:background .14s var(--ease),border-color .14s var(--ease);
+}
+.kw-item:hover{background:var(--card-2);}
+.kw-item.on{background:var(--brand-wash);border-color:#f3d4b6;}
+.kw-badge{
+  grid-row:1 / span 3;width:38px;height:38px;border-radius:11px;display:grid;place-items:center;
+  font-family:var(--mono);font-size:12.5px;font-weight:700;color:#fff;background:var(--rank-none);
+  font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+}
+.kw-badge.r1{background:var(--rank-1);} .kw-badge.r2{background:var(--rank-2);}
+.kw-badge.r3{background:var(--rank-3);} .kw-badge.r4{background:var(--rank-4);}
+.kw-badge.r5{background:var(--rank-5);}
+.kw-badge small{display:block;font-size:8px;font-weight:600;opacity:.8;margin-top:-3px;letter-spacing:.04em;}
+.kw-badge.two{line-height:1.05;text-align:center;}
+.kw-name{font-size:12.5px;font-weight:600;line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+.kw-sub{font-size:10.5px;color:var(--ink-3);font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.kw-sub .up{color:var(--good);font-weight:700;} .kw-sub .down{color:var(--alert);font-weight:700;}
+.kw-dist{display:flex;height:4px;border-radius:4px;overflow:hidden;background:var(--line-2);}
+.kw-dist i{display:block;height:100%;}
+.kw-empty{font-size:12px;color:var(--ink-3);padding:6px 8px 10px;line-height:1.5;}
+.kw-add{display:flex;gap:6px;padding:8px 2px 2px;border-top:1px solid var(--line-2);margin-top:6px;}
+.kw-add input{flex:1;min-width:0;font-size:12px;padding:7px 10px;}
+.kw-add .btn{flex:none;}
+@container ws (max-width:859px){
+  #focusView.ws-results .kw-rail{padding:8px;}
+  #focusView.ws-results .kw-list{flex-direction:row;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:4px;}
+  #focusView.ws-results .kw-item{flex:0 0 min(78%,250px);scroll-snap-align:start;border-color:var(--line-2);}
+  #focusView.ws-results .kw-item.on{border-color:#f3d4b6;}
+}
+
+/* the published client view: the same Results page, read-only */
+body.embed-mode #focusView .steps,
+body.embed-mode #focusView .runbar,
+body.embed-mode .ws-seg,
+body.embed-mode .ws-acts,
+body.embed-mode .kw-add,
+body.embed-mode .mod-intro{display:none !important;}
+body.embed-mode .panels{padding-top:16px;margin:0 auto;}
+body.embed-mode .shell{grid-template-columns:1fr !important;}
+body.embed-mode .map-head .tools{display:flex !important;}
+body.embed-mode .map-head .tools > :not(#historySelect){display:none !important;}
+body.embed-mode #focusView.ws-results .kw-rail{top:16px;}
+body.embed-mode .legend span.ws-team-only{display:none;}
+.embed-brand{display:none;}
+body.embed-mode .embed-brand{display:flex;align-items:center;gap:10px;margin-right:4px;}
+body.embed-mode .embed-brand img{height:26px;width:auto;border-radius:6px;}
+@media (max-width:560px){
+  .ws-bar{padding:8px;}
+  .ws-seg{width:100%;}
+  .ws-seg button{flex:1;}
+}
+
+/* publish dialog */
+.pub-backdrop{position:fixed;inset:0;z-index:9000;background:rgba(14,19,24,.46);backdrop-filter:blur(3px);display:none;place-items:center;padding:16px;}
+.pub-backdrop.on{display:grid;}
+.pub-card{
+  position:relative;width:min(560px,100%);max-height:calc(100vh - 32px);overflow:auto;background:var(--card);
+  border-radius:20px;box-shadow:0 30px 80px rgba(10,15,20,.35);padding:24px 24px 20px;animation:pop .22s var(--ease);
+}
+.pub-x{position:absolute;top:12px;right:12px;width:30px;height:30px;border-radius:9px;border:0;background:none;font-size:20px;color:var(--ink-3);cursor:pointer;}
+.pub-x:hover{background:var(--card-2);color:var(--ink);}
+.pub-eyebrow{font-size:10px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--brand-deep);}
+.pub-card h3{font-family:var(--display);font-size:20px;font-weight:600;letter-spacing:-.02em;margin:6px 0 8px;padding-right:28px;}
+.pub-lede{font-size:13px;line-height:1.6;color:var(--ink-2);margin:0 0 16px;}
+.pub-l{display:block;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--ink-3);margin:12px 0 6px;}
+.pub-l span{text-transform:none;letter-spacing:0;font-weight:500;}
+.pub-row{display:flex;gap:8px;align-items:stretch;}
+.pub-row input,.pub-row textarea{flex:1;min-width:0;font-family:var(--mono);font-size:11.5px;background:var(--card-2);resize:none;}
+.pub-row .btn{flex:none;align-self:flex-start;}
+.pub-facts{list-style:none;margin:16px 0 0;padding:12px 14px;border-radius:12px;background:var(--card-2);display:grid;gap:6px;font-size:12px;color:var(--ink-2);}
+.pub-facts li{position:relative;padding-left:16px;}
+.pub-facts li::before{content:"";position:absolute;left:0;top:7px;width:6px;height:6px;border-radius:50%;background:var(--good);}
+.pub-acts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:18px;}
+.pub-acts a.btn{text-decoration:none;}
 </style>
 </head>
 <body>
@@ -4774,6 +4923,21 @@ body.so-locked{overflow:hidden;}
         <!-- ---- FOCUS: one GBP ---- -->
         <div id="focusView" style="display:none">
           <div class="gbp-tabs" id="gbpTabs"></div>
+          <!-- One bar for the two things the team does with a profile: look at
+               its results, or change how it is measured. Publishing lives here
+               too, so the client link is never more than one click away. -->
+          <div class="ws-bar" id="wsBar">
+            <span class="embed-brand"><img id="embedBrandLogo" alt="EDGE Marketing"/></span>
+            <div class="ws-seg" role="tablist" aria-label="Profile view">
+              <button type="button" role="tab" data-ws="results">Results</button>
+              <button type="button" role="tab" data-ws="setup">Setup</button>
+            </div>
+            <div class="ws-meta" id="wsMeta"></div>
+            <div class="ws-acts">
+              <span class="ws-live" id="publishState" hidden></span>
+              <button class="btn btn-sm ws-publish" id="publishBtn" type="button">Publish for client</button>
+            </div>
+          </div>
           <div class="setup">
             <div class="steps" id="steps">
 
@@ -5028,8 +5192,10 @@ body.so-locked{overflow:hidden;}
                       <option value="strict">Exact signals only</option>
                     </select>
                   </div>
-                  <label class="sw" style="margin-bottom:6px"><input type="checkbox" id="deepVerify" checked/><i></i><span>Widen the search before calling a point absent</span></label>
-                  <div class="hint" style="margin-bottom:14px">When a point finds nothing, EDGE SEO Reporter re-runs it at a wider map view and then on the other surface, so a miss can be told apart from a listing that is simply known further out. <b>A wider view never becomes the rank at the point</b> — the number on the grid is always what the configured view returned, and anything found wider is reported separately with its own link. Only the empty points cost extra calls.</div>
+                  <label class="sw" style="margin-bottom:6px"><input type="checkbox" id="mapsFullList" checked/><i></i><span>Read the whole Google Maps list, like a person scrolling it</span></label>
+                  <div class="hint" style="margin-bottom:14px">Google Maps keeps listing places past the edge of the map. Without this, only places inside the map box are read, and a profile Google shows at #15 can come back as "not found". DataForSEO only. Leave it on.</div>
+                  <label class="sw" style="margin-bottom:6px"><input type="checkbox" id="deepVerify" checked/><i></i><span>Double-check a point before calling it absent</span></label>
+                  <div class="hint" style="margin-bottom:14px">With the whole-list read on: a miss on a full list is read again twice as deep before it turns red. With it off: when a point finds nothing, EDGE SEO Reporter re-runs it at a wider map view and then on the other surface, so a miss can be told apart from a listing that is simply known further out. <b>A wider view never becomes the rank at the point</b> — the number on the grid is always what the configured view returned, and anything found wider is reported separately with its own link. Only the empty points cost extra calls.</div>
                   <div class="f">
                     <label for="proxyPrefix">CORS proxy prefix <span class="opt">only if requests are blocked</span></label>
                     <input id="proxyPrefix" type="text" placeholder="https://your-proxy.example.com/" autocomplete="off"/>
@@ -5088,6 +5254,9 @@ body.so-locked{overflow:hidden;}
                 <div class="status" id="scanStatus"></div>
               </div>
 
+              <div class="ws-split">
+              <aside class="kw-rail" id="kwRail" aria-label="Keywords"></aside>
+              <div class="ws-main">
               <div class="stats">
                 <div class="stat s-good"><b id="statTop3">—</b><span>Top 3</span><em id="statTop3sub">no scan yet</em></div>
                 <div class="stat s-mid"><b id="statAvg">—</b><span>Avg position</span><em id="statAvgSub">where it appears</em></div>
@@ -5160,7 +5329,10 @@ body.so-locked{overflow:hidden;}
                 </div>
                 <div class="status" id="parseStatus"></div>
               </div>
+              </div>
+              </div>
 
+              <div class="ws-lower">
               <div class="verdict" id="verdictBox" style="display:none"></div>
 
               <div class="tips" id="tipsBox" style="display:none"></div>
@@ -5171,6 +5343,7 @@ body.so-locked{overflow:hidden;}
                   <thead><tr><th>Business</th><th class="num">Seen at</th><th class="num">Avg</th><th class="num">#1</th><th class="num">Top 3</th></tr></thead>
                   <tbody id="compBody"></tbody>
                 </table>
+              </div>
               </div>
             </div>
           </div>
@@ -6442,6 +6615,7 @@ if (window.EDGE_LOGO){
   const hbl = document.getElementById('hubLogo'); if (hbl) hbl.src = window.EDGE_LOGO;
   const sbl = document.getElementById('seoBrandLogo'); if (sbl) sbl.src = window.EDGE_LOGO;
   const spl = document.getElementById('serpBrandLogo'); if (spl) spl.src = window.EDGE_LOGO;
+  const ebl = document.getElementById('embedBrandLogo'); if (ebl) ebl.src = window.EDGE_LOGO;
 }
 const uid = () => 'id-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,7);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -9552,7 +9726,7 @@ const STORE_KEY = 'meridian-console-v2';
 const LEGACY_KEY = 'meridian-grid-tracker-v1';
 const DEFAULTS = {
   provider:'dataforseo', relay:'allorigins', serperKey:'', dfsLogin:'', dfsPassword:'',
-  proxyPrefix:'', strictMatch:'loose', includeAds:true, depth:100, deepVerify:true, concurrency:6,
+  proxyPrefix:'', strictMatch:'loose', includeAds:true, depth:100, deepVerify:true, mapsFullList:true, concurrency:6,
   confirmListing:true,
   /* Keyword rank tracker. 'live' reads Google through the provider above,
      'hybrid' adds a free Search Console second opinion on every miss, and
@@ -11708,6 +11882,7 @@ function loadGbpIntoForm(){
   drawScan(kw && kw.scans.length ? kw.scans[kw.scans.length - 1] : null);
   recenterMap();
   renderListingPanel(); drawListingPin();
+  wsApply();
 }
 function persistGbp(){
   const g = activeGbp();
@@ -12629,6 +12804,7 @@ function renderKeywords(){
     d.textContent = 'No keywords yet — add the phrases customers actually type.';
     wrap.appendChild(d);
     renderEmbedKeywordSwitch();
+    renderKwRail();
     return;
   }
   g.keywords.forEach(k => {
@@ -12647,6 +12823,7 @@ function renderKeywords(){
       g.keywords = g.keywords.filter(w => w.id !== k.id);
       if (g.activeKeywordId === k.id) g.activeKeywordId = g.keywords.length ? g.keywords[0].id : null;
       save(); renderKeywords(); renderHistory(); refreshStepState();
+      autoRepublish(g);
       const kw = activeKeyword();
       drawScan(kw && kw.scans.length ? kw.scans[kw.scans.length-1] : null);
     });
@@ -12659,6 +12836,170 @@ function renderKeywords(){
     wrap.appendChild(chip);
   });
   renderEmbedKeywordSwitch();
+  renderKwRail();
+}
+
+/* ==========================================================================
+   PROFILE WORKSPACE — Results / Setup, and the keyword rail
+   ========================================================================== */
+var wsPref = null;
+try{ wsPref = localStorage.getItem('edge-gbp-ws'); }catch(e){}
+function gbpHasScans(g){
+  return !!(g && g.keywords.some(k => (k.scans || []).some(s => s.points.some(p => p.rank != null))));
+}
+function wsMode(){
+  if (document.body.classList.contains('embed-mode')) return 'results';
+  if (!gbpHasScans(activeGbp())) return 'setup';
+  return wsPref === 'setup' ? 'setup' : 'results';
+}
+function wsApply(){
+  const fv = $('focusView');
+  if (!fv) return;
+  const mode = wsMode();
+  const was = fv.classList.contains('ws-results') ? 'results' : (fv.classList.contains('ws-setup') ? 'setup' : null);
+  fv.classList.toggle('ws-results', mode === 'results');
+  fv.classList.toggle('ws-setup', mode === 'setup');
+  document.querySelectorAll('#wsBar [data-ws]').forEach(b => {
+    const on = b.dataset.ws === mode;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  renderWsMeta(); renderPublishState(); renderKwRail();
+  if (was !== mode) setTimeout(() => { try{ map.invalidateSize(); }catch(e){} }, 40);
+}
+function wsSet(mode){
+  wsPref = mode;
+  try{ localStorage.setItem('edge-gbp-ws', mode); }catch(e){}
+  wsApply();
+}
+document.querySelectorAll('#wsBar [data-ws]').forEach(b => b.addEventListener('click', () => {
+  if (b.dataset.ws === 'results' && !gbpHasScans(activeGbp())){
+    toast('Run a scan first — Results shows what it found.', 'err');
+    return;
+  }
+  wsSet(b.dataset.ws);
+}));
+if ($('publishBtn')) $('publishBtn').addEventListener('click', () => {
+  const g = activeGbp();
+  if (g && g.publishedAt && !gbpPublishStale(g)) pubDialog(g, embedUrlFor(g.id));
+  else publishAndShare();
+});
+
+function renderWsMeta(){
+  const el = $('wsMeta');
+  if (!el) return;
+  const g = activeGbp();
+  if (!g){ el.innerHTML = ''; return; }
+  const kws = g.keywords.length;
+  let last = 0;
+  g.keywords.forEach(k => (k.scans || []).forEach(s => { if (s.ts > last) last = s.ts; }));
+  const when = last ? new Date(last).toLocaleDateString([], {month:'short', day:'numeric', year:'numeric'}) : null;
+  if (document.body.classList.contains('embed-mode')){
+    const biz = (g.bizInfo && g.bizInfo.name) || g.bizName || g.name;
+    el.innerHTML = '<span class="ws-title">' + esc(biz) + '</span>' +
+      'Local map rankings · ' + kws + ' keyword' + (kws === 1 ? '' : 's') +
+      (when ? ' · last scanned ' + esc(when) : '');
+    return;
+  }
+  el.innerHTML = '<b>' + kws + '</b> keyword' + (kws === 1 ? '' : 's') +
+    (g.center && g.center.label ? ' · ' + esc(String(g.center.label).split(',')[0]) : '') +
+    (when ? ' · last scan ' + esc(when) : ' · not scanned yet');
+}
+
+/* Everything the rail says about one scan. "Avg" is the average position
+   where the profile appears; the bar underneath shows how many points it
+   was missing from, so a #2.5 seen at 4 of 25 points never passes for a
+   strong keyword. */
+function scanStatsOf(scan){
+  const pts = scan ? scan.points : [];
+  const read = pts.filter(p => p.rank != null);
+  const found = read.filter(p => p.rank >= 1);
+  const top3 = found.filter(p => p.rank <= 3).length;
+  const avg = found.length ? found.reduce((s, p) => s + p.rank, 0) / found.length : null;
+  const buckets = {good:0, mid:0, warn:0, bad:0, lost:0};
+  read.forEach(p => { buckets[rankClass(p.rank)]++; });
+  return {read: read.length, total: pts.length, found: found.length, top3, avg, buckets};
+}
+function renderKwRail(){
+  const rail = $('kwRail');
+  if (!rail) return;
+  const g = activeGbp();
+  rail.innerHTML = '';
+  if (!g) return;
+  const embed = document.body.classList.contains('embed-mode');
+  const h = document.createElement('div');
+  h.className = 'kw-rail-h';
+  h.innerHTML = '<span>Keywords</span><em>' + g.keywords.length + '</em>';
+  rail.appendChild(h);
+  const list = document.createElement('div');
+  list.className = 'kw-list';
+  rail.appendChild(list);
+  const kws = embed ? g.keywords.filter(k => k.scans.length) : g.keywords;
+  if (!kws.length){
+    const e = document.createElement('div');
+    e.className = 'kw-empty';
+    e.textContent = 'No keywords yet. Add the phrases customers type below.';
+    list.appendChild(e);
+  }
+  kws.forEach(k => {
+    const scans = k.scans || [];
+    const last = scans.length ? scans[scans.length - 1] : null;
+    const st = last ? scanStatsOf(last) : null;
+    const prev = scans.length > 1 ? scanStatsOf(scans[scans.length - 2]) : null;
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'kw-item' + (k.id === g.activeKeywordId ? ' on' : '');
+    const cls = st && st.avg != null ? ({good:'r1', mid:'r2', warn:'r3', bad:'r4', lost:'r5'})[rankClass(Math.round(st.avg))] : '';
+    const badge = !st ? '<span class="kw-badge" title="Not scanned yet">·</span>'
+      : (st.avg == null ? '<span class="kw-badge r5" title="Not found at any point">—</span>'
+        : '<span class="kw-badge two ' + cls + '" title="Average position where it appears">' +
+          (st.avg < 10 ? st.avg.toFixed(1) : Math.round(st.avg)) + '<small>AVG</small></span>');
+    let trend = '';
+    if (st && prev && prev.read && st.read){
+      const a = st.top3 / st.read, p0 = prev.top3 / prev.read;
+      if (a > p0 + 0.001) trend = ' <span class="up" title="More top-3 points than the scan before">▲</span>';
+      else if (a < p0 - 0.001) trend = ' <span class="down" title="Fewer top-3 points than the scan before">▼</span>';
+    }
+    const sub = !st ? 'not scanned yet'
+      : ('top 3 at ' + st.top3 + '/' + st.read + ' · seen ' + st.found + '/' + st.read +
+         ' · ' + new Date(last.ts).toLocaleDateString([], {month:'short', day:'numeric'}));
+    let dist = '';
+    if (st && st.read){
+      const seg = (n, v) => n ? '<i style="width:' + (n / st.read * 100).toFixed(2) + '%;background:' + v + '"></i>' : '';
+      dist = '<span class="kw-dist">' + seg(st.buckets.good, 'var(--rank-1)') + seg(st.buckets.mid, 'var(--rank-2)') +
+        seg(st.buckets.warn, 'var(--rank-3)') + seg(st.buckets.bad, 'var(--rank-4)') + seg(st.buckets.lost, 'var(--rank-5)') + '</span>';
+    }
+    b.innerHTML = badge + '<span class="kw-name">' + esc(k.text) + '</span>' +
+      '<span class="kw-sub">' + sub + trend + '</span>' + dist;
+    b.addEventListener('click', () => selectKeyword(k.id));
+    list.appendChild(b);
+  });
+  if (!embed){
+    const add = document.createElement('form');
+    add.className = 'kw-add';
+    add.innerHTML = '<input type="text" placeholder="Add a keyword" aria-label="Add a keyword" autocomplete="off"/>' +
+      '<button class="btn btn-sm" type="submit">Add</button>';
+    add.addEventListener('submit', e => {
+      e.preventDefault();
+      const v = add.querySelector('input').value.trim();
+      if (!v) return;
+      $('kwInput').value = v;
+      $('addKwBtn').click();
+    });
+    rail.appendChild(add);
+  }
+}
+function selectKeyword(id){
+  const g = activeGbp();
+  const k = g && g.keywords.find(x => x.id === id);
+  if (!k) return;
+  if (g.activeKeywordId !== id){
+    g.activeKeywordId = id;
+    if (!isPublicView()) save();
+  }
+  renderKeywords(); renderHistory();
+  drawScan(k.scans.length ? k.scans[k.scans.length - 1] : null);
+  if (document.body.classList.contains('embed-mode') && typeof embedFit === 'function') embedFit();
 }
 
 /* ---------- settings ---------- */
@@ -12674,6 +13015,7 @@ function hydrateSettings(){
   $('depthSel').value = String(s.depth || 100);
   $('includeAds').checked = s.includeAds !== false;
   $('deepVerify').checked = s.deepVerify !== false;
+  $('mapsFullList').checked = s.mapsFullList !== false;
   $('speedSel').value = String(s.concurrency || 6);
   $('confirmListing').checked = s.confirmListing !== false;
   $('seoRankSource').value = ['live','hybrid','gsc'].indexOf(s.seoRankSource) === -1 ? 'live' : s.seoRankSource;
@@ -12715,6 +13057,7 @@ bindSetting('strictMatch','strictMatch');
 bindSetting('depthSel','depth', el => parseInt(el.value,10) || 100);
 bindSetting('includeAds','includeAds', el => el.checked);
 bindSetting('deepVerify','deepVerify', el => el.checked);
+bindSetting('mapsFullList','mapsFullList', el => el.checked);
 bindSetting('speedSel','concurrency', el => parseInt(el.value,10) || 6);
 bindSetting('confirmListing','confirmListing', el => el.checked);
 bindSetting('seoRankSource','seoRankSource');
@@ -12953,7 +13296,8 @@ function recordRead(p, step, region, read){
        whatever the grid cell happens to say later. */
     lat: Number(Number(p.lat).toFixed(7)),
     lng: Number(Number(p.lng).toFixed(7)),
-    depth: state.settings.depth || 100,
+    depth: (sent && sent.depth) || state.settings.depth || 100,
+    full: !!(sent && sent.fullList),
     hl: region.hl, gl: region.gl,
     list: (read && read.listKind) || null,
     count: (read && read.names) ? read.names.length : 0,
@@ -12973,8 +13317,8 @@ const READ_LIST_WORDS = {
 };
 function readCaption(r){
   if (!r) return '';
-  const bits = [(r.surface === 'web' ? 'web' : 'map pack') + ' \u00b7 ' + r.zoom + 'z'];
-  if (r.radius) bits.push('~' + (Math.round(Number(r.radius) / 100) / 10) + ' km');
+  const bits = [(r.surface === 'web' ? 'web' : (r.full ? 'Google Maps list' : 'map pack')) + ' \u00b7 ' + r.zoom + 'z'];
+  if (r.radius && !r.full) bits.push('~' + (Math.round(Number(r.radius) / 100) / 10) + ' km');
   bits.push(r.count + ' listing' + (r.count === 1 ? '' : 's'));
   if (r.ts) bits.push(new Date(r.ts).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}));
   return bits.join(' \u00b7 ');
@@ -14618,6 +14962,10 @@ function telemetry(ids, info){
 const TEL_MAIN = {index:'telIndex', coord:'telCoord', step:'telStep'};
 const TEL_CMP  = {index:'cmpTelIndex', coord:'cmpTelCoord', step:'cmpTelStep'};
 function stepWording(a, i){
+  if (a.full){
+    if (a.depth) return (a.error ? 'deeper check failed' : 'checked deeper, top ' + a.depth) + ' \u00b7 ' + a.listings + ' listings';
+    return (a.error ? 'that read failed, trying again' : 'reading the Google Maps list at ' + a.zoom + 'z') + ' \u00b7 ' + a.listings + ' listings';
+  }
   const where = a.surface === 'web' ? 'web results' : 'map pack';
   const base = i === 0 ? 'reading the ' + where + ' at ' + a.zoom + 'z' : 'widening to ' + a.zoom + 'z on the ' + where;
   return base + ' \u00b7 ' + a.listings + ' listings';
@@ -15081,6 +15429,7 @@ function drawScan(scan){
   $('retryFailedBtn').disabled = !scan || !scan.points.some(p => p.rank == null || p.rank === 0 || p.matchConfidence === 'fuzzy' || p.sparse);
   /* A keyword with nothing read yet still has a plan worth looking at, and
      switching to it must put that plan back on the map. */
+  renderKwRail(); renderWsMeta();
   if (!scan){ drawPlannedArea(); return; }
   scan.points.forEach((p, i) => addDot(p, i, scan));
   recenterMap();
@@ -15127,7 +15476,8 @@ function dotPopup(p, idx, scan){
   const r = document.createElement('div');
   r.className = 'pop-r';
   r.style.color = rankColorVar(p.rank);
-  r.textContent = p.rank == null ? 'Not read yet' : (p.rank === 0 ? 'Not in the results read here' : '#' + p.rank);
+  r.textContent = p.rank == null ? 'Not read yet'
+    : (p.rank === 0 ? (p.fullList ? 'Not in the Google Maps list here' : 'Not in the results read here') : '#' + p.rank);
   d.appendChild(r);
 
   /* What this number is a number in. Without it, a pack slot of 3 and an
@@ -15197,7 +15547,19 @@ function dotPopup(p, idx, scan){
       'next view that did. Read it again to try the configured one.';
     d.appendChild(v);
   }
-  if (p.rank === 0 && p.attempts && p.attempts.length){
+  if (p.rank === 0 && p.fullList){
+    const a = document.createElement('div');
+    a.className = 'pop-line';
+    const n = Math.max(...(p.attempts || []).map(x => x.listings || 0), (p.names || []).length);
+    a.textContent = 'Read the whole list Google Maps shows for this search here (' + n + ' places' +
+      (p.confirm ? ', double-checked to the top ' + p.confirm.depth : '') + ') and the profile is not on it.';
+    d.appendChild(a);
+  } else if (p.rank >= 1 && p.fullList && p.confirm && p.confirm.found){
+    const a = document.createElement('div');
+    a.className = 'pop-line';
+    a.textContent = 'Found on the deeper check, past the first ' + (state.settings.depth || 100) + ' places.';
+    d.appendChild(a);
+  } else if (p.rank === 0 && p.attempts && p.attempts.length){
     const a = document.createElement('div');
     a.className = 'pop-line';
     const views = 'Checked ' + p.attempts.map(x => x.zoom + 'z ' + (x.surface === 'web' ? 'web' : 'map') +
@@ -15249,7 +15611,7 @@ function dotPopup(p, idx, scan){
     q.className = 'pop-sent';
     q.textContent = 'Asked ' + (sentSpec.endpoint === 'google/maps' ? 'Google Maps' : 'Google web') +
       ' for “' + sentSpec.coord + '” · ' + (sentSpec.lang || 'en') +
-      ' · depth ' + sentSpec.depth;
+      ' · depth ' + sentSpec.depth + (sentSpec.fullList ? ' · whole list' : '');
     q.title = 'Exactly the request this number came from. The link below rebuilds it.';
     d.appendChild(q);
   }
@@ -15336,7 +15698,7 @@ function dotPopup(p, idx, scan){
   paste.textContent = 'Paste for this point';
   paste.addEventListener('click', () => {
     const prev = currentIdx;
-    currentScan = scan; currentIdx = idx; lastFocused = 'single';
+    currentScan = scan; currentIdx = idx; lastFocused = 'single'; assistOn = true;
     refreshHighlight(prev); updateAssist(); map.closePopup();
     $('assistPanel').style.display = 'block';
     $('pasteBox').focus();
@@ -15784,7 +16146,7 @@ $('buildBtn').addEventListener('click', async () => {
   const scan = createScan();
   if (!scan) return;
   setStatus('scanStatus', 'Grid ready — ' + scan.points.length + ' points. Walk them with the paste loop below the map.', 'ok');
-  $('assistPanel').style.display = 'block';
+  assistOn = true; updateAssist();
   setTimeout(() => $('assistPanel').scrollIntoView({behavior:'smooth', block:'center'}), 120);
 });
 $('stopAutoBtn').addEventListener('click', () => { autoStop = true; setStatus('scanStatus', 'Stopping after this point…', 'busy'); });
@@ -15827,6 +16189,10 @@ async function runScan(scan){
   });
   try{ await runScanInner(scan, ov); }
   finally{ ScanOverlay.settle(ov); }
+  /* A finished scan is something to look at, and a published client link
+     should show it without anyone remembering to republish. */
+  if (activeGbp() === g){ if (gbpHasScans(g)) wsSet('results'); else wsApply(); }
+  autoRepublish(g);
 }
 function gridScanStats(scan, failures){
   const found = scan.points.filter(p => p.rank >= 1).length;
@@ -15881,8 +16247,9 @@ async function runScanInner(scan, ov){
           zoom: scan.zoom, surface: scan.surface,
           onStep: (step, si, res) => paintTelemetry(res
             ? stepWording(res, si)
-            : (si === 0 ? 'reading the ' + (step.surface === 'web' ? 'web results' : 'map pack') + ' at ' + step.zoom + 'z\u2026'
-                        : 'nothing yet \u2014 widening to ' + step.zoom + 'z\u2026'))
+            : (step.depth ? 'not in the list \u2014 checking deeper, top ' + step.depth + '\u2026'
+              : si === 0 ? 'reading the ' + (step.surface === 'web' ? 'web results' : (mapsFullList() ? 'Google Maps list' : 'map pack')) + ' at ' + step.zoom + 'z\u2026'
+                        : (mapsFullList() && step.surface !== 'web' ? 'retrying the same view\u2026' : 'nothing yet \u2014 widening to ' + step.zoom + 'z\u2026')))
         });
         ok = true;
       }catch(err){
@@ -16054,6 +16421,11 @@ $('retryFailedBtn').addEventListener('click', async () => {
 /* ==========================================================================
    PROVIDERS
    ========================================================================== */
+/* Full-list map reads are on unless switched off on step four. Only the
+   DataForSEO Maps endpoint can be asked for them. */
+function mapsFullList(){
+  return (state.settings.provider || 'dataforseo') === 'dataforseo' && state.settings.mapsFullList !== false;
+}
 function providerQuery(keyword, p, region, surface, opts){
   const o = opts || {};
   const prov = state.settings.provider || 'dataforseo';
@@ -16066,7 +16438,17 @@ async function dfsQuery(keyword, p, region, surface, opts){
   const zoom = (opts && opts.zoom) || 14;
   const login = (state.settings.dfsLogin || '').trim();
   const pass = (state.settings.dfsPassword || '').trim();
-  const depth = state.settings.depth || 100;
+  const depth = (opts && opts.depth) || state.settings.depth || 100;
+  /* THE WHOLE LIST, NOT THE BOX
+     Left to its default, the Maps endpoint only returns places that sit
+     inside a ~1000px map at the given zoom. Google Maps itself does not work
+     like that: open the same search at the same coordinate and zoom and the
+     list keeps going past the edge of the map, 40 to 60 places deep. Tested
+     against Google Maps in October 2026, a profile sitting at #13, #15 and
+     #16 there was being reported "not found" here, because it was a few
+     hundred metres outside the box. search_this_area:false asks for the list
+     a person actually scrolls, so a miss now means it is not on that list. */
+  const fullList = surface !== 'web' && mapsFullList();
   const endpoint = surface === 'web'
     ? 'https://api.dataforseo.com/v3/serp/google/organic/live/advanced'
     : 'https://api.dataforseo.com/v3/serp/google/maps/live/advanced';
@@ -16081,6 +16463,7 @@ async function dfsQuery(keyword, p, region, surface, opts){
   const task = surface === 'web'
     ? {keyword, location_coordinate:coord, language_code:lang, device:'desktop', depth}
     : {keyword, location_coordinate:sentCoord, language_code:lang, depth};
+  if (fullList) task.search_this_area = false;
   const sent = {
     provider: 'dataforseo',
     endpoint: surface === 'web' ? 'google/organic' : 'google/maps',
@@ -16088,7 +16471,7 @@ async function dfsQuery(keyword, p, region, surface, opts){
     /* null on the web surface, because no zoom was sent and inventing one for
        the link is exactly how the two came to disagree. */
     zoom: surface === 'web' ? null : zoom,
-    lang, depth, at: Date.now()
+    lang, depth, fullList, at: Date.now()
   };
 
   let res;
@@ -16493,8 +16876,12 @@ async function directQuery(keyword, p, region, surface, opts){
    ========================================================================== */
 const SPARSE = 3;
 function identify(listing, target, strict){
-  if (target.cid && listing.cid && String(listing.cid) === String(target.cid)) return 'cid';
-  if (target.placeId && listing.placeId && String(listing.placeId) === String(target.placeId)) return 'place';
+  /* Google's own IDs settle it either way. A client with several locations
+     shares one website and often one phone number, so without this the
+     Golden listing could be counted as the Saanich profile's rank. When both
+     sides carry an ID and they differ, it is a different listing. */
+  if (target.cid && listing.cid) return String(listing.cid) === String(target.cid) ? 'cid' : null;
+  if (target.placeId && listing.placeId) return String(listing.placeId) === String(target.placeId) ? 'place' : null;
   if (target.phone && listing.phone && phoneMatches(target.phone, listing.phone)) return 'phone';
   if (target.website && listing.domain && domainMatches(target.website, listing.domain)) return 'site';
   const tn = normName(target.bizName);
@@ -16510,6 +16897,7 @@ function readListings(results, target){
   const out = {
     names: organic.map(l => l.title).slice(0, 100),
     adNames: ads.map(l => l.title).slice(0, 30),
+    total: organic.length,
     rank: 0, matched: null, matchConfidence: null, matchedViaAd: false,
     adRank: null, adMatched: null,
     sparse: organic.length < SPARSE,
@@ -16587,10 +16975,77 @@ function zoomLadder(base, surface){
 const WIDE_FIELDS = ['wideRank','wideNames','wideRead','wideSurface','wideZoom','wideMatched'];
 function clearWide(p){ WIDE_FIELDS.forEach(k => { delete p[k]; }); }
 
+/* ---------------------------------------------------------------------------
+   THE FULL-LIST READ
+   One question, asked the way Google Maps answers it: this search, at this
+   coordinate and zoom, the whole list. Its position in that list is the rank,
+   and there is no wider view to fall back on, because the list already runs
+   past the edge of the map exactly as it does on Google.
+
+   A miss is double-checked before it is believed. If the list came back full
+   to the depth asked for, the profile may simply be further down, so it is
+   read again twice as deep. If that finds it, that is the rank; if not, the
+   point is red with a stated depth ("not in the top 200"), which is a fact
+   anyone can check rather than a guess.
+--------------------------------------------------------------------------- */
+async function resolveFullList(keyword, p, region, target, c, base, surface){
+  const step = {surface, zoom: base};
+  const attempts = [];
+  let read = null, lastErr = null;
+  /* One retry of the same view: a dropped request is not an answer. */
+  for (let t = 0; t < 2 && !read; t++){
+    if (c.onStep) c.onStep(step, t);
+    try{
+      const res = await providerQuery(keyword, p, region, surface, {zoom: base});
+      read = readListings(res, target);
+      attempts.push({surface, zoom: base, listings: read.total, rank: read.rank, full: true});
+    }catch(err){
+      if (err.fatal) throw err;
+      lastErr = err;
+      attempts.push({surface, zoom: base, listings: 0, rank: 0, full: true, error: err.message});
+    }
+    if (c.onStep) c.onStep(step, t, attempts[attempts.length - 1]);
+  }
+  if (!read) throw (lastErr || new Error('this point could not be read'));
+
+  const depth = state.settings.depth || 100;
+  let confirm = null;
+  if (read.rank === 0 && state.settings.deepVerify !== false && read.total >= depth * 0.9 && depth < 300){
+    const deeper = Math.min(Math.max(depth * 2, 200), 300);
+    if (c.onStep) c.onStep({surface, zoom: base, depth: deeper}, 2);
+    try{
+      const res2 = await providerQuery(keyword, p, region, surface, {zoom: base, depth: deeper});
+      const r2 = readListings(res2, target);
+      attempts.push({surface, zoom: base, listings: r2.total, rank: r2.rank, full: true, depth: deeper});
+      confirm = {depth: deeper, listings: r2.total, found: r2.rank >= 1};
+      if (r2.rank >= 1) read = r2;
+    }catch(err){
+      if (err.fatal) throw err;
+      attempts.push({surface, zoom: base, listings: 0, rank: 0, full: true, depth: deeper, error: err.message});
+    }
+    if (c.onStep) c.onStep({surface, zoom: base, depth: deeper}, 2, attempts[attempts.length - 1]);
+  }
+
+  Object.assign(p, read);
+  p.attempts = attempts;
+  p.viewShifted = false;
+  p.read = recordRead(p, step, region, read);
+  p.error = null;
+  clearWide(p);
+  p.widened = false;
+  p.fullList = true;
+  p.confirm = confirm;
+  /* "verified" keeps its old meaning for the summary: a miss that was
+     checked more than once. */
+  p.verified = p.rank === 0 && attempts.filter(a => !a.error).length > 1;
+}
+
 async function resolvePoint(keyword, p, region, target, cfg){
   const c = cfg || {};
   const base = c.zoom || 14;
   const surface = c.surface || 'local';
+  if (surface !== 'web' && mapsFullList()) return resolveFullList(keyword, p, region, target, c, base, surface);
+  delete p.fullList; delete p.confirm;
   const relay = state.settings.provider === 'direct';
   const deep = state.settings.deepVerify !== false && !relay;
   const ladder = relay ? [{surface, zoom: base}] : zoomLadder(base, surface);
@@ -16661,9 +17116,17 @@ async function resolvePoint(keyword, p, region, target, cfg){
    PASTE MODE
    ========================================================================== */
 let lastFocused = null;
+/* The paste helper is for walking points by hand. It opens when someone
+   starts paste mode or asks to paste one point, and closes itself once every
+   point has a reading — an API scan, or a finished paste walk, has nothing
+   left for it to do, and leaving it under the map only crowded the page. */
+var assistOn = false;
 function updateAssist(){
   const panel = $('assistPanel');
-  if (!currentScan){ panel.style.display = 'none'; return; }
+  if (!currentScan || !assistOn || currentIdx == null){
+    if (currentScan && currentIdx == null) assistOn = false;
+    panel.style.display = 'none'; return;
+  }
   panel.style.display = 'block';
   const total = currentScan.points.length;
   const done = currentScan.points.filter(p => p.rank != null).length;
@@ -19182,59 +19645,278 @@ function toggleMapFullscreen(cardId, mapObj, btnId){
 function embedUrlFor(shareId){
   return location.origin + location.pathname + '?embed=' + encodeURIComponent(shareId);
 }
-async function publishGbpView(g){
+/* ==========================================================================
+   PUBLISHING A PROFILE FOR THE CLIENT
+   ==========================================================================
+   The client link opens the same Results page the team works from — the
+   keyword list, the map, every scan in the history dropdown, the point
+   pop-ups, the findings and the competitor table — read-only. Nothing is
+   re-drawn for the client from a summary; the page is fed the same scans.
+
+   Everything goes into one Firestore document (publicViews/<profile id>), so
+   it has to fit in 1 MB. Listing names repeat across every point and scan,
+   so they are stored once in a dictionary and each point carries the
+   positions. Scans are kept newest-first until the budget runs out, and the
+   newest scan of every keyword always goes in.
+   ========================================================================== */
+const PUB_SCANS_PER_KEYWORD = 12;
+const PUB_MAX_BYTES = 800000;
+const PUB_POINT_DROP = new Set(['adNames','wideNames','busy','_mt']);
+
+/* A scan with nothing read yet (one that has just started) is not shown to
+   the client. */
+function pubScans(k){
+  return (k.scans || []).filter(s => s.points && s.points.some(p => p.rank != null));
+}
+function packGbpSnapshot(g, scansPerKw){
+  const dict = [], index = new Map();
+  const ref = n => {
+    const k = String(n);
+    if (!index.has(k)){ index.set(k, dict.length); dict.push(k); }
+    return index.get(k);
+  };
+  const keywords = g.keywords.filter(k => pubScans(k).length).map(k => ({
+    id: k.id, text: k.text,
+    scans: pubScans(k).slice(-scansPerKw).map(s => {
+      const out = {};
+      Object.keys(s).forEach(key => { if (key !== 'points') out[key] = s[key]; });
+      out.points = s.points.map(p => {
+        const q = {};
+        Object.keys(p).forEach(key => {
+          if (PUB_POINT_DROP.has(key) || p[key] === undefined) return;
+          if (key === 'names') q.n = p.names.map(ref);
+          else q[key] = p[key];
+        });
+        return q;
+      });
+      return out;
+    })
+  }));
+  return JSON.parse(JSON.stringify({v: 2, dict, keywords}));
+}
+function unpackGbpSnapshot(packed){
+  const dict = packed.dict || [];
+  return (packed.keywords || []).map(k => ({
+    id: k.id, text: k.text,
+    scans: (k.scans || []).map(s => Object.assign({}, s, {
+      points: (s.points || []).map(p => {
+        const q = Object.assign({}, p);
+        if (Array.isArray(p.n)){ q.names = p.n.map(i => dict[i]).filter(x => x != null); delete q.n; }
+        return q;
+      })
+    }))
+  }));
+}
+/* Links already sit inside client reports, and a browser that last opened
+   one before this release can keep running the old page for a few minutes.
+   That page reads `keywords` (the latest scan of each), not `gbpSnap`, so the
+   old field is still written alongside — as many keywords as fit in what is
+   left of the document — and an old copy keeps showing the map instead of
+   an empty frame until it picks up the new code. */
+function legacyKeywords(g, budget){
+  const out = [];
+  let used = 0;
+  g.keywords.forEach(k => {
+    const ss = pubScans(k);
+    if (!ss.length) return;
+    const s = ss[ss.length - 1];
+    const scan = {};
+    Object.keys(s).forEach(key => { if (key !== 'points') scan[key] = s[key]; });
+    scan.points = s.points.map(p => {
+      const q = {};
+      Object.keys(p).forEach(key => { if (!PUB_POINT_DROP.has(key) && p[key] !== undefined) q[key] = p[key]; });
+      return q;
+    });
+    const item = JSON.parse(JSON.stringify({id: k.id, text: k.text, scan}));
+    const size = JSON.stringify(item).length;
+    if (used + size > budget) return;
+    used += size;
+    out.push(item);
+  });
+  return out;
+}
+function buildGbpSnapshot(g){
+  for (let n = PUB_SCANS_PER_KEYWORD; n >= 1; n = n > 4 ? n - 4 : n - 1){
+    const json = JSON.stringify(packGbpSnapshot(g, n));
+    if (json.length <= PUB_MAX_BYTES || n === 1) return {json, scansPerKw: n};
+  }
+}
+
+async function publishGbpView(g, opts){
   if (!fbDb || !fbUid || !g) return null;
-  const keywordsData = g.keywords
-    .filter(k => k.scans.length)
-    .map(k => ({ id:k.id, text:k.text, scan: JSON.parse(JSON.stringify(k.scans[k.scans.length - 1])) }));
-  if (!keywordsData.length) return null;
+  if (!g.keywords.some(k => pubScans(k).length)) return null;
+  const built = buildGbpSnapshot(g);
+  if (!built || built.json.length > 1000000) return null;
+  const c = state.clients.find(x => x.gbps.some(y => y.id === g.id));
   const shareId = g.id;
+  const now = Date.now();
   try{
     await fbDb.collection('publicViews').doc(shareId).set({
+      type: 'gbp',
       gbpId: g.id,
       gbpName: g.name || g.bizName || 'Location',
-      activeKeywordId: g.activeKeywordId || keywordsData[0].id,
-      keywords: keywordsData,
-      /* Where the link should open. null leaves the embed to frame the
-         points itself, which is the default and the right answer most of
-         the time; a pinned view overrides it because someone looked at the
-         map and decided this is the shot the client should land on. */
+      clientName: (c && c.name) || '',
+      activeKeywordId: g.activeKeywordId || null,
+      gbpSnap: built.json,
+      scansPerKw: built.scansPerKw,
+      keywords: legacyKeywords(g, 920000 - built.json.length),
       view: (g.embedView && isFinite(g.embedView.lat)) ? {
         lat: Number(g.embedView.lat), lng: Number(g.embedView.lng), zoom: Number(g.embedView.zoom)
       } : null,
-      /* The tracked business itself — name, rating and Google's pin — so
-         the embedded map can draw it. JSON round-trip drops anything
-         undefined, which Firestore would refuse. */
       business: JSON.parse(JSON.stringify(gbpBizPublish(g))),
-      updatedAt: Date.now(),
+      centre: g.center ? JSON.parse(JSON.stringify({label: g.center.label || '', lat: g.center.lat, lng: g.center.lng})) : null,
+      updatedAt: now,
       updatedBy: fbUid
     });
+    g.publishedAt = now;
+    g.publishedSig = gbpPublishSig(g);
+    save();
+    renderPublishState();
     return shareId;
   }catch(err){
+    console.warn('publish failed', err);
     return null;
   }
+}
+/* What the published copy was made from. When it no longer matches, the
+   chip says the client link is behind and a quiet republish catches it up. */
+function gbpPublishSig(g){
+  return g.keywords.filter(k => pubScans(k).length).map(k => k.id + ':' + k.text + ':' + pubScans(k).map(s => s.id + '/' +
+    s.points.filter(p => p.rank != null).length).join(',')).join('|') + '|' + JSON.stringify(g.embedView || null);
+}
+function gbpPublishStale(g){ return !!(g && g.publishedAt && g.publishedSig !== gbpPublishSig(g)); }
+/* Once a profile is published, keeping its link current is not a chore
+   anyone should have to remember: a finished scan or an edited keyword list
+   republishes it. */
+var pubTimer = null;
+function autoRepublish(g){
+  if (!g || isPublicView()) return;
+  if (!g.publishedAt){ upgradeOldLink(g); return; }
+  clearTimeout(pubTimer);
+  pubTimer = setTimeout(() => {
+    if (gbpPublishStale(g)) publishGbpView(g, {quiet: true});
+  }, 1500);
+}
+
+/* Profiles shared before the Publish button existed have a live client link
+   (the old map-only snapshot, written whenever the map was expanded) but no
+   publish record here. The first time one is opened, the link is checked;
+   if it exists it is republished as the full client view and from then on
+   kept current like any other — the URL the client has does not change. */
+var upgradeChecked = new Set();
+async function upgradeOldLink(g){
+  if (!g || g.publishedAt || !fbDb || !fbUid || upgradeChecked.has(g.id)) return;
+  upgradeChecked.add(g.id);
+  try{
+    const snap = await fbDb.collection('publicViews').doc(g.id).get();
+    if (!snap.exists) return;
+    const d = snap.data() || {};
+    if (d.gbpSnap) { g.publishedAt = d.updatedAt || Date.now(); g.publishedSig = ''; save(); }
+    await publishGbpView(g, {quiet: true});
+  }catch(e){ /* stays as it was; Publish for client still works */ }
+}
+function renderPublishState(){
+  const el = $('publishState'), btn = $('publishBtn');
+  if (!el || !btn) return;
+  const g = activeGbp();
+  const has = !!(g && g.keywords.some(k => k.scans.length));
+  btn.disabled = !has;
+  btn.title = has ? 'Publish this profile’s results as a read-only page for the client' : 'Run a scan first';
+  if (g && !g.publishedAt && !isPublicView()) upgradeOldLink(g);
+  if (!g || !g.publishedAt){ el.hidden = true; btn.textContent = 'Publish for client'; return; }
+  el.hidden = false;
+  const stale = gbpPublishStale(g);
+  el.className = 'ws-live' + (stale ? ' stale' : '');
+  el.textContent = stale ? 'Client link behind — updating' : 'Live · ' + timeAgo(g.publishedAt);
+  el.title = 'Published ' + new Date(g.publishedAt).toLocaleString();
+  btn.textContent = 'Client link';
+}
+function timeAgo(ts){
+  const m = Math.round((Date.now() - ts) / 60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return m + ' min ago';
+  const h = Math.round(m / 60);
+  if (h < 24) return h + ' h ago';
+  return new Date(ts).toLocaleDateString([], {month:'short', day:'numeric'});
+}
+
+/* The dialog: the link, the iframe code, and a preview, in one place. */
+function pubDialog(g, url){
+  let bd = $('pubBackdrop');
+  if (!bd){
+    bd = document.createElement('div');
+    bd.id = 'pubBackdrop';
+    bd.className = 'pub-backdrop';
+    bd.innerHTML =
+      '<div class="pub-card" role="dialog" aria-modal="true" aria-labelledby="pubTitle">' +
+        '<button type="button" class="pub-x" aria-label="Close">×</button>' +
+        '<div class="pub-eyebrow">Client view · read-only</div>' +
+        '<h3 id="pubTitle"></h3>' +
+        '<p class="pub-lede">The same Results page your team sees: every keyword, every scan in the history, the map with each point’s listings and link, the findings and who owns the area. Nothing on it can be changed from the link.</p>' +
+        '<label class="pub-l">Link</label>' +
+        '<div class="pub-row"><input type="text" id="pubUrl" readonly/><button type="button" class="btn btn-sm" data-copy="pubUrl">Copy</button></div>' +
+        '<label class="pub-l">Embed code <span>for AgencyAnalytics, a website or a report</span></label>' +
+        '<div class="pub-row"><textarea id="pubCode" readonly rows="3"></textarea><button type="button" class="btn btn-sm" data-copy="pubCode">Copy</button></div>' +
+        '<ul class="pub-facts" id="pubFacts"></ul>' +
+        '<div class="pub-acts"><a class="btn" id="pubOpen" target="_blank" rel="noopener">Open the client view</a>' +
+        '<button type="button" class="btn" id="pubRefresh">Republish now</button>' +
+        '<button type="button" class="btn btn-go" id="pubDone">Done</button></div>' +
+      '</div>';
+    document.body.appendChild(bd);
+    const close = () => bd.classList.remove('on');
+    bd.addEventListener('click', e => { if (e.target === bd) close(); });
+    bd.querySelector('.pub-x').addEventListener('click', close);
+    bd.querySelector('#pubDone').addEventListener('click', close);
+    bd.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+    bd.querySelectorAll('[data-copy]').forEach(b => b.addEventListener('click', async () => {
+      const f = $(b.dataset.copy);
+      try{ await navigator.clipboard.writeText(f.value); }catch(e){ f.select(); document.execCommand('copy'); }
+      const t = b.textContent; b.textContent = 'Copied'; setTimeout(() => { b.textContent = t; }, 1400);
+    }));
+    bd.querySelector('#pubRefresh').addEventListener('click', async () => {
+      const gg = activeGbp(); const b = $('pubRefresh');
+      b.disabled = true; b.textContent = 'Publishing…';
+      const id = await publishGbpView(gg);
+      b.disabled = false; b.textContent = id ? 'Republished' : 'Couldn’t publish';
+      setTimeout(() => { b.textContent = 'Republish now'; }, 1600);
+      if (id) pubFacts(gg);
+    });
+  }
+  $('pubTitle').textContent = (g.bizName || g.name || 'This profile') + ' is live';
+  $('pubUrl').value = url;
+  $('pubCode').value = '<iframe src="' + url + '" title="' + esc(g.bizName || g.name || 'Local rankings') +
+    ' — local rankings" width="100%" height="900" style="border:0;border-radius:12px" loading="lazy"></iframe>';
+  $('pubOpen').href = url;
+  pubFacts(g);
+  bd.classList.add('on');
+  setTimeout(() => $('pubUrl').select(), 40);
+}
+function pubFacts(g){
+  const ul = $('pubFacts'); if (!ul) return;
+  const kws = g.keywords.filter(k => pubScans(k).length);
+  const scans = kws.reduce((n, k) => n + Math.min(pubScans(k).length, PUB_SCANS_PER_KEYWORD), 0);
+  const pinned = !!(g.embedView && isFinite(g.embedView.lat));
+  ul.innerHTML =
+    '<li><b>' + kws.length + '</b> keyword' + (kws.length === 1 ? '' : 's') + ' with <b>' + scans + '</b> scan' + (scans === 1 ? '' : 's') + ' in the history</li>' +
+    '<li>Updates itself after every scan and keyword change on this profile</li>' +
+    '<li>' + (pinned ? 'Opens at the map view you pinned' : 'Opens framed on the scanned points — use “Set opening view” on the map to change that') + '</li>';
 }
 async function publishAndShare(){
   const g = activeGbp();
   if (!g || !g.keywords.some(k => k.scans.length)){
-    toast('Run or open a scan first — the embed link needs at least one scan to show.', 'err');
+    toast('Run a scan first — the client link shows scan results.', 'err');
     return;
   }
+  const btn = $('publishBtn');
+  if (btn){ btn.disabled = true; btn.textContent = 'Publishing…'; }
   const id = await publishGbpView(g);
+  if (btn) btn.disabled = false;
+  renderPublishState();
   if (!id){
-    toast('Couldn\u2019t publish. Check the publicViews Firestore rule near the top of the file.', 'err');
+    toast('Couldn’t publish. Check you’re signed in and online.', 'err');
     return;
   }
-  const url = embedUrlFor(id);
-  try{ await navigator.clipboard.writeText(url); }catch(e){ /* clipboard not available — link is still shown below */ }
-  const exactPin = !!(g.listing && !g.listing.stale && g.listing.lat != null);
-  const pinned = !!(g.embedView && isFinite(g.embedView.lat));
-  ask('Public embed link (copied)', 'This link updates automatically the next time you expand this profile\u2019s map. Every keyword with a scan is included, so the client can switch between them, and the business itself is pinned on the map with its name and rating. ' +
-    (pinned
-      ? 'It opens at the view you pinned (zoom ' + g.embedView.zoom + '); press Back to auto-fit to let it frame the points instead. '
-      : 'It opens framed on the scanned points \u2014 pan and zoom to the shot you want, then press Set opening view to make the link start there. ') +
-    (exactPin ? '' : 'Tip: confirm the listing on step one so the pin sits on Google\u2019s exact spot \u2014 until then it marks the grid centre. ') +
-    'Paste it into AgencyAnalytics\u2019 Embed widget, in the URL or iFrame field.', '', url);
+  pubDialog(g, embedUrlFor(id));
 }
 
 /* ==========================================================================
@@ -19272,17 +19954,17 @@ async function pinEmbedView(){
   save(); renderEmbedViewBtns();
   /* Saved locally whatever happens; re-published so the live link changes
      now rather than the next time somebody expands the map. */
-  const id = g.keywords.some(k => k.scans.length) ? await publishGbpView(g) : null;
+  const id = g.publishedAt ? await publishGbpView(g) : null;
   toast(id
     ? 'The shared link now opens here — zoom ' + z + '. Reload the widget to see it.'
-    : 'Opening view saved. It goes live with the link once this profile has a scan.', 'ok');
+    : 'Opening view saved. It applies to the client link when you publish.', 'ok');
 }
 async function unpinEmbedView(){
   const g = activeGbp();
   if (!g || !g.embedView) return;
   g.embedView = null;
   save(); renderEmbedViewBtns();
-  const id = g.keywords.some(k => k.scans.length) ? await publishGbpView(g) : null;
+  const id = g.publishedAt ? await publishGbpView(g) : null;
   toast(id
     ? 'Back to auto-fit — the link will frame the scanned points again.'
     : 'Back to auto-fit.', 'ok');
@@ -19297,7 +19979,7 @@ if (expandMapBtnEl) expandMapBtnEl.addEventListener('click', () => {
   const card = $('mapCard');
   const wasExpanded = !!(card && card.classList.contains('fullscreen'));
   toggleMapFullscreen('mapCard', map, 'expandMapBtn');
-  if (!wasExpanded) publishAndShare();
+  if (!wasExpanded) autoRepublish(activeGbp());
 });
 const cmpExpandMapBtnEl = $('cmpExpandMapBtn');
 if (cmpExpandMapBtnEl) cmpExpandMapBtnEl.addEventListener('click', () => toggleMapFullscreen('cmpMapCard', cmpMap, 'cmpExpandMapBtn'));
@@ -19307,6 +19989,7 @@ if (cmpExpandMapBtnEl) cmpExpandMapBtnEl.addEventListener('click', () => toggleM
    sidebar, just that GBP's published map, permanently expanded. Meant to be
    opened directly, e.g. inside an AgencyAnalytics embed widget.
 --------------------------------------------------------------------------- */
+var EMBED_META = null;
 function showEmbedMessage(msg){
   const el = document.createElement('div');
   el.className = 'embed-message';
@@ -19314,17 +19997,26 @@ function showEmbedMessage(msg){
   document.body.appendChild(el);
 }
 function renderEmbedSnapshot(data){
-  const rawKeywords = (data && Array.isArray(data.keywords) && data.keywords.length)
-    ? data.keywords
-    : (data && data.scan ? [{ id:'embed-kw', text:data.keyword || data.scan.keyword || '', scan:data.scan }] : []);
-  const keywords = rawKeywords.map(k => ({
-    id: k.id || uid(), text: k.text || '', scans: k.scan ? [k.scan] : []
-  }));
+  let keywords;
+  let packed = null;
+  try{ packed = data && data.gbpSnap ? JSON.parse(data.gbpSnap) : null; }catch(e){ packed = null; }
+  if (packed){
+    /* Published since the client view became the full Results page: every
+       keyword with its scan history. */
+    keywords = unpackGbpSnapshot(packed).map(k => ({id: k.id || uid(), text: k.text || '', scans: k.scans}));
+  } else {
+    const rawKeywords = (data && Array.isArray(data.keywords) && data.keywords.length)
+      ? data.keywords
+      : (data && data.scan ? [{ id:'embed-kw', text:data.keyword || data.scan.keyword || '', scan:data.scan }] : []);
+    keywords = rawKeywords.map(k => ({
+      id: k.id || uid(), text: k.text || '', scans: k.scan ? [k.scan] : []
+    }));
+  }
   const activeId = (data && data.activeKeywordId && keywords.some(k => k.id === data.activeKeywordId))
     ? data.activeKeywordId
     : (keywords[0] ? keywords[0].id : null);
   const activeKw = keywords.find(k => k.id === activeId) || keywords[0] || null;
-  const scan = activeKw && activeKw.scans.length ? activeKw.scans[0] : null;
+  const scan = activeKw && activeKw.scans.length ? activeKw.scans[activeKw.scans.length - 1] : null;
   const g = Object.assign(blankGbp((data && data.gbpName) || 'Location'), {
     id: (data && data.gbpId) || 'embed-gbp',
     name: (data && data.gbpName) || 'Location',
@@ -19359,7 +20051,10 @@ function renderEmbedSnapshot(data){
      existed have none, and the marker falls back to the scan's own record
      of the listing, then to the grid centre). */
   g.bizInfo = (data && data.business && typeof data.business === 'object') ? data.business : null;
-  state.clients = [{ id:'embed-client', name:g.name, gbps:[g], compareScans:[] }];
+  if (g.bizInfo && g.bizInfo.name) g.bizName = g.bizInfo.name;
+  g.publishedAt = (data && data.updatedAt) || null;
+  EMBED_META = {clientName: (data && data.clientName) || '', updatedAt: (data && data.updatedAt) || null};
+  state.clients = [{ id:'embed-client', name:(data && data.clientName) || g.name, gbps:[g], compareScans:[] }];
   state.activeClientId = 'embed-client';
   state.activeGbpId = g.id;
   state.view = 'focus';
@@ -19461,8 +20156,12 @@ async function bootEmbedView(shareId){
       return;
     }
     setAppVisible(true);
-    if ($('mapCard')) $('mapCard').classList.add('fullscreen');
-    document.body.classList.add('map-locked');
+    /* ?view=map keeps the old map-only widget for anything sized around it. */
+    const mapOnly = new URLSearchParams(location.search).get('view') === 'map';
+    if (mapOnly){
+      if ($('mapCard')) $('mapCard').classList.add('fullscreen');
+      document.body.classList.add('map-locked');
+    }
     map.invalidateSize();
     renderEmbedSnapshot(snap.data());
     const refit = embedFit;

@@ -10094,7 +10094,7 @@ function seedSigs(){
 function persistLocalQuiet(json){
   if (isPublicView()) return false;
   memoryStore = state;
-  try{ localStorage.setItem(STORE_KEY, json || JSON.stringify(state)); return true; }catch(e){ return false; }
+  try{ writeLocalState(json || JSON.stringify(state)); return true; }catch(e){ return false; }
 }
 
 /* A scan this browser is running right now is never overwritten by a copy
@@ -10337,6 +10337,29 @@ function pill(mode){
     if (s) s.textContent = mode === 'saving' ? 'Saving' : (mode === 'saved' ? 'All changes saved' : 'Autosave on');
   });
 }
+/* Every EDGE dashboard on GitHub Pages shares one web address, and a browser
+   gives one address about 5 MB of storage in total. The Jigsaw and Electrogas
+   pathway reports, the search-queries report and the AI feed all keep cached
+   copies of their data there, and between them they filled it, so this
+   workspace could no longer be saved in the browser. Those copies are only
+   caches — each page refetches its data when its copy is missing — so when
+   space runs out they are cleared, largest first, until the workspace fits.
+   Saved settings (pins, names, preferences) are never touched. */
+var DISPOSABLE_CACHE = [/^jlPathway:/, /^egPathway:/, /^gscq:/, /^gscQueries:/, /^aivFeed:/];
+function writeLocalState(json){
+  try{ localStorage.setItem(STORE_KEY, json); return; }catch(e){ /* full: make room below */ }
+  const caches = [];
+  for (let i = 0; i < localStorage.length; i++){
+    const k = localStorage.key(i);
+    if (k && DISPOSABLE_CACHE.some(re => re.test(k))) caches.push([k, (localStorage.getItem(k) || '').length]);
+  }
+  caches.sort((x, y) => y[1] - x[1]);
+  for (const [k] of caches){
+    localStorage.removeItem(k);
+    try{ localStorage.setItem(STORE_KEY, json); return; }catch(e){ /* keep clearing */ }
+  }
+  localStorage.setItem(STORE_KEY, json);   /* still too big: let save() report it */
+}
 function save(){
   /* An embed link or a published report renders inside this same page, and
      both swap `state` for a read-only snapshot of one profile. Writing that
@@ -10349,7 +10372,7 @@ function save(){
   if (fbUid) state.owner = fbUid;
   memoryStore = state;
   try{
-    localStorage.setItem(STORE_KEY, JSON.stringify(state));
+    writeLocalState(JSON.stringify(state));
     localWriteFailed = false;
     /* And, if a folder has been chosen, keep the readable copy beside it. */
     try{ claudeSyncTouch(); }catch(err){}
@@ -11520,7 +11543,7 @@ async function loadCloudForUser(user){
       state.owner = user.uid;
       liveEnsureSeo();
       seedSigs();
-      try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){}
+      try{ writeLocalState(JSON.stringify(state)); }catch(e){}
       cloudBaseStamp = res.stamp || 0;
       cloudBaseRev = res.rev || null;
       cloudLoadedOk = true;

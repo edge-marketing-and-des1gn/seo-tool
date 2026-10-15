@@ -44,9 +44,11 @@ const shortUrl = u => String(u || '').replace(/^https?:\/\/(www\.)?/i, '') || '/
 /* One key for a page whether it came from GA4 (a path) or Search Console / Bing (a full URL). */
 const pageKey = u => {
   /* Paths never contain spaces; anything after one is button text copied along with a Search Console export. */
-  let s = String(u || '').trim().toLowerCase().split(/\s/)[0];
+  let s = String(u || '').trim().toLowerCase();
+  if (s === '(not set)') return 'Landing page not recorded';   /* GA4's own label: check before trimming at the space */
+  s = s.split(/\s/)[0];
   s = s.replace(/^https?:\/\/[^\/]+/, '').split(/[?#]/)[0] || '/';
-  if (s.length > 1) s = s.replace(/\/+$/, ''); if (s === '(not set)') return 'Landing page not recorded';
+  if (s.length > 1) s = s.replace(/\/+$/, '');
   return s || '/';
 };
 

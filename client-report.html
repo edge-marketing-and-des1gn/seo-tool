@@ -68,8 +68,14 @@ html,body{margin:0;background:#fafafa;color:var(--ink);font-family:var(--ui);-we
     let snap = null;
     try{ if (view.snap) snap = JSON.parse(view.snap); }catch(e){}
     document.title = view.title || 'Report';
+    const parse = (x, d) => { try{ return x ? JSON.parse(x) : d; }catch(e){ return d; } };
+    /* Only the periods the team allowed; the first one when the stored one isn't among them. */
+    const periods = (Array.isArray(view.periods) && view.periods.length ? view.periods : ER.CLIENT_PERIODS_DEFAULT).filter(ER.validPeriod);
+    if (!periods.length) periods.push('lastMonth');
+    const kwStored = parse(view.kw, null), gbpStored = parse(view.gbp, null), brand = parse(view.brand, {});
+    if (brand.accent) document.documentElement.style.setProperty('--brand', brand.accent);
 
-    let period = view.period || 'lastMonth';
+    let period = periods.indexOf(view.period) > -1 ? view.period : periods[0];
     const live = {feed: null, g4: {}, gsc: {}};
     /* Stored copy for the period the report was published with; live numbers (read-only token) for everything else. */
     const ctxFor = () => {
@@ -77,7 +83,9 @@ html,body{margin:0;background:#fafafa;color:var(--ink);font-family:var(--ui);-we
       const fromSnap = n => snap && snap[n] && snap.period === period ? snap[n] : null;
       const canLive = !!(view.feedUrl && view.token);
       ctx.get = name => {
-        if (name === 'kw' || name === 'gbp') return snap && snap[name] ? Promise.resolve(snap[name]) : Promise.reject(new Error('Not available.'));
+        if (name === 'kw' && kwStored) return Promise.resolve(kwStored);
+        if (name === 'gbp' && gbpStored) return Promise.resolve(gbpStored);
+        if (name === 'kw' || name === 'gbp') return snap && snap[name] ? Promise.resolve(snap[name]) : Promise.reject(new Error('Not available yet.'));
         if (name === 'feed'){
           if (live.feed) return live.feed;
           if (snap && snap.feed && !canLive) return Promise.resolve(snap.feed);
@@ -101,8 +109,9 @@ html,body{margin:0;background:#fafafa;color:var(--ink);font-family:var(--ui);-we
     };
     const draw = () => {
       ER.renderBoard(root, {mode: 'public', title: view.title, items, period, ctx: ctxFor(), editable: false,
+        periods, lockNote: true, showDates: view.showDates !== false, brand, clientLogo: view.clientLogo || '', agencyLogo: view.agencyLogo || '', clientName: view.clientName || '',
         emptyHtml: '<h3>This report is being prepared</h3>Check back soon.',
-        onPeriod: p => { period = p; draw(); }});
+        onPeriod: p => { if (periods.indexOf(p) < 0) return; period = p; draw(); }});
     };
     draw();
     const at = snap && snap.at ? snap.at : view.updatedAt;

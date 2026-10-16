@@ -4709,6 +4709,12 @@ body.embed-mode .embed-brand img{height:26px;width:auto;border-radius:6px;}
 .pub-acts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:18px;}
 .pub-acts a.btn{text-decoration:none;}
 </style>
+<style>
+/* Sidebar tools not needed day to day: hidden (they still work if shown again). */
+#exportBtn, #importBtn, .rail-foot .mini-row:has(> #exportBtn), .rail-foot .mini-row:has(> [data-claude-sync]), .rail-foot .mini-row:has(> [data-claude-acts]),
+.rail-foot [data-claude-sync], .rail-foot [data-claude-acts], #claudeSyncStatus, #seoClaudeSyncStatus{display:none !important;}
+.rail-foot .mini-row:has(> #signOutBtn){margin-top:0 !important;}
+</style>
 </head>
 <body>
 

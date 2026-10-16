@@ -805,7 +805,7 @@ W.gsc_kpis = {g: 'gsc', t: 'Google Search summary', d: 'Clicks, impressions, cli
     const t = D.gsc.totals || {}, p = (D.gsc.previous || {}).totals || null;
     const dd = (a, b, inv) => { if (!p) return null; const d = delta(a, b, true); if (inv && d.txt){ d.cls = d.cls === 'up' ? 'down' : d.cls === 'down' ? 'up' : d.cls; } return d; };
     h.innerHTML = '<div class="rp-kpis">' + kpiTile('Clicks', fmt(t.clicks), esc(gscLabel(D)), {d: dd(t.clicks, p && p.clicks)}) + kpiTile('Impressions', fmtK(t.impressions), '', {d: dd(t.impressions, p && p.impressions)}) +
-      kpiTile('Click-through rate', (t.ctr || 0) + '%', '', {}) + kpiTile('Average position', String(t.position || '—'), 'Lower is better', {d: dd(t.position, p && p.position, true)}) +
+      kpiTile('Click-through rate', esc(String(t.ctr || 0)) + '%', '', {}) + kpiTile('Average position', esc(String(t.position || '—')), 'Lower is better', {d: dd(t.position, p && p.position, true)}) +
       kpiTile('Search queries', fmt(t.queries), 'Different searches that showed the site', {}) + '</div>';
   }};
 W.gsc_trend = {g: 'gsc', t: 'Clicks and impressions by day', d: 'Search Console, day by day.', size: 'l', needs: ['gsc'],
@@ -847,7 +847,8 @@ W.gsc_countries = {g: 'gsc', t: 'Top countries', d: 'Clicks by country.', size: 
 
 /* ---------- Keyword rankings ---------- */
 const rankCls = r => r == null ? 'out' : r === 0 ? 'out' : r <= 3 ? 't3' : r <= 10 ? 't10' : r <= 20 ? 't20' : r <= 50 ? 't50' : 't100';
-const rankBadge = r => '<span class="rp-rank ' + rankCls(r) + '" title="' + esc(rankTxt(r)) + '">' + (r == null ? '—' : r === 0 ? '100+' : '#' + r) + '</span>';
+const rankBadge = r => { r = r == null || r === '' || !isFinite(Number(r)) ? null : Number(r); return rankBadge_(r); };
+const rankBadge_ = r => '<span class="rp-rank ' + rankCls(r) + '" title="' + esc(rankTxt(r)) + '">' + (r == null ? '—' : r === 0 ? '100+' : '#' + r) + '</span>';
 const moveChip = (r, p) => { const m = rankMove(r, p); return m.txt && m.txt !== '=' ? '<span class="aiv-delta ' + m.cls + '">' + esc(m.txt) + '</span>' : '<span style="color:var(--a-ink3);font-size:11.5px">no change</span>'; };
 /* Position history as a small line: higher is better, gaps where outside the top 100. */
 const rankSpark = (hist, color) => {
@@ -932,7 +933,7 @@ W.gbp_grids = {g: 'gbp', t: 'Map pack grids', d: 'Latest Google Maps rank grid p
       return '<div><div style="font-size:12.5px;font-weight:600;line-height:1.3">' + esc(k.kw) + '</div>' +
         '<div style="font-size:11.5px;color:var(--a-ink2);margin-top:3px">' + (L.avg ? 'Avg #' + L.avg.toFixed(1) : 'Not found') + ' · ' + pctS(L.top3, L.n) + ' top 3' +
         (d ? ' <span class="aiv-delta ' + (d > 0 ? 'up' : 'down') + '">' + (d > 0 ? '▲ ' : '▼ ') + Math.abs(d) + '</span>' : '') + '</div>' +
-        '<div class="rp-heat" style="grid-template-columns:repeat(' + n + ',1fr)">' + cells.map(v => '<i style="background:' + heatCol(v) + '">' + (v == null ? '' : v > 20 ? '20+' : v) + '</i>').join('') + '</div>' +
+        '<div class="rp-heat" style="grid-template-columns:repeat(' + n + ',1fr)">' + cells.map(v => '<i style="background:' + heatCol(v) + '">' + (v == null ? '' : v > 20 ? '20+' : esc(String(v))) + '</i>').join('') + '</div>' +
         '<div style="font-size:10.5px;color:var(--a-ink3);margin-top:4px">' + esc(prettyDate(isoDay(new Date(L.ts || Date.now())))) + '</div></div>';
     }).join('') + '</div></div>').join('');
   }};
@@ -951,7 +952,7 @@ W.embed = {g: 'content', t: 'Embedded page', d: 'Any web page shown inside the r
     const url = safeUrl(c.url);
     if (!url){ h.innerHTML = '<div class="rp-err">No page set. ' + (ctx.editable ? 'Click “Edit” and paste a link.' : '') + '</div>'; return; }
     const ht = Math.max(200, Math.min(2400, Number(c.height) || 600));
-    h.innerHTML = '<iframe class="rp-frame" src="' + esc(url) + '" style="height:' + ht + 'px" loading="lazy" referrerpolicy="no-referrer" allowfullscreen title="' + esc(c.title || 'Embedded page') + '"></iframe>' +
+    h.innerHTML = '<iframe class="rp-frame" sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-presentation" src="' + esc(url) + '" style="height:' + ht + 'px" loading="lazy" referrerpolicy="no-referrer" allowfullscreen title="' + esc(c.title || 'Embedded page') + '"></iframe>' +
       (ctx.internal ? '<p class="aiv-foot">' + esc(url) + ' · <a href="' + esc(url) + '" target="_blank" rel="noopener">open ↗</a>. Some sites refuse to be shown inside another page.</p>' : '');
   },
   form: w => '<label>Link</label><input data-c="url" placeholder="https://…" value="' + esc((w.cfg || {}).url || '') + '"><label>Height (pixels)</label><input data-c="height" type="number" min="200" max="2400" step="50" value="' + esc(String((w.cfg || {}).height || 600)) + '">'};
@@ -1033,7 +1034,7 @@ function renderBoard(root, o){
   const dates = o.showDates === false ? '' : esc(ctx.R.text);
   const sub = [dates, o.sub || ''].filter(Boolean).join(' · ');
 
-  root.innerHTML = '<div class="aiv rp' + (editing ? ' editing' : '') + '"' + (brand.accent ? ' style="--a-brand:' + esc(brand.accent) + ';--a-deep:' + esc(brand.accent) + ';--a-wash:color-mix(in srgb,' + esc(brand.accent) + ' 10%,#fff)"' : '') + '>' +
+  root.innerHTML = '<div class="aiv rp' + (editing ? ' editing' : '') + '"' + (brand.accent && /^#[0-9a-f]{3,8}$/i.test(brand.accent) ? ' style="--a-brand:' + esc(brand.accent) + ';--a-deep:' + esc(brand.accent) + ';--a-wash:color-mix(in srgb,' + esc(brand.accent) + ' 10%,#fff)"' : '') + '>' +
     '<div class="rp-head' + (brand.banner ? ' rp-banner' : '') + '"><div>' + brandHtml(o) + '<h2 class="rp-title">' + esc(o.title || '') + '</h2>' + (sub ? '<div class="rp-sub">' + sub + '</div>' : '') + '</div>' +
     '<div class="rp-bar">' + seg +
       (o.editable ? '<button class="aiv-btn" type="button" data-edit>' + (editing ? 'Done' : 'Customize') + '</button><button class="aiv-btn rp-edit-only" type="button" data-add>+ Add widget</button>' +

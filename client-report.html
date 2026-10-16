@@ -72,7 +72,23 @@ html,body{margin:0;background:#fafafa;color:var(--ink);font-family:var(--ui);-we
     /* Only the periods the team allowed; the first one when the stored one isn't among them. */
     const periods = (Array.isArray(view.periods) && view.periods.length ? view.periods : ER.CLIENT_PERIODS_DEFAULT).filter(ER.validPeriod);
     if (!periods.length) periods.push('lastMonth');
-    const kwStored = parse(view.kw, null), gbpStored = parse(view.gbp, null), brand = parse(view.brand, {});
+    const num = v => { if (v == null || v === '') return null; const n = Number(v); return isFinite(n) ? n : null; };
+    /* Shared documents are data: numbers are forced to numbers, links and colours are checked. */
+    const kwStored = Array.isArray(parse(view.kw, null)) && parse(view.kw, []).filter(r => r && typeof r === 'object').map(r => ({kw: String(r.kw || ''), loc: String(r.loc || ''),
+      rank: num(r.rank), prev: num(r.prev), at: num(r.at) || 0, url: /^https?:\/\//i.test(String(r.url || '')) ? String(r.url) : '',
+      hist: (Array.isArray(r.hist) ? r.hist : []).map(h => [num(h && h[0]), num(h && h[1])])}));
+    const gbpStored = Array.isArray(parse(view.gbp, null)) && parse(view.gbp, []).filter(g => g && typeof g === 'object').map(g => ({name: String(g.name || ''), biz: String(g.biz || ''),
+      kws: (Array.isArray(g.kws) ? g.kws : []).filter(k => k && k.last).map(k => {
+        const st = s => s && typeof s === 'object' ? {ts: num(s.ts), n: num(s.n) || 0, found: num(s.found) || 0, top3: num(s.top3) || 0, avg: num(s.avg), grid: Math.min(15, num(s.grid) || 0),
+          pts: (Array.isArray(s.pts) ? s.pts : []).map(p => [num(p && p[0]), num(p && p[1]), num(p && p[2])])} : null;
+        return {kw: String(k.kw || ''), last: st(k.last), prev: st(k.prev)};
+      })}));
+    const brand = parse(view.brand, {}) || {};
+    if (!/^#[0-9a-f]{3,8}$/i.test(String(brand.accent || ''))) brand.accent = '';
+    brand.logoH = Math.max(20, Math.min(120, num(brand.logoH) || 44));
+    const okImg = u => /^(https:\/\/|data:image\/(png|jpe?g|gif|webp);)/i.test(String(u || '')) ? String(u) : '';
+    /* Live numbers only from the EDGE tracker (Google Apps Script), never another server. */
+    if (view.feedUrl && !/^https:\/\/script\.google(usercontent)?\.com\//.test(String(view.feedUrl))){ view.feedUrl = ''; view.token = ''; }
     if (brand.accent) document.documentElement.style.setProperty('--brand', brand.accent);
 
     let period = periods.indexOf(view.period) > -1 ? view.period : periods[0];
@@ -109,7 +125,7 @@ html,body{margin:0;background:#fafafa;color:var(--ink);font-family:var(--ui);-we
     };
     const draw = () => {
       ER.renderBoard(root, {mode: 'public', title: view.title, items, period, ctx: ctxFor(), editable: false,
-        periods, lockNote: true, showDates: view.showDates !== false, brand, clientLogo: view.clientLogo || '', agencyLogo: view.agencyLogo || '', clientName: view.clientName || '',
+        periods, lockNote: true, showDates: view.showDates !== false, brand, clientLogo: okImg(view.clientLogo), agencyLogo: okImg(view.agencyLogo), clientName: view.clientName || '',
         emptyHtml: '<h3>This report is being prepared</h3>Check back soon.',
         onPeriod: p => { if (periods.indexOf(p) < 0) return; period = p; draw(); }});
     };

@@ -1352,7 +1352,12 @@ function cachePut(id, feed){
 /* Same data, ignoring the request timestamp, so an unchanged feed doesn't redraw. */
 const feedSig = f => { try{ const c = Object.assign({}, f); delete c.generatedAt; return JSON.stringify(c); }catch(e){ return String(Math.random()); } };
 
-window.AIVis = {render, renderReport, renderMessage, apiGet, normDomain, cacheGet, cachePut, feedSig};
+window.AIVis = {render, renderReport, renderMessage, apiGet, normDomain, cacheGet, cachePut, feedSig,
+  /* shared with reports.js (Team and Client reports) */
+  ui: {esc, fmt, fmtK, pctTxt, prettyDate, shortDate, isoDay, addDays, today, pageKey, shortUrl, safeUrl, linkTo, dotName,
+    lineChart, sparkline, donut, table, barCell, statsRow, delta, injectStyles, openDrawer, closeDrawer,
+    keLabel, keyEventsOf, pcol, PLATFORMS, PCOL, NO_PROMPTS, model, drawAio, drawJourneys, openVisitor,
+    openAllAi, openPlatform, openGoogle, openBing, openPage, openDay}};
 
 /* ==========================================================================
    SEO TOOL TAB
@@ -1611,6 +1616,10 @@ function setFreshness(v, f){
   el.title = f.at ? 'Loaded ' + new Date(f.at).toLocaleString('en-CA') : '';
 }
 
+/* For reports.js: the same cached feed the AI tab uses, and the client's read-only token. */
+window.AIVis.getFeed = (domain, force) => { const s = settings(); if (!s.url || !s.key) return Promise.reject(new Error('Connect the AI Visibility Tracker first (AI Visibility tab, ⚙).')); const m = memFeed[domain]; if (m && !force && Date.now() - m.at < 10 * 60 * 1000) return Promise.resolve(m.feed); return fetchFeed(s, domain, force); };
+window.AIVis.tracker = () => settings();
+window.AIVis.tokenFor = async domain => { const s = settings(); if (!tokens[domain]){ const cl = await apiGet(s.url, {action: 'clients', key: s.key}); (cl.clients || []).forEach(x => { tokens[x.domain] = x.token; }); } return tokens[domain] || null; };
 function reportId(c){ return 'aireport-' + c.id; }
 function reportUrl(c){
   const base = location.origin + location.pathname.replace(/[^\/]*$/, '');

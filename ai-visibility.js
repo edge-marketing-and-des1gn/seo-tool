@@ -436,7 +436,9 @@ function model(feed, period){ if (period === 'lastMonth'){ const t0 = new Date()
   const prevEnd = addDays(since, -1), prevSince = addDays(prevEnd, -(period - 1));
   const inCur = d => d >= since && d <= end, inPrev = d => d >= prevSince && d <= prevEnd;
   const weekly = period > 35;
-  const bucket = d => { if (!weekly) return d; const t = new Date(d + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() - ((t.getUTCDay() + 6) % 7)); return isoDay(t); };
+  /* No date (e.g. a client with no Search Console export yet) stays no date:
+     turning '' into a Date threw and froze the 90-day and 12-month views. */
+  const bucket = d => { if (!weekly || !d) return d; const t = new Date(d + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() - ((t.getUTCDay() + 6) % 7)); return isoDay(t); };
   /* GA4 AI rows: [date, platform, source, page, sessions, engaged, key events] */
   let rows = (feed.ga4 && feed.ga4.rows) || null;
   if (!rows) rows = ((feed.ga4 && feed.ga4.daily) || []).map(r => [r.d, r.p, r.p, '', r.s, 0, r.k]);

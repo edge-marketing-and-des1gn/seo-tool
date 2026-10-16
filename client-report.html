@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="referrer" content="no-referrer"/>
+<meta name="robots" content="noindex"/>
+<title>Report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600&display=swap" rel="stylesheet"/>
+<style>
+/* Same palette as the SEO tool. */
+:root{
+  --brand:#e87722; --brand-deep:#b8570f; --brand-wash:#fdf1e6;
+  --paper:#f3f6f8; --card:#ffffff; --card-2:#f7f9fa; --line:#e4e9ed; --line-2:#eef2f5;
+  --ink:#1b222a; --ink-2:#57646f; --ink-3:#8b98a3;
+  --good:#0f7a58; --good-wash:#e6f5ef; --alert:#b5352a;
+  --ui:"Geist","Inter",-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;
+  --display:"Poppins","Inter",Helvetica,Arial,sans-serif;
+  --mono:"JetBrains Mono","SFMono-Regular",Consolas,monospace;
+}
+html,body{margin:0;background:#fafafa;color:var(--ink);font-family:var(--ui);-webkit-font-smoothing:antialiased;}
+#report{max-width:1280px;margin:0 auto;padding:24px 16px 40px;}
+.foot{max-width:1280px;margin:0 auto;padding:0 16px 28px;color:var(--ink-3);font-size:11.5px;}
+</style>
+</head>
+<body>
+<main id="report"></main>
+<div class="foot" id="foot"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="ai-visibility.js"></script>
+<script src="reports.js"></script>
+<script>
+(function(){
+  'use strict';
+  const root = document.getElementById('report'), foot = document.getElementById('foot');
+  const AIV = window.AIVis, ER = window.EdgeReports;
+  const id = new URLSearchParams(location.search).get('r') || '';
+  if (!AIV || !ER){ root.textContent = 'This report could not load.'; return; }
+  if (!/^clientreport-[\w-]+$/.test(id)){ AIV.renderMessage(root, 'Report not found', 'This link is missing its report id.', true); return; }
+
+  let db = null;
+  try{
+    firebase.initializeApp({
+      apiKey: "AIzaSyA94BzMWcwqlK9Bpmclw6l0hSDiyPhQ_AA",
+      authDomain: "serp-79020.firebaseapp.com",
+      projectId: "serp-79020",
+      storageBucket: "serp-79020.firebasestorage.app",
+      messagingSenderId: "760216876354",
+      appId: "1:760216876354:web:27c96045159c7920af44db"
+    });
+    db = firebase.firestore();
+  }catch(e){ db = null; }
+
+  AIV.renderMessage(root, 'Loading report', 'Fetching the latest numbers…');
+
+  (async () => {
+    if (!db) throw new Error('This report needs an internet connection to load.');
+    const snapDoc = await db.collection('publicViews').doc(id).get();
+    if (!snapDoc.exists) throw new Error('This report link is no longer available.');
+    const view = snapDoc.data() || {};
+    if (view.type !== 'clientreport') throw new Error('This report link is not set up correctly.');
+    let items = [];
+    try{ items = JSON.parse(view.layout || '[]').filter(i => ER.W[i.type] && !ER.W[i.type].internal); }catch(e){}
+    let snap = null;
+    try{ if (view.snap) snap = JSON.parse(view.snap); }catch(e){}
+    document.title = view.title || 'Report';
+
+    let period = view.period || 'lastMonth';
+    const live = {feed: null, g4: {}, gsc: {}};
+    /* Stored copy for the period the report was published with; live numbers (read-only token) for everything else. */
+    const ctxFor = () => {
+      const ctx = {domain: view.domain};
+      const fromSnap = n => snap && snap[n] && snap.period === period ? snap[n] : null;
+      const canLive = !!(view.feedUrl && view.token);
+      ctx.get = name => {
+        if (name === 'kw' || name === 'gbp') return snap && snap[name] ? Promise.resolve(snap[name]) : Promise.reject(new Error('Not available.'));
+        if (name === 'feed'){
+          if (live.feed) return live.feed;
+          if (snap && snap.feed && !canLive) return Promise.resolve(snap.feed);
+          if (!canLive) return Promise.reject(new Error('Not available.'));
+          live.feed = AIV.apiGet(view.feedUrl, {action: 'feed', domain: view.domain, t: view.token}).catch(e => { live.feed = null; if (snap && snap.feed) return snap.feed; throw e; });
+          return snap && snap.feed ? Promise.resolve(snap.feed) : live.feed;
+        }
+        const R = ctx.R;
+        const k = name === 'g4' ? R.prevSince + '|' + R.end : R.since + '|' + R.end;
+        const stored = fromSnap(name);
+        if (live[name][k]) return live[name][k];
+        if (!canLive) return stored ? Promise.resolve(stored) : Promise.reject(new Error('Not available.'));
+        const p = AIV.apiGet(view.feedUrl, name === 'g4'
+          ? {action: 'ga4report', domain: view.domain, t: view.token, start: R.prevSince, end: R.end}
+          : {action: 'gscQueries', domain: view.domain, t: view.token, start: R.since, end: R.end})
+          .catch(e => { delete live[name][k]; if (stored) return stored; throw e; });
+        live[name][k] = p;
+        return stored ? Promise.resolve(stored) : p;
+      };
+      return ctx;
+    };
+    const draw = () => {
+      ER.renderBoard(root, {mode: 'public', title: view.title, items, period, ctx: ctxFor(), editable: false,
+        emptyHtml: '<h3>This report is being prepared</h3>Check back soon.',
+        onPeriod: p => { period = p; draw(); }});
+    };
+    draw();
+    const at = snap && snap.at ? snap.at : view.updatedAt;
+    foot.textContent = at ? 'Updated ' + new Date(at).toLocaleString('en-CA', {dateStyle: 'medium', timeStyle: 'short'}) + ' · Numbers refresh automatically' : '';
+
+    /* Once live numbers for the shown period arrive, redraw with them. */
+    if (view.feedUrl && view.token){
+      const ctx = ctxFor(); ctx.R = ER.rangeOf(period);
+      const needs = new Set(); items.forEach(i => (ER.W[i.type].needs || []).forEach(n => needs.add(n)));
+      const waits = [];
+      if (needs.has('feed')) waits.push(ctx.get('feed') && live.feed);
+      if (needs.has('g4')){ ctx.get('g4'); waits.push(live.g4[ctx.R.prevSince + '|' + ctx.R.end]); }
+      if (needs.has('gsc')){ ctx.get('gsc'); waits.push(live.gsc[ctx.R.since + '|' + ctx.R.end]); }
+      if (snap && waits.length) Promise.allSettled(waits.filter(Boolean)).then(() => { snap = Object.assign({}, snap, {period: '__live'}); draw(); });
+    }
+  })().catch(err => {
+    AIV.renderMessage(root, 'This report couldn’t load', String(err && err.message || err).replace(/[&<>]/g, ''), true);
+  });
+})();
+</script>
+</body>
+</html>

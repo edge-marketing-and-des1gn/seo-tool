@@ -1205,7 +1205,18 @@ if (typeof state === 'undefined' || !document.getElementById('seoModes')) return
 const VIEW = 'ai';
 let active = false;
 let period = 30;
-let loadedFor = null;
+let loadedFor = null, loadedDomain = null;
+/* The view used to reload only when a different client was picked. A
+   client whose website was saved after the page was drawn (the cloud copy
+   landing a moment after load, a teammate's edit, or typing it on the
+   Dashboard) kept the "add the website first" card until someone clicked
+   away and back. Now a change of website reloads it too. */
+setInterval(() => {
+  if (!active) return;
+  const c = activeClient();
+  const d = c ? normDomain(c.website) : null;
+  if (c && c.id === loadedFor && d !== loadedDomain) load(false);
+}, 2000);
 let registeredSig = null;
 let tokens = {};
 let busy = false;
@@ -1331,12 +1342,23 @@ async function load(force){
   if (!v || !active) return;
   const c = activeClient();
   loadedFor = c ? c.id : null;
+  loadedDomain = c ? normDomain(c.website) : null;
   if (!c){ renderMessage(v, 'No client selected', 'Pick an SEO client on the left.'); return; }
   const s = settings();
   if (!s.url || !s.key){ renderConnect(v); return; }
   const domain = normDomain(c.website);
   if (domain.indexOf('.') < 0){
-    renderMessage(v, 'Add this client’s website first', 'AI visibility is matched by domain. Add the website on the Dashboard tab, then come back.');
+    /* Say what is actually saved, so "it has a website" and "the tool has
+       no website" can be told apart at a glance: empty, or an address
+       missing its .com / .ca. This page also re-checks every couple of
+       seconds while it is open, so the report appears by itself as soon as
+       the website is saved — typed on the Dashboard, by a teammate, or
+       arriving with the cloud copy a moment after the page opened. */
+    const raw = String(c.website || '').trim();
+    renderMessage(v, raw ? 'This client’s website looks incomplete' : 'Add this client’s website first',
+      raw
+        ? 'The Dashboard has “' + esc(raw) + '”, which is missing the ending (like .com or .ca). AI visibility is matched by the full domain. Fix it on the Dashboard tab and this page fills in by itself.'
+        : 'AI visibility is matched by domain, and no website is saved for this client yet. Add it on the Dashboard tab and this page fills in by itself.');
     return;
   }
   const forId = c.id;

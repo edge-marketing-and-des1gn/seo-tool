@@ -156,6 +156,25 @@ function injectStyles(){
 .aiv-yes{background:var(--a-goodw);color:var(--a-good);}
 .aiv-mid{background:var(--a-wash);color:var(--a-deep);}
 .aiv-no{background:var(--a-line2);color:var(--a-ink3);}
+.aiv-vis{display:inline-flex;align-items:center;gap:7px;font-weight:600;}
+.aiv-vis code{font:600 11px ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--a-ink3);font-weight:500;}
+.aiv-kepill{display:inline-block;font-size:10.5px;font-weight:700;border-radius:20px;padding:2px 8px;margin:1px 3px 1px 0;background:var(--a-goodw);color:var(--a-good);white-space:nowrap;}
+.aiv-jt{list-style:none;margin:0;padding:0 0 0 4px;}
+.aiv-jt li{position:relative;padding:0 0 12px 26px;font-size:12.5px;line-height:1.45;}
+.aiv-jt li::before{content:'';position:absolute;left:7px;top:14px;bottom:-2px;width:2px;background:var(--a-line);}
+.aiv-jt li:last-child::before{display:none;}
+.aiv-jt li i{position:absolute;left:2px;top:4px;width:12px;height:12px;border-radius:50%;background:var(--a-card);border:2px solid var(--a-ink3);box-sizing:border-box;}
+.aiv-jt li.pg i{border-color:var(--pc,#8795a1);}
+.aiv-jt li.key i{background:var(--a-good);border-color:var(--a-good);}
+.aiv-jt li.ev i{width:8px;height:8px;left:4px;top:6px;border-width:0;background:var(--a-ink3);}
+.aiv-jt time{display:inline-block;min-width:62px;color:var(--a-ink3);font-variant-numeric:tabular-nums;font-size:11.5px;}
+.aiv-jt li.key b{color:var(--a-good);}
+.aiv-jt li.ev span{color:var(--a-ink2);}
+.aiv-visit{border:1px solid var(--a-line);border-radius:14px;padding:12px 14px 2px;margin-bottom:12px;background:var(--a-card);}
+.aiv-visit-head{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-bottom:10px;font-size:12px;color:var(--a-ink2);}
+.aiv-visit-head b{color:var(--a-ink);font-size:13px;}
+.aiv-src{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;border:1px solid var(--a-line);border-radius:20px;padding:2px 9px;}
+.aiv-src i{width:8px;height:8px;border-radius:50%;display:inline-block;}
 .aiv-donut-wrap{display:flex;gap:20px;align-items:center;flex-wrap:wrap;}
 .aiv-donut{width:150px;height:150px;flex:none;}
 .aiv-donut path{cursor:pointer;transition:opacity .15s;}
@@ -712,6 +731,7 @@ function render(root, feed, opts){
         '</div></div><div class="aiv-chart" data-main></div></section>' +
       '<section class="aiv-card"><div class="aiv-card-head"><div><h3>By source</h3><p class="aiv-cap">Click a card for its visits, landing pages, key events and what can be known about the questions behind them.</p></div></div>' +
         (platCards ? '<div class="aiv-plats">' + platCards + '</div>' : '<div class="aiv-empty">No AI visits in this period yet.</div>') + '</section>' +
+      (opts.loadJourneys ? '<section class="aiv-card" data-jrn-card><div class="aiv-card-head"><div><h3>AI visitor journeys</h3><p class="aiv-cap">Each person an AI assistant sent to the site, and every page and action after that, including later visits from anywhere else. Click a visitor to follow them step by step.</p></div></div><div data-jrn></div></section>' : '') +
       '<section class="aiv-card" data-aio-card><div class="aiv-card-head"><div><h3>Google AI Overviews for tracked keywords</h3><p class="aiv-cap">' +
         (M.aioRun ? 'The real Google results page for each tracked keyword and location, checked ' + esc(prettyDate(M.aioRun)) + '. Click a slice to filter, a row for detail.' : 'Checked weekly from each tracked keyword and location.') + '</p></div></div>' +
         '<div data-aio></div></section>' +
@@ -753,6 +773,9 @@ function render(root, feed, opts){
   }));
 
   drawAio(root.querySelector('[data-aio]'), M, domain, true);
+  M.loadJourneys = opts.loadJourneys || null;
+  const jh = root.querySelector('[data-jrn]');
+  if (jh) drawJourneys(jh, M, domain, {});
 
   const pf = root.querySelector('[data-pf]');
   const drawPages = () => {
@@ -889,6 +912,7 @@ function openPlatform(M, domain, name){
       statsRow([['Visits', fmt(p.s), d.txt ? esc(d.txt) + ' vs previous period' : ''], ['Engaged', fmt(p.e), pctTxt(p.e, p.s) + ' engagement rate'], ['Key events', fmt(p.k), 'From ' + fmt(p.s) + ' visits']]) +
       '<div class="aiv-card"><h3>Visits and key events</h3><div class="aiv-chart" data-c style="margin-top:10px"></div></div>' +
       (p.k || !M.keyEv.known ? keyEventCardHtml('The key events ' + esc(name) + ' visitors triggered, and the page they landed on.') : '') +
+      (M.loadJourneys ? '<div class="aiv-card"><h3>' + esc(name) + ' visitors, one by one</h3><p class="aiv-cap" style="margin-bottom:8px">Click a visitor to follow their path through the site.</p><div data-jv></div></div>' : '') +
       '<div class="aiv-card"><h3>Where ' + esc(name) + ' sent people</h3><p class="aiv-cap" style="margin-bottom:8px">Landing pages and what those visitors did. Click a page for its full picture.</p><div data-pg></div></div>' +
       (name === 'Copilot' && M.bing.imported ? '<div class="aiv-card"><h3>Questions Copilot cited the site for</h3><div data-q style="margin-top:8px"></div></div>' : '') +
       '<div class="aiv-card"><h3>Referrer recorded by GA4</h3><p class="aiv-cap">' + srcs.map(s => esc(s) + ' (' + fmt(p.sources[s]) + ')').join(' · ') + '</p></div>';
@@ -898,6 +922,8 @@ function openPlatform(M, domain, name){
     pageTable(body.querySelector('[data-pg]'), M, domain, pagesOf(rows), pcol(name));
     const qh = body.querySelector('[data-q]');
     if (qh) bingQueries(qh, M);
+    const jv = body.querySelector('[data-jv]');
+    if (jv) drawJourneys(jv, M, domain, {platform: name});
   });
 }
 
@@ -1014,6 +1040,136 @@ function openDay(M, domain, d){
 /* ==========================================================================
    SHARED REPORT (visual only, AgencyAnalytics skin)
    ========================================================================== */
+/* ==========================================================================
+   AI VISITOR JOURNEYS (internal only)
+   From the tracker's journeys action: anonymous visitor IDs Tag Manager adds
+   to GA4 (edge_vid / edge_sid / edge_src). Loaded when the tab opens, not with
+   the feed, and never shown on the shared client report.
+   visitor: {vid, platform, src, visits:[{sid, start, src, platform, steps:[[time, page, 'page'|eventName, isKey, count]]}]}
+   ========================================================================== */
+const jrnTime = t => {   /* 'YYYY-MM-DD HH:MM' in the GA4 property's time zone */
+  const m = /^(\d{4}-\d{2}-\d{2}) (\d{2}):(\d{2})/.exec(t || '');
+  if (!m) return {day: t || '', time: ''};
+  const h = Number(m[2]);
+  return {day: shortDate(m[1]), time: ((h + 11) % 12 + 1) + ':' + m[3] + (h < 12 ? ' AM' : ' PM')};
+};
+const visitorName = v => 'Visitor ' + String(v.vid || '').replace(/[^a-z0-9]/gi, '').slice(-4).toUpperCase();
+const srcLabel = s => {
+  const raw = String(s || '').trim();
+  if (!raw || raw === '(direct)' || raw === '(not set)') return 'Direct';
+  return raw.replace(/^www\./, '');
+};
+function jrnSummary(v){
+  const allSteps = [].concat(...v.visits.map(x => x.steps));
+  const firstAi = v.visits.find(x => x.platform) || v.visits[0];
+  const land = (firstAi.steps.find(s => s[2] === 'page') || firstAi.steps[0] || [])[1] || '';
+  const keys = {};
+  allSteps.forEach(s => { if (s[2] !== 'page' && s[3]) keys[s[2]] = (keys[s[2]] || 0) + 1; });
+  return {
+    v, platform: v.platform || 'Other AI', vid: v.vid,
+    first: v.visits[0].start, last: v.visits[v.visits.length - 1].start,
+    land: pageKey(land), pages: allSteps.filter(s => s[2] === 'page').length,
+    visits: v.visits.length, keyN: Object.values(keys).reduce((a, b) => a + b, 0),
+    keyNames: Object.keys(keys),
+    otherSrc: v.visits.filter(x => !x.platform).map(x => srcLabel(x.src))
+  };
+}
+
+const jrnMem = {};
+async function jrnData(M){
+  if (!M.loadJourneys) return null;
+  const end = M.end === addDays(today(), -1) ? today() : M.end;
+  const k = M.since + '|' + end;
+  const have = jrnMem[k];
+  if (have && Date.now() - have.at < 10 * 60 * 1000) return have.p;
+  const p = M.loadJourneys(M.since, end);
+  jrnMem[k] = {at: Date.now(), p};
+  p.catch(() => { delete jrnMem[k]; });
+  return p;
+}
+
+function drawJourneys(host, M, domain, opts){
+  opts = opts || {};
+  host.innerHTML = '<div class="aiv-empty"><span class="aiv-spin"></span>Reading visitor paths from GA4…</div>';
+  const data = jrnData(M);
+  if (!data){ host.innerHTML = ''; return; }
+  data.then(J => {
+    if (!host.isConnected) return;
+    const all = (J.visitors || []).map(jrnSummary).filter(r => !opts.platform || r.platform === opts.platform);
+    const notes = (J.notes || []).slice();
+    if (J.thresholded) notes.push('GA4 is holding back some rows for privacy (Google signals is on for this property), so single visitors can be missing.');
+    const noteHtml = notes.length ? '<p class="aiv-foot" style="margin-top:8px">' + notes.map(esc).join(' ') + '</p>' : '';
+    if (!all.length){
+      host.innerHTML = '<div class="aiv-empty">' + (opts.platform ? 'No ' + esc(opts.platform) + ' visitors' : 'No AI visitors') + ' with a visitor ID in this period yet.' +
+        '<div style="margin-top:6px;font-size:11.5px">Visitor IDs started being recorded on October 16, 2026, and GA4 takes a few hours to process new visits.</div></div>' + noteHtml;
+      return;
+    }
+    const plats = PLATFORMS.filter(p => all.some(r => r.platform === p));
+    const flt = {plat: '', keysOnly: false, q: ''};
+    host.innerHTML = (opts.platform ? '' :
+      '<div class="aiv-filters" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">' +
+        '<div class="aiv-chips" data-jp><button type="button" class="aiv-chip" data-p="">All (' + all.length + ')</button>' +
+          plats.map(p => '<button type="button" class="aiv-chip off" data-p="' + esc(p) + '"><i style="background:' + pcol(p) + '"></i>' + esc(p) + ' (' + all.filter(r => r.platform === p).length + ')</button>').join('') + '</div>' +
+        '<button type="button" class="aiv-chip off" data-jk title="Only visitors who triggered a key event">Key events only</button>' +
+        '<input type="search" data-jq placeholder="Filter by page" style="margin-left:auto"></div>') +
+      '<div data-jt></div>' + noteHtml;
+    const drawT = () => {
+      const rows = all.filter(r => (!flt.plat || r.platform === flt.plat) && (!flt.keysOnly || r.keyN) &&
+        (!flt.q || r.v.visits.some(x => x.steps.some(s => pageKey(s[1]).indexOf(flt.q) > -1))));
+      table(host.querySelector('[data-jt]'), rows, [
+        {key: 'last', label: 'Last seen', fmt: r => { const t = jrnTime(r.last); return esc(t.day) + ' <span style="color:var(--a-ink3)">' + esc(t.time) + '</span>'; }},
+        {key: 'vid', label: 'Visitor', fmt: r => '<span class="aiv-vis">' + dotName(r.platform, pcol(r.platform)) + '<code>' + esc(visitorName(r)) + '</code></span>', sort: r => r.platform + r.vid},
+        {key: 'land', label: 'Landed on', fmt: r => '<span class="aiv-page">' + esc(r.land) + '</span>'},
+        {key: 'pages', label: 'Pages', num: true, fmt: r => fmt(r.pages)},
+        {key: 'visits', label: 'Visits', num: true, fmt: r => fmt(r.visits) + (r.otherSrc.length ? ' <span title="Came back via ' + esc(r.otherSrc.join(', ')) + '" style="color:var(--a-ink3)">↺</span>' : '')},
+        {key: 'keyN', label: 'Key events', fmt: r => r.keyNames.length ? r.keyNames.slice(0, 2).map(n => '<span class="aiv-kepill">' + esc(keLabel(n)) + '</span>').join('') + (r.keyNames.length > 2 ? ' +' + (r.keyNames.length - 2) : '') : '<span style="color:var(--a-ink3)">—</span>', sort: r => r.keyN}
+      ], {sort: 'last', empty: 'No visitors match.', maxH: opts.platform ? 360 : 480, onRow: r => openVisitor(r, domain)});
+    };
+    host.querySelectorAll('[data-jp] [data-p]').forEach(b => b.addEventListener('click', () => {
+      flt.plat = b.dataset.p;
+      host.querySelectorAll('[data-jp] [data-p]').forEach(x => x.classList.toggle('off', x.dataset.p !== flt.plat));
+      drawT();
+    }));
+    const kb = host.querySelector('[data-jk]');
+    if (kb) kb.addEventListener('click', () => { flt.keysOnly = !flt.keysOnly; kb.classList.toggle('off', !flt.keysOnly); drawT(); });
+    const qi = host.querySelector('[data-jq]');
+    if (qi) qi.addEventListener('input', () => { flt.q = pageKey(qi.value || '').replace(/^\/$/, '') ; if (!qi.value) flt.q = ''; drawT(); });
+    drawT();
+  }).catch(err => {
+    if (!host.isConnected) return;
+    host.innerHTML = '<div class="aiv-empty">Couldn’t load visitor journeys: ' + esc(err.message) + '</div>';
+  });
+}
+
+function openVisitor(r, domain){
+  const v = r.v, col = pcol(r.platform);
+  const first = jrnTime(r.first);
+  openDrawer(visitorName(r) + ' · from ' + r.platform, col, body => {
+    body.innerHTML =
+      statsRow([['First visit', esc(first.day), esc(first.time) + ' · from ' + esc(r.platform)], ['Visits', fmt(r.visits), r.otherSrc.length ? 'Came back via ' + esc([...new Set(r.otherSrc)].join(', ')) : 'All from ' + esc(r.platform)],
+        ['Pages viewed', fmt(r.pages), ''], ['Key events', fmt(r.keyN), r.keyNames.map(keLabel).map(esc).join(', ')]]) +
+      '<div class="aiv-note"><b>Anonymous.</b> This is one browser, identified only by a random ID the site stored for it. No name, email or IP is recorded. ' +
+        esc(NO_PROMPTS[r.platform] ? 'The assistant does not pass on what the person asked.' : '') + '</div>' +
+      v.visits.map((x, i) => {
+        const t = jrnTime(x.start), xp = x.platform || '';
+        const srcCol = xp ? pcol(xp) : '#8795a1';
+        let lastDay = t.day;
+        return '<div class="aiv-visit" style="--pc:' + srcCol + '"><div class="aiv-visit-head"><span><b>Visit ' + (i + 1) + '</b> · ' + esc(t.day) + ', ' + esc(t.time) + '</span>' +
+          '<span class="aiv-src"><i style="background:' + srcCol + '"></i>' + (xp ? esc(xp) + ' · ' : '') + esc(srcLabel(x.src)) + '</span></div><ol class="aiv-jt">' +
+          x.steps.map(s => {
+            const st = jrnTime(s[0]);
+            const dayTag = st.day !== lastDay ? esc(st.day) + ' ' : '';
+            lastDay = st.day;
+            const tm = '<time>' + dayTag + esc(st.time) + '</time> ';
+            if (s[2] === 'page') return '<li class="pg"><i></i>' + tm + linkTo(domain, s[1]) + '</li>';
+            if (s[3]) return '<li class="key"><i></i>' + tm + '<b>★ ' + esc(keLabel(s[2])) + '</b> <span style="color:var(--a-ink3);font-size:11px">key event · ' + esc(s[2]) + '</span></li>';
+            return '<li class="ev"><i></i>' + tm + '<span>' + esc(keLabel(s[2])) + (s[4] > 1 ? ' ×' + s[4] : '') + '</span></li>';
+          }).join('') + '</ol></div>';
+      }).join('') +
+      '<p class="aiv-foot">Times are in the GA4 property’s time zone, to the minute. Pages come from page views; on sites where the website loads GA4 itself they come from the “edge_page” event Tag Manager sends with each page.</p>';
+  });
+}
+
 function renderReport(root, feed, opts){
   opts = opts || {};
   injectStyles();
@@ -1479,6 +1635,7 @@ function draw(v, c, feed, info){
 
   render(v, feed, {
     period, actionsHtml: actions, topHtml: top,
+    loadJourneys: tracking.ga4 ? (since, end) => apiGet(settings().url, {action: 'journeys', domain, key: settings().key, start: since, end}) : null,
     onPeriod: p => { period = p; closeDrawer(); draw(v, c, feed, info); }
   });
   setFreshness(v, info);

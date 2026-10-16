@@ -66,6 +66,8 @@ html,body{margin:0;background:#fafafa;color:var(--ink);font-family:var(--ui);-we
     if (!snap.exists) throw new Error('This report link is no longer available.');
     const view = snap.data() || {};
     if (view.type !== 'aireport' || !view.feedUrl || !view.token) throw new Error('This report link is not set up correctly.');
+    /* Live numbers only from the EDGE tracker (Google Apps Script), never another server. */
+    if (!/^https:\/\/script\.google(usercontent)?\.com\//.test(String(view.feedUrl))) throw new Error('This report link is not set up correctly.');
 
     let period = 'lastMonth', feed = null;
     /* One state object, so the ticked sources and assistant filter survive a period change and a data refresh. */

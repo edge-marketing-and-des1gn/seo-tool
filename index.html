@@ -4305,6 +4305,12 @@ body.so-locked{overflow:hidden;}
 .seo-lg-rn-hint.warn{color:var(--brand-deep); font-weight:600;}
 
 .seo-lg-group-check{margin:0 1px 0 0;}
+/* someone is checking this keyword right now */
+.seo-scan-by{display:inline-flex; align-items:center; gap:6px; font:600 11px var(--ui); color:#b5352a; background:#fdecea; border-radius:20px; padding:2px 9px 2px 7px; margin-left:8px; white-space:nowrap; vertical-align:middle;}
+.seo-scan-by.mine{color:var(--brand-deep); background:var(--brand-wash);}
+.seo-scan-by i{width:7px; height:7px; border-radius:50%; background:currentColor; animation:seoScanPulse 1.1s ease-in-out infinite;}
+@keyframes seoScanPulse{0%,100%{opacity:1}50%{opacity:.25}}
+.seo-lg-row-busy{box-shadow:inset 3px 0 0 #e8a29b;}
 #seoKeywordList.seo-edit-mode .seo-lg-row.seo-lg-row-selected{background:var(--brand-wash); box-shadow:inset 3px 0 0 var(--brand);}
 #seoKeywordList.seo-edit-mode .seo-lg-row.seo-lg-row-selected:hover{background:#fcebdc;}
 /* A keyword still waiting for a location: its name was being squeezed to
@@ -10080,6 +10086,7 @@ function syncWalk(st, onRec, onScan){
     (c.dashboards || []).forEach(d => rec('seoDash', d));
   });
   (st.seoFolders || []).forEach(f => rec('seoFolder', f));
+  (st.reportTemplates || []).forEach(t => { if (t && t.id) rec('rptTpl', t); });
 }
 /* Stamp whatever has changed in this browser since the last look. Runs just
    before anything goes up to the cloud and just before anything is merged
@@ -10328,6 +10335,8 @@ function mergeStates(localState, remoteState){
   /* Rail folders are flat records, so the union of both sides is the whole
      merge - a folder made on the laptop survives a sync from the desktop. */
   merged.seoFolders  = mergeList(localState.seoFolders, remoteState.seoFolders, 'seoFolder', reg, mergeFlatRec, preferRemote);
+  /* Report templates, like folders, are flat records: a template saved on one computer survives a sync from another. */
+  merged.reportTemplates = mergeList(localState.reportTemplates, remoteState.reportTemplates, 'rptTpl', reg, mergeFlatRec, preferRemote);
   merged.serpRecents = mergeRecents(localState.serpRecents, remoteState.serpRecents);
   const rk = new Set((remoteState.serpRecents || []).filter(Boolean).map(x => recentKey(x) + '|' + (x.at || 0)));
   if (merged.serpRecents.some(x => !rk.has(recentKey(x) + '|' + (x.at || 0)))) mergeAhead = true;
@@ -11035,6 +11044,47 @@ let presPeers = new Map(), presOffset = 0, presScan = null, presNamePending = fa
 let presSentNav = '', presSentDone = null, presSentAt = 0, presLiveKey = '';
 let presPanelIsOpen = false, presPanelAnchor = null;
 const presReaped = new Set();
+/* SEO keyword checks this tab has queued or running, one key per keyword at a
+   location ("seoClientId|keywordId|locationId"). They travel in the presence
+   note, so every teammate sees which rows are being scanned and by whom, and
+   nobody starts the same check twice. */
+const presScanKeys = new Set();
+const seoScanKey = (c, k, loc) => (c && c.id) + '|' + (k && k.id) + '|' + (loc && loc.id);
+/* Who else is scanning this keyword at this location right now ('' if nobody). */
+function presScanningBy(key){
+  if (!presOn) return '';
+  const p = presLive().find(x => Array.isArray(x.scanKeys) && x.scanKeys.indexOf(key) > -1);
+  return p ? String(p.name || 'A teammate') : '';
+}
+/* Marks every keyword row on screen: "Scanning · Name" when a teammate has it,
+   "Scanning now" when this tab does. A teammate's row can't be scanned again. */
+function presPaintScanRows(){
+  document.querySelectorAll('.seo-lg-row[data-scankey]').forEach(row => {
+    const key = row.dataset.scankey, by = presScanningBy(key), mine = presScanKeys.has(key);
+    let chip = row.querySelector('.seo-scan-by');
+    const btn = row.querySelector('.seo-loc-scan-btn');
+    if (!by && !mine){
+      if (chip) chip.remove();
+      row.classList.remove('seo-lg-row-busy');
+      if (btn && btn.dataset.busyLock){ btn.disabled = false; delete btn.dataset.busyLock; btn.title = btn.dataset.title0 || btn.title; }
+      return;
+    }
+    if (!chip){
+      chip = document.createElement('span');
+      chip.className = 'seo-scan-by';
+      const txt = row.querySelector('.seo-lg-text');
+      if (txt) txt.after(chip); else row.prepend(chip);
+    }
+    chip.classList.toggle('mine', !by);
+    chip.innerHTML = '<i></i>' + (by ? 'Scanning · ' + esc(by) : 'Scanning now');
+    chip.title = by ? by + ' is checking this keyword right now. Wait for it to finish to avoid overwriting their result.' : 'This tab is checking this keyword.';
+    row.classList.add('seo-lg-row-busy');
+    if (btn && by){
+      if (!btn.dataset.title0) btn.dataset.title0 = btn.title;
+      btn.disabled = true; btn.dataset.busyLock = '1'; btn.title = by + ' is scanning this right now';
+    }
+  });
+}
 
 function presRef(sid){
   return fbDb.collection('users').doc(fbUid).collection('presence').doc(sid || SESSION_ID);
@@ -11087,6 +11137,7 @@ function presPayload(){
   const mail = (fbAuth && fbAuth.currentUser && fbAuth.currentUser.email) || '';
   return {
     session: SESSION_ID, name: presName(), email: mail, where: presWhere(), hidden: !!document.hidden, v: 1,
+    scanKeys: Array.from(presScanKeys).slice(0, 600),
     scan: s ? {
       title: String(s.title || 'Scanning').slice(0, 140), sub: String(s.sub || '').slice(0, 160),
       done: +s.done || 0, total: +s.total || 0, startedAt: s.startedAt || Date.now(),
@@ -11097,7 +11148,7 @@ function presPayload(){
 function presSend(force){
   if (!presOn || !fbDb || !fbUid || isPublicView()) return;
   const p = presPayload();
-  const nav = JSON.stringify([p.name, p.where, p.hidden, p.scan ? [p.scan.title, p.scan.sub, p.scan.total, p.scan.module, p.scan.clientId, p.scan.gbpId, p.scan.seoClientId] : null]);
+  const nav = JSON.stringify([p.name, p.where, p.hidden, p.scanKeys.join(','), p.scan ? [p.scan.title, p.scan.sub, p.scan.total, p.scan.module, p.scan.clientId, p.scan.gbpId, p.scan.seoClientId] : null]);
   const now = Date.now();
   const done = p.scan ? p.scan.done : null;
   /* where you are goes out at once; scan progress at most every 4 seconds */
@@ -11470,6 +11521,7 @@ function presPaint(){
     presPaintTeam();
     presPaintSlots();
     presPaintHere();
+    presPaintScanRows();
     if (presPanelIsOpen){
       const el = $('presPanel');
       if (el){ el.innerHTML = presPanelHtml(); presPanelPlace(); }
@@ -21485,6 +21537,22 @@ async function seoScanAndRender(c, pairs){
   if (!c.website || !c.website.trim()){ toast('Add this client\u2019s website on the Dashboard tab first \u2014 rank checks need it.', 'err'); return; }
   if (!seoSourceReady()){ toast(seoSourceMissingMsg(), 'err'); return; }
   if (seoScanRunning){ toast('A scan is already running for this client', 'err'); return; }
+  /* Leave alone anything a teammate is checking right now. */
+  const busy = pairs.map(p => presScanningBy(seoScanKey(c, p.k, p.loc)));
+  if (busy.some(Boolean)){
+    const who = Array.from(new Set(busy.filter(Boolean))).join(', ');
+    if (pairs.length === 1){
+      if (!confirm(who + ' is scanning “' + pairs[0].k.text + '” in ' + pairs[0].loc.label.trim() + ' right now.\n\nScan it anyway? Whichever finishes last will overwrite the other’s result.')) return;
+    } else {
+      const free = pairs.filter((p, i) => !busy[i]);
+      if (!free.length){ toast('All of these are being scanned right now by ' + who, 'err'); return; }
+      toast('Skipping ' + (pairs.length - free.length) + ' keyword location' + (pairs.length - free.length === 1 ? '' : 's') + ' ' + who + ' is scanning right now');
+      pairs = free;
+    }
+  }
+  const myKeys = pairs.map(p => seoScanKey(c, p.k, p.loc));
+  myKeys.forEach(x => presScanKeys.add(x));
+  presSend(true); presPaintScanRows();
   seoScanRunning = true;
   seoScanStop = false;
   const source = seoRankSource();
@@ -21495,6 +21563,7 @@ async function seoScanAndRender(c, pairs){
     catch(err){
       if (source === 'gsc'){
         seoScanRunning = false;
+        myKeys.forEach(x => presScanKeys.delete(x)); presSend(true); presPaintScanRows();
         toast((err && err.message) || 'Search Console sign-in failed', 'err');
         return;
       }
@@ -21565,7 +21634,7 @@ async function seoScanAndRender(c, pairs){
           }
         });
       }
-      finally{ inflight.delete(i); reading.delete(i); }
+      finally{ inflight.delete(i); reading.delete(i); presScanKeys.delete(myKeys[i]); presNudge(); presPaintScanRows(); }
       lastStatus = status;
       const L = pairs[i].loc;
       if (status === 'stopped') skipped++;
@@ -21579,6 +21648,7 @@ async function seoScanAndRender(c, pairs){
     });
   } finally {
     seoScanRunning = false;
+    myKeys.forEach(x => presScanKeys.delete(x)); presSend(true); setTimeout(presPaintScanRows, 0);
     seoProgressHide(widgets);
     const stopped = seoScanStop;
     const spent = seoMeterText(meter);
@@ -22336,6 +22406,7 @@ function seoCopyLink(url, btnEl){
 function seoLocGroupRow(c, k, loc){
   const row = document.createElement('div');
   row.className = 'seo-lg-row';
+  row.dataset.scankey = seoScanKey(c, k, loc);
 
   /* ---- primary line: keyword, its rank here, and the two actions you
      actually reach for day to day ---- */
@@ -22429,6 +22500,7 @@ function seoLocGroupRow(c, k, loc){
   scanBtn.title = 'Scan \u201c' + k.text + '\u201d in ' + (loc.label || 'this location') + ' now';
   scanBtn.addEventListener('click', async () => {
     if (!loc.label.trim()){ toast('Add a location first', 'err'); return; }
+    if (scanBtn.dataset.busyLock) return;
     scanBtn.disabled = true; scanBtn.classList.add('is-loading');
     try{ await seoScanAndRender(c, [{k, loc}]); }
     finally{ scanBtn.disabled = false; scanBtn.classList.remove('is-loading'); }
@@ -22453,6 +22525,7 @@ function seoLocGroupRow(c, k, loc){
   metrics.className = 'seo-lg-metrics';
   [spark, rankBox, deltaBox, sourceEl, copyEl, scanBtn, delBtn].forEach(el => metrics.appendChild(el));
   [check, text, metrics].forEach(el => top.appendChild(el));
+  setTimeout(presPaintScanRows, 0);
 
   /* ---- secondary line: quiet status, plus an optional drawer for the
      things you rarely touch — the exact location text, its pinned

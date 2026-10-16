@@ -1498,7 +1498,8 @@ function draw(){
         else { R.client.items.push(Object.assign(layoutOf(it), {id: uid(), cfg: JSON.parse(JSON.stringify(it.cfg || {})), from: it.id})); toastMsg('Added to the client report'); }
         persist(c, 'client'); autoPublish(c); draw();
       },
-      actionsHtml: '<button class="aiv-btn" type="button" data-reset title="Put back the default set of widgets">Reset layout</button>'}, logosFor(c, R.team)));
+      actionsHtml: '<button class="aiv-btn" type="button" data-tpl style="display:inline-flex;align-items:center;gap:6px" title="Save this layout as a template, or apply a template to many clients">' + glyph('grid', 14) + 'Templates</button>' + '<button class="aiv-btn" type="button" data-reset title="Put back the default set of widgets">Reset layout</button>'}, logosFor(c, R.team)));
+    v.querySelector('[data-tpl]').addEventListener('click', () => openTemplates(c));
     const rs = v.querySelector('[data-reset]');
     if (rs) rs.addEventListener('click', () => {
       if (!confirm('Put the team report back to the default widgets? Your changes to this layout will be lost. The client report is not affected.')) return;
@@ -1516,10 +1517,11 @@ function draw(){
         '<div style="margin-top:14px"><button class="aiv-btn go" type="button" data-empty-add>+ Add widgets</button></div>',
       onItems: () => { persist(c, 'client'); autoPublish(c); },
       onPeriod: p => { if (clientPeriods(R).indexOf(p) < 0) return; R.client.period = p; persist(c, 'client'); autoPublish(c); draw(); },
-      actionsHtml: '<button class="aiv-btn" type="button" data-dates style="display:inline-flex;align-items:center;gap:6px">' + glyph('cal', 14) + 'Date ranges</button>' +
+      actionsHtml: '<button class="aiv-btn" type="button" data-tpl style="display:inline-flex;align-items:center;gap:6px" title="Save this layout as a template, or apply a template to many clients">' + glyph('grid', 14) + 'Templates</button>' + '<button class="aiv-btn" type="button" data-dates style="display:inline-flex;align-items:center;gap:6px">' + glyph('cal', 14) + 'Date ranges</button>' +
         '<button class="aiv-btn" type="button" data-title>Rename</button><button class="aiv-btn go" type="button" data-share>' + (pub ? 'Share link' : 'Share report') + '</button>',
       topHtml: '<div data-sharebox></div><div data-datebox></div><div class="aiv-note">' + periodNote(R) + ' Widgets here are copies: moving or resizing them doesn’t change the team report.</div>'}, logosFor(c, R.client)));
     v.querySelector('[data-share]').addEventListener('click', () => share(v, c));
+    v.querySelector('[data-tpl]').addEventListener('click', () => openTemplates(c));
     v.querySelector('[data-dates]').addEventListener('click', () => datePanel(v.querySelector('[data-datebox]'), c, R));
     v.querySelector('[data-title]').addEventListener('click', () => {
       const t = prompt('Report title the client sees:', R.client.title || ((c.name || ctx.domain) + ' — Report'));
@@ -1529,6 +1531,197 @@ function draw(){
     else if (panelOpen.rclient === 'brand'){ panelOpen.rclient = ''; if (editingState.rclient){ const b = v.querySelector('[data-brand]'); if (b) b.click(); } }
   }
 }
+
+/* ==========================================================================
+   REPORT TEMPLATES
+   A template is a saved layout: the team report's widgets, the client
+   report's widgets, or both, with their sizes, titles, text blocks, period
+   settings and branding. Applying one to many clients gives each of them
+   that layout; every widget then draws that client's own numbers.
+   Templates live in state.reportTemplates and sync like everything else.
+   ========================================================================== */
+const STARTERS = [
+  {id: 'starter_essentials', name: 'Client essentials (starter)', starter: true,
+    client: {period: 'lastMonth', periods: ['30', 'lastMonth', '90', '365'], brand: {logo: 'auto', agency: true, banner: true},
+      items: [['headline', 'xl'], ['conv_trend', 'l'], ['conv_by_channel', 'l'], ['kw_kpis', 'xl'], ['kw_cards', 'xl'], ['gsc_kpis', 'xl'], ['ai_assistants', 'l'], ['aio', 'l']]
+        .map((d, i) => ({id: 's' + i, type: d[0], size: d[1]}))}},
+  {id: 'starter_team', name: 'Full team report (starter)', starter: true,
+    team: {period: '30', items: TEAM_DEFAULT.map(d => ({id: 'd_' + d[0], type: d[0], size: d[1]}))}}
+];
+function tplList(){
+  if (!Array.isArray(state.reportTemplates)) state.reportTemplates = [];
+  state.reportTemplates = state.reportTemplates.filter(t => t && t.id);
+  return state.reportTemplates;
+}
+const tplAll = () => tplList().concat(STARTERS);
+const clone = o => JSON.parse(JSON.stringify(o));
+/* Brand settings that make sense for every client: a client's own uploaded logo stays with that client. */
+const tplBrand = b => { if (!b) return undefined; const o = clone(b); if (o.logo && ['auto', 'site', 'none'].indexOf(o.logo) < 0) o.logo = 'auto'; return o; };
+const tplItems = items => items.map(i => { const o = layoutOf(i); if (i.cfg && Object.keys(i.cfg).length) o.cfg = clone(i.cfg); if (i.from) o.from = i.from; return o; });
+
+function tplFromClient(c, name, parts){
+  const R = reportsOf(c), t = {id: 'tpl' + uid(), name, createdAt: Date.now(), updatedAt: Date.now()};
+  if (parts.team) t.team = {period: R.team.period, brand: tplBrand(R.team.brand), items: tplItems(R.team.items)};
+  if (parts.client){
+    const nm = c.name || '';
+    t.client = {period: clientPeriod(R), periods: clientPeriods(R), showDates: R.client.showDates !== false, brand: tplBrand(R.client.brand), items: tplItems(R.client.items)};
+    if (R.client.title) t.client.title = nm && R.client.title.indexOf(nm) > -1 ? R.client.title.split(nm).join('{client}') : R.client.title;
+  }
+  return t;
+}
+
+/* Gives one client the template's layout. Fresh widget ids per client; a client
+   widget copied from a team widget keeps pointing at that client's copy of it. */
+function tplApply(t, c, parts){
+  const R = reportsOf(c), map = {};
+  if (parts.team && t.team){
+    R.team = {period: t.team.period || '30', items: t.team.items.map(i => { const n = Object.assign(clone(i), {id: i.id && /^d_/.test(i.id) ? i.id : uid()}); map[i.id] = n.id; return n; })};
+    if (t.team.brand) R.team.brand = clone(t.team.brand);
+  }
+  if (parts.client && t.client){
+    const keep = {publishedAt: R.client.publishedAt};
+    const teamByType = {}; R.team.items.forEach(x => { if (!teamByType[x.type]) teamByType[x.type] = x.id; });
+    R.client = Object.assign(keep, {period: t.client.period || 'lastMonth', periods: clone(t.client.periods || CLIENT_PERIODS_DEFAULT),
+      items: t.client.items.filter(i => W[i.type] && !W[i.type].internal).map(i => {
+        const n = Object.assign(clone(i), {id: uid()});
+        if (i.from) n.from = map[i.from] || teamByType[i.type] || undefined;
+        if (!n.from) delete n.from;
+        return n;
+      })});
+    if (t.client.showDates === false) R.client.showDates = false;
+    if (t.client.brand) R.client.brand = clone(t.client.brand);
+    if (t.client.title) R.client.title = t.client.title.split('{client}').join(c.name || '');
+    if (!keep.publishedAt) delete R.client.publishedAt;
+  }
+  persist(c);
+}
+
+/* Republishes shared client reports one at a time, so applying a template to
+   forty clients doesn't fire forty data pulls at once. */
+const pubQueue = [];
+let pubBusy = false;
+function queuePublish(c){
+  if (!reportsOf(c).client.publishedAt || pubQueue.indexOf(c) > -1) return;
+  pubQueue.push(c);
+  if (pubBusy) return;
+  pubBusy = true;
+  (async () => {
+    while (pubQueue.length){
+      const x = pubQueue.shift();
+      try{ await publish(x); }catch(e){ console.warn('template publish', x.name, e); }
+    }
+    pubBusy = false;
+  })();
+}
+
+const tplSummary = t => [t.team ? t.team.items.length + ' team widget' + (t.team.items.length === 1 ? '' : 's') : '', t.client ? t.client.items.length + ' client widget' + (t.client.items.length === 1 ? '' : 's') : '']
+  .filter(Boolean).join(' · ');
+
+function openTemplates(c, startOn){
+  const draw_ = draw;
+  const back = document.createElement('div');
+  back.className = 'rp-cat-back';
+  document.body.appendChild(back);
+  const close = () => { back.remove(); document.removeEventListener('keydown', onKey); };
+  const onKey = e => { if (e.key === 'Escape') close(); };
+  document.addEventListener('keydown', onKey);
+  back.addEventListener('click', e => { if (e.target === back) close(); });
+  const head = (title, sub) => '<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div><h2 style="display:flex;align-items:center;gap:8px">' + glyph('grid', 18) + esc(title) + '</h2><div class="aiv-cap">' + sub + '</div></div>' +
+    '<button class="aiv-x" type="button" aria-label="Close" style="border:0;background:none;font-size:22px;cursor:pointer">×</button></div>';
+  const wire = () => back.querySelector('.aiv-x').addEventListener('click', close);
+
+  function home(){
+    const list = tplAll();
+    back.innerHTML = '<div class="rp-cat aiv" role="dialog" aria-modal="true" aria-label="Report templates">' + head('Report templates', 'Save a layout once, then give it to as many clients as you like. Each client’s widgets show that client’s own data.') +
+      '<div class="rp-panel" style="margin:16px 0 0"><h4>' + glyph('page', 16) + 'Save ' + esc(c.name || 'this client') + '’s layout as a template</h4>' +
+      '<div class="row"><input type="text" data-name placeholder="Template name, e.g. Monthly SEO + AI" style="flex:1;min-width:220px">' +
+      '<label class="rp-chipx on"><input type="checkbox" data-p="team" checked>Team report</label><label class="rp-chipx on"><input type="checkbox" data-p="client" checked>Client report</label>' +
+      '<button class="aiv-btn go" type="button" data-save>Save template</button></div>' +
+      '<div class="aiv-cap">Saves widgets, sizes, titles, text blocks, the client’s allowed date ranges and branding. A logo uploaded for one client isn’t copied; each client shows its own.</div></div>' +
+      '<div class="rp-cat-g"><b>Saved templates</b><div class="rp-cat-list">' + list.map(t => '<div class="rp-cat-i"><div style="min-width:0"><strong>' + esc(t.name) + '</strong><small>' + esc(tplSummary(t)) +
+        (t.updatedAt ? ' · saved ' + esc(new Date(t.updatedAt).toLocaleDateString('en-CA', {month: 'short', day: 'numeric'})) : '') + '</small>' +
+        '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:8px"><button class="rp-ib go" type="button" data-apply="' + esc(t.id) + '">Apply to clients…</button>' +
+        (t.starter ? '' : '<button class="rp-ib" type="button" data-update="' + esc(t.id) + '" title="Replace this template with ' + esc(c.name || 'this client') + '’s current layout">Update from this client</button>' +
+          '<button class="rp-ib" type="button" data-rename="' + esc(t.id) + '">Rename</button><button class="rp-ib" type="button" data-del="' + esc(t.id) + '" title="Delete template">×</button>') +
+        '</div></div></div>').join('') + '</div></div></div>';
+    wire();
+    back.querySelectorAll('.rp-chipx input').forEach(x => x.addEventListener('change', () => x.parentNode.classList.toggle('on', x.checked)));
+    back.querySelector('[data-save]').addEventListener('click', () => {
+      const name = back.querySelector('[data-name]').value.trim();
+      const parts = {team: back.querySelector('[data-p=team]').checked, client: back.querySelector('[data-p=client]').checked};
+      if (!name){ back.querySelector('[data-name]').focus(); return; }
+      if (!parts.team && !parts.client){ toastMsg('Tick the team report, the client report or both'); return; }
+      const t = tplFromClient(c, name, parts);
+      tplList().push(t); save(); toastMsg('Template “' + name + '” saved'); home();
+    });
+    back.querySelectorAll('[data-apply]').forEach(b => b.addEventListener('click', () => apply(tplAll().find(t => t.id === b.dataset.apply))));
+    back.querySelectorAll('[data-update]').forEach(b => b.addEventListener('click', () => {
+      const t = tplList().find(x => x.id === b.dataset.update); if (!t) return;
+      if (!confirm('Replace “' + t.name + '” with ' + (c.name || 'this client') + '’s current layout?')) return;
+      const n = tplFromClient(c, t.name, {team: !!t.team, client: !!t.client});
+      Object.assign(t, {team: n.team, client: n.client, updatedAt: Date.now()}); if (!n.team) delete t.team; if (!n.client) delete t.client;
+      save(); toastMsg('Template updated'); home();
+    }));
+    back.querySelectorAll('[data-rename]').forEach(b => b.addEventListener('click', () => {
+      const t = tplList().find(x => x.id === b.dataset.rename); if (!t) return;
+      const n = prompt('Template name:', t.name); if (!n || !n.trim()) return;
+      t.name = n.trim(); t.updatedAt = Date.now(); save(); home();
+    }));
+    back.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => {
+      const t = tplList().find(x => x.id === b.dataset.del); if (!t) return;
+      if (!confirm('Delete the template “' + t.name + '”? Reports already made from it stay as they are.')) return;
+      try{ if (typeof tombstone === 'function') tombstone('rptTpl', t.id); }catch(e){}
+      state.reportTemplates = tplList().filter(x => x.id !== t.id); save(); home();
+    }));
+  }
+
+  function apply(t){
+    if (!t) return;
+    const all = (state.seoClients || []).filter(Boolean).slice().sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+    const folders = {}; (state.seoFolders || []).forEach(f => { if (f) folders[f.id] = f.name; });
+    const picked = new Set([c.id]);
+    back.innerHTML = '<div class="rp-cat aiv" role="dialog" aria-modal="true" aria-label="Apply template">' + head('Apply “' + t.name + '”', esc(tplSummary(t)) + '. Each client gets this layout filled with its own data.') +
+      '<div class="rp-panel" style="margin:16px 0 0"><div class="row"><span class="lbl">Replace</span>' +
+      (t.team ? '<label class="rp-chipx on"><input type="checkbox" data-p="team" checked>Team report</label>' : '') +
+      (t.client ? '<label class="rp-chipx on"><input type="checkbox" data-p="client" checked>Client report</label>' : '') + '</div>' +
+      '<div class="row"><span class="lbl">Clients</span><input type="text" data-q placeholder="Find a client" style="flex:1;min-width:200px">' +
+      '<button class="aiv-btn" type="button" data-all>Select all shown</button><button class="aiv-btn" type="button" data-none>Clear</button></div>' +
+      '<div data-list style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px;max-height:340px;overflow:auto;padding:2px"></div>' +
+      '<div class="aiv-cap">This replaces the chosen reports’ current layout for each selected client. Shared client links keep working and update to the new layout.</div>' +
+      '<div class="row" style="justify-content:space-between"><button class="aiv-btn" type="button" data-back>← Templates</button><button class="aiv-btn go" type="button" data-go></button></div></div></div>';
+    wire();
+    const listEl = back.querySelector('[data-list]'), q = back.querySelector('[data-q]'), go = back.querySelector('[data-go]');
+    const shown = () => { const s = q.value.trim().toLowerCase(); return all.filter(x => !s || String(x.name || '').toLowerCase().indexOf(s) > -1 || String(folders[x.folderId] || '').toLowerCase().indexOf(s) > -1); };
+    const count = () => { go.textContent = 'Apply to ' + picked.size + ' client' + (picked.size === 1 ? '' : 's'); go.disabled = !picked.size; };
+    const draw = () => {
+      listEl.innerHTML = shown().map(x => '<label class="rp-chipx' + (picked.has(x.id) ? ' on' : '') + '" style="border-radius:10px;justify-content:flex-start;overflow:hidden">' +
+        '<input type="checkbox" value="' + esc(x.id) + '"' + (picked.has(x.id) ? ' checked' : '') + '><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(x.name || x.website || 'Client') + '</span>' +
+        (x.folderId && folders[x.folderId] ? '<span class="rp-pill" style="margin-left:auto">' + esc(folders[x.folderId]) + '</span>' : '') + '</label>').join('') || '<div class="aiv-cap">No clients match.</div>';
+      listEl.querySelectorAll('input').forEach(i => i.addEventListener('change', () => { if (i.checked) picked.add(i.value); else picked.delete(i.value); i.parentNode.classList.toggle('on', i.checked); count(); }));
+      count();
+    };
+    q.addEventListener('input', draw);
+    back.querySelectorAll('.rp-panel > .row:first-child input').forEach(x => x.addEventListener('change', () => x.parentNode.classList.toggle('on', x.checked)));
+    back.querySelector('[data-all]').addEventListener('click', () => { shown().forEach(x => picked.add(x.id)); draw(); });
+    back.querySelector('[data-none]').addEventListener('click', () => { picked.clear(); draw(); });
+    back.querySelector('[data-back]').addEventListener('click', home);
+    go.addEventListener('click', () => {
+      const tp = back.querySelector('[data-p=team]'), cp = back.querySelector('[data-p=client]');
+      const parts = {team: !!(tp && tp.checked), client: !!(cp && cp.checked)};
+      if (!parts.team && !parts.client){ toastMsg('Tick the team report, the client report or both'); return; }
+      const targets = all.filter(x => picked.has(x.id));
+      const what = [parts.team ? 'team report' : '', parts.client ? 'client report' : ''].filter(Boolean).join(' and ');
+      if (!confirm('Replace the ' + what + ' layout for ' + targets.length + ' client' + (targets.length === 1 ? '' : 's') + ' with “' + t.name + '”?')) return;
+      let shared = 0;
+      targets.forEach(x => { tplApply(t, x, parts); if (parts.client && reportsOf(x).client.publishedAt){ shared++; queuePublish(x); } });
+      save(); close(); draw_();
+      toastMsg('“' + t.name + '” applied to ' + targets.length + ' client' + (targets.length === 1 ? '' : 's') + (shared ? ' · updating ' + shared + ' shared link' + (shared === 1 ? '' : 's') + ' in the background' : ''));
+    });
+    draw();
+  }
+  if (startOn) apply(tplAll().find(t => t.id === startOn)); else home();
+}
+
 function toastMsg(m){ try{ if (typeof toast === 'function') toast(m); }catch(e){} }
 
 /* ---------- publishing the client report ---------- */
